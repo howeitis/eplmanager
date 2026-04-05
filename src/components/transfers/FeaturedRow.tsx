@@ -98,7 +98,7 @@ export function FeaturedRow({ listings }: FeaturedRowProps) {
 function FeaturedCard({
   player,
   club,
-  listing,
+  listing: _listing,
   archetype,
   onOpen,
 }: {

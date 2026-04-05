@@ -467,7 +467,7 @@ function buildFeaturedCandidatePool(
 }
 
 function pickByArchetype(
-  rng: SeededRNG,
+  _rng: SeededRNG,
   candidates: FeaturedCandidate[],
   archetype: 'star' | 'prospect' | 'bargain',
   usedIds: Set<string>,

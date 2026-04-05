@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
-import type { Player, Club, MarketListing, Position, PlayerStats } from '../../types/entities';
+import type { Player, Club, MarketListing, PlayerStats } from '../../types/entities';
 import { refreshPlayerValue } from '../../engine/transfers';
 import { useModalParams } from '../../hooks/useModalParams';
 import { useGameStore } from '../../store/gameStore';
-import { DEFAULT_MARKET_FILTERS, type MarketFilters } from '../../store/marketSlice';
+import { type MarketFilters } from '../../store/marketSlice';
 import { MarketFilterPanel } from './MarketFilterPanel';
 import { FeaturedRow } from './FeaturedRow';
 
@@ -63,7 +63,6 @@ export function applyMarketFilters(
   });
 }
 
-const POSITIONS: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 
 export function MarketBoard({ listings, budget, onMakeOffer, playerClubId, clubs }: MarketBoardProps) {
   const [sortBy, setSortBy] = useState<'overall' | 'value' | 'age'>('overall');

@@ -6,7 +6,6 @@ import {
   generateMarketListings,
   generateFeaturedSlots,
   refillFeaturedSlot,
-  refreshPlayerValue,
 } from '../transfers';
 import { applyMarketFilters, countActiveFilters } from '../../components/transfers/MarketBoard';
 import { DEFAULT_MARKET_FILTERS, type MarketFilters, type FeaturedSlot } from '../../store/marketSlice';

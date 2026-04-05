@@ -15,7 +15,8 @@
       "Bash(npx vite:*)",
       "Bash(xargs -I {} basename {})",
       "mcp__Claude_Preview__preview_start",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
     ]
   }
 }
