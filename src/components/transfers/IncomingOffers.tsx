@@ -47,7 +47,7 @@ export function IncomingOffers({ offers, clubs, onRespond }: IncomingOffersProps
                   {offer.playerName}
                 </div>
                 <div className="plm-text-xs plm-text-gray-500">
-                  {offer.playerPosition} &middot; {offer.playerOverall} OVR
+                  {offer.playerPosition} &middot; {offer.playerOverall} OVR &middot; {offer.playerAge}
                 </div>
               </div>
             </div>

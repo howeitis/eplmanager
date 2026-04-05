@@ -358,6 +358,7 @@ export function simulateAITransferWindow(
             playerName: player.name,
             playerPosition: player.position,
             playerOverall: player.overall,
+            playerAge: player.age,
             fromClubId: sellerClub.id,
             toClubId: club.id,
             fee,
@@ -382,6 +383,7 @@ export function simulateAITransferWindow(
           playerName: player.name,
           playerPosition: player.position,
           playerOverall: player.overall,
+          playerAge: player.age,
           fromClubId: sellerClub.id,
           toClubId: club.id,
           fee,
@@ -413,6 +415,7 @@ export function simulateAITransferWindow(
         playerName: playerToSell.name,
         playerPosition: playerToSell.position,
         playerOverall: playerToSell.overall,
+        playerAge: playerToSell.age,
         fromClubId: club.id,
         toClubId: 'continent',
         fee: sale.fee,
@@ -429,6 +432,135 @@ export function simulateAITransferWindow(
   }
 
   return { completedTransfers, offers: incomingOffers, tickerMessages };
+}
+
+// --- Featured player selection ---
+
+import type { FeaturedSlot } from '../store/marketSlice';
+
+export interface FeaturedCandidate {
+  playerId: string;
+  overall: number;
+  age: number;
+  price: number;
+}
+
+function buildFeaturedCandidatePool(
+  listings: MarketListing[],
+  clubs: Club[],
+  excludeIds: Set<string>,
+): FeaturedCandidate[] {
+  const candidates: FeaturedCandidate[] = [];
+  for (const listing of listings) {
+    if (excludeIds.has(listing.playerId)) continue;
+    const club = clubs.find((c) => c.id === listing.clubId);
+    const player = club?.roster.find((p) => p.id === listing.playerId);
+    if (!player) continue;
+    candidates.push({
+      playerId: player.id,
+      overall: player.overall,
+      age: player.age,
+      price: listing.askingPrice,
+    });
+  }
+  return candidates;
+}
+
+function pickByArchetype(
+  rng: SeededRNG,
+  candidates: FeaturedCandidate[],
+  archetype: 'star' | 'prospect' | 'bargain',
+  usedIds: Set<string>,
+): FeaturedCandidate | null {
+  const available = candidates.filter((c) => !usedIds.has(c.playerId));
+  if (available.length === 0) return null;
+
+  if (archetype === 'star') {
+    const stars = available.filter((c) => c.overall >= 78);
+    if (stars.length > 0) return stars.sort((a, b) => b.overall - a.overall)[0];
+    // Fallback: highest rated
+    return available.sort((a, b) => b.overall - a.overall)[0];
+  }
+  if (archetype === 'prospect') {
+    const prospects = available.filter((c) => c.age <= 21 && c.overall >= 65);
+    if (prospects.length > 0) return prospects.sort((a, b) => b.overall - a.overall)[0];
+    return null;
+  }
+  if (archetype === 'bargain') {
+    const bargains = available.filter((c) => c.overall >= 70 && c.price <= 15);
+    if (bargains.length > 0) return bargains.sort((a, b) => b.overall - a.overall)[0];
+    return null;
+  }
+  return null;
+}
+
+function pickWeightedRandom(
+  rng: SeededRNG,
+  candidates: FeaturedCandidate[],
+  usedIds: Set<string>,
+): FeaturedCandidate | null {
+  const available = candidates.filter((c) => !usedIds.has(c.playerId));
+  if (available.length === 0) return null;
+  const weights = available.map((c) => c.overall);
+  return rng.weightedPick(available, weights);
+}
+
+export function generateFeaturedSlots(
+  rng: SeededRNG,
+  listings: MarketListing[],
+  clubs: Club[],
+): FeaturedSlot[] {
+  const candidates = buildFeaturedCandidatePool(listings, clubs, new Set());
+  if (candidates.length === 0) return [];
+
+  const slots: FeaturedSlot[] = [];
+  const usedIds = new Set<string>();
+
+  // Slot 1: Star
+  const star = pickByArchetype(rng, candidates, 'star', usedIds);
+  if (star) { slots.push({ playerId: star.playerId, archetype: 'star' }); usedIds.add(star.playerId); }
+
+  // Slot 2: Young Prospect
+  const prospect = pickByArchetype(rng, candidates, 'prospect', usedIds);
+  if (prospect) { slots.push({ playerId: prospect.playerId, archetype: 'prospect' }); usedIds.add(prospect.playerId); }
+
+  // Slot 3: Bargain
+  const bargain = pickByArchetype(rng, candidates, 'bargain', usedIds);
+  if (bargain) { slots.push({ playerId: bargain.playerId, archetype: 'bargain' }); usedIds.add(bargain.playerId); }
+
+  // Slots 4-6: Weighted random
+  for (let i = 0; i < 3; i++) {
+    const pick = pickWeightedRandom(rng, candidates, usedIds);
+    if (pick) { slots.push({ playerId: pick.playerId, archetype: 'trending' }); usedIds.add(pick.playerId); }
+  }
+
+  return slots;
+}
+
+export function refillFeaturedSlot(
+  rng: SeededRNG,
+  slotIndex: number,
+  currentSlots: FeaturedSlot[],
+  listings: MarketListing[],
+  clubs: Club[],
+): FeaturedSlot | null {
+  const usedIds = new Set(currentSlots.filter((_, i) => i !== slotIndex).map((s) => s.playerId));
+  const candidates = buildFeaturedCandidatePool(listings, clubs, new Set());
+  if (candidates.length === 0) return null;
+
+  const originalArchetype = currentSlots[slotIndex]?.archetype || 'trending';
+
+  // Try original archetype first
+  if (originalArchetype === 'star' || originalArchetype === 'prospect' || originalArchetype === 'bargain') {
+    const pick = pickByArchetype(rng, candidates, originalArchetype, usedIds);
+    if (pick) return { playerId: pick.playerId, archetype: originalArchetype };
+  }
+
+  // Fallback to weighted random
+  const pick = pickWeightedRandom(rng, candidates, usedIds);
+  if (pick) return { playerId: pick.playerId, archetype: 'trending' };
+
+  return null;
 }
 
 // --- Reset acquiredThisWindow flags for all clubs ---

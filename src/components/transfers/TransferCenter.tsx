@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { SeededRNG } from '../../utils/rng';
 import { seasonSeed, transferSeed } from '../../utils/rng';
@@ -9,7 +9,10 @@ import {
   executeContinentSale,
   generateMarketListings,
   simulateAITransferWindow,
+  generateFeaturedSlots,
+  refillFeaturedSlot,
 } from '../../engine/transfers';
+import { countActiveFilters } from './MarketBoard';
 import type {
   Player,
   Club,
@@ -22,8 +25,9 @@ import { SquadPanel } from './SquadPanel';
 import { IncomingOffers } from './IncomingOffers';
 import { OutgoingOffers } from './OutgoingOffers';
 import { TransferTicker } from './TransferTicker';
+import { TransferLedger } from './TransferLedger';
 
-type TransferTab = 'market' | 'squad' | 'incoming' | 'outgoing' | 'ticker';
+type TransferTab = 'market' | 'squad' | 'incoming' | 'outgoing' | 'ticker' | 'ledger';
 
 interface TransferCenterProps {
   onClose: () => void;
@@ -42,6 +46,9 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
   const transferOffers = useGameStore((s) => s.transferOffers);
   const marketListings = useGameStore((s) => s.marketListings);
   const tickerMessages = useGameStore((s) => s.tickerMessages);
+  const marketFilters = useGameStore((s) => s.marketFilters);
+  const featuredSlots = useGameStore((s) => s.featuredSlots);
+  const featuredRefillIndex = useGameStore((s) => s.featuredRefillIndex);
 
   const addTransferOffer = useGameStore((s) => s.addTransferOffer);
   const updateTransferOffer = useGameStore((s) => s.updateTransferOffer);
@@ -53,6 +60,8 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
   const removeMarketListing = useGameStore((s) => s.removeMarketListing);
   const addTickerMessage = useGameStore((s) => s.addTickerMessage);
   const setTickerMessages = useGameStore((s) => s.setTickerMessages);
+  const setFeaturedSlots = useGameStore((s) => s.setFeaturedSlots);
+  const setFeaturedRefillIndex = useGameStore((s) => s.setFeaturedRefillIndex);
 
   const playerClubId = manager?.clubId || '';
   const playerClub = clubs.find((c) => c.id === playerClubId);
@@ -60,6 +69,15 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
 
   const windowType: 'summer' | 'january' =
     currentPhase === 'january_window' ? 'january' : 'summer';
+
+  // Derive month number for featured seed
+  const monthNumber = useMemo(() => {
+    const phases = ['summer_window', 'january_window'];
+    return phases.indexOf(currentPhase) >= 0 ? currentPhase : 'summer_window';
+  }, [currentPhase]);
+
+  // Track previous listing count for refill detection
+  const prevListingIdsRef = useRef<Set<string>>(new Set());
 
   // Initialize market on first render
   const initializeWindow = useCallback(() => {
@@ -109,15 +127,85 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
     // Set ticker messages
     setTickerMessages(aiResult.tickerMessages);
 
+    // Generate featured slots
+    const featuredSeed = `${sSeed}-featured-${monthNumber}`;
+    const featuredRng = new SeededRNG(featuredSeed);
+    // Need to get current listings after AI transfers removed some
+    const currentListings = useGameStore.getState().marketListings;
+    const slots = generateFeaturedSlots(featuredRng, currentListings, useGameStore.getState().clubs);
+    setFeaturedSlots(slots);
+    setFeaturedRefillIndex(0);
+
+    // Track listing IDs
+    prevListingIdsRef.current = new Set(currentListings.map((l) => l.playerId));
+
     setInitialized(true);
-  }, [initialized, gameSeed, seasonNumber, windowType, clubs, budgets, playerClubId,
+  }, [initialized, gameSeed, seasonNumber, windowType, monthNumber, clubs, budgets, playerClubId,
     setMarketListings, removePlayerFromClub, addPlayerToClub, adjustBudget,
-    recordTransfer, addTransferOffer, setTickerMessages]);
+    recordTransfer, addTransferOffer, setTickerMessages, setFeaturedSlots, setFeaturedRefillIndex]);
 
   // Initialize on mount
-  if (!initialized) {
-    initializeWindow();
-  }
+  useEffect(() => {
+    if (!initialized) {
+      initializeWindow();
+    }
+  }, [initialized, initializeWindow]);
+
+  // Featured refill: detect when a featured player leaves the market
+  useEffect(() => {
+    if (!initialized) return;
+
+    const currentListingIds = new Set(marketListings.map((l) => l.playerId));
+    const removedIds = new Set<string>();
+
+    for (const id of prevListingIdsRef.current) {
+      if (!currentListingIds.has(id)) {
+        removedIds.add(id);
+      }
+    }
+    prevListingIdsRef.current = currentListingIds;
+
+    if (removedIds.size === 0) return;
+
+    // Check if any featured slot lost its player
+    let currentSlots = [...featuredSlots];
+    let currentRefillIdx = featuredRefillIndex;
+    let changed = false;
+
+    for (let i = 0; i < currentSlots.length; i++) {
+      if (removedIds.has(currentSlots[i].playerId)) {
+        // This slot needs refill
+        const sSeed = seasonSeed(gameSeed, seasonNumber);
+        const refillSeed = `${sSeed}-featured-${monthNumber}-refill-${currentRefillIdx}`;
+        const refillRng = new SeededRNG(refillSeed);
+
+        const replacement = refillFeaturedSlot(
+          refillRng,
+          i,
+          currentSlots,
+          marketListings,
+          clubs,
+        );
+
+        if (replacement) {
+          currentSlots = [...currentSlots];
+          currentSlots[i] = replacement;
+        } else {
+          // Remove the slot
+          currentSlots = currentSlots.filter((_, idx) => idx !== i);
+          i--;
+        }
+
+        currentRefillIdx++;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      setFeaturedSlots(currentSlots);
+      setFeaturedRefillIndex(currentRefillIdx);
+    }
+  }, [marketListings, initialized, featuredSlots, featuredRefillIndex, gameSeed, seasonNumber, monthNumber, clubs, setFeaturedSlots, setFeaturedRefillIndex]);
 
   // Handle player making an offer for a market player
   const handleMakeOffer = useCallback(
@@ -151,6 +239,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
             playerName: player.name,
             playerPosition: player.position,
             playerOverall: player.overall,
+            playerAge: player.age,
             fromClubId: sellerClubId,
             toClubId: playerClubId,
             fee: offerFee,
@@ -173,6 +262,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
           playerName: player.name,
           playerPosition: player.position,
           playerOverall: player.overall,
+          playerAge: player.age,
           fromClubId: sellerClubId,
           toClubId: playerClubId,
           fee: offerFee,
@@ -187,6 +277,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
           playerName: player.name,
           playerPosition: player.position,
           playerOverall: player.overall,
+          playerAge: player.age,
           fromClubId: sellerClubId,
           toClubId: playerClubId,
           fee: offerFee,
@@ -203,6 +294,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
           playerName: player.name,
           playerPosition: player.position,
           playerOverall: player.overall,
+          playerAge: player.age,
           fromClubId: sellerClubId,
           toClubId: playerClubId,
           fee: offerFee,
@@ -217,6 +309,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
           playerName: player.name,
           playerPosition: player.position,
           playerOverall: player.overall,
+          playerAge: player.age,
           fromClubId: sellerClubId,
           toClubId: playerClubId,
           fee: offerFee,
@@ -260,6 +353,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         playerName: player.name,
         playerPosition: player.position,
         playerOverall: player.overall,
+        playerAge: player.age,
         fromClubId: offer.fromClubId,
         toClubId: playerClubId,
         fee: offer.counterFee,
@@ -292,6 +386,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         playerName: player.name,
         playerPosition: player.position,
         playerOverall: player.overall,
+        playerAge: player.age,
         fromClubId: playerClubId,
         toClubId: 'continent',
         fee: sale.fee,
@@ -328,6 +423,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
           playerName: player.name,
           playerPosition: player.position,
           playerOverall: player.overall,
+          playerAge: player.age,
           fromClubId: playerClubId,
           toClubId: offer.toClubId,
           fee: offer.fee,
@@ -364,11 +460,20 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
       .filter(Boolean) as { player: Player; club: Club; listing: MarketListing }[];
   }, [marketListings, clubs]);
 
-  const tabs: { key: TransferTab; label: string; badge?: number }[] = [
-    { key: 'market', label: 'Market' },
+  const activeFilterCount = countActiveFilters(marketFilters);
+
+  const tabs: { key: TransferTab; label: string; badge?: number; pill?: string }[] = [
+    {
+      key: 'market',
+      label: 'Market',
+      pill: activeTab !== 'market' && activeFilterCount > 0
+        ? `Filters Active (${activeFilterCount})`
+        : undefined,
+    },
     { key: 'squad', label: 'Squad' },
     { key: 'incoming', label: 'Incoming', badge: incomingOffers.length || undefined },
     { key: 'outgoing', label: 'Outgoing', badge: outgoingOffers.length || undefined },
+    { key: 'ledger', label: 'Ledger' },
     { key: 'ticker', label: 'Ticker' },
   ];
 
@@ -422,6 +527,11 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
                   {tab.badge}
                 </span>
               )}
+              {tab.pill && (
+                <span className="plm-ml-1 plm-bg-blue-100 plm-text-blue-700 plm-text-[10px] plm-font-medium plm-rounded-full plm-px-1.5 plm-py-0.5">
+                  {tab.pill}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -463,6 +573,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
                 onAcceptCounter={handleAcceptCounter}
               />
             )}
+            <TransferLedger clubs={clubs} />
             <TransferTicker messages={tickerMessages} />
           </div>
         </div>
@@ -498,6 +609,9 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
               budget={playerBudget}
               onAcceptCounter={handleAcceptCounter}
             />
+          )}
+          {activeTab === 'ledger' && (
+            <TransferLedger clubs={clubs} />
           )}
           {activeTab === 'ticker' && (
             <TransferTicker messages={tickerMessages} />

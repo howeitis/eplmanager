@@ -57,7 +57,7 @@ export function OutgoingOffers({ offers, clubs, budget, onAcceptCounter }: Outgo
                   {offer.playerName}
                 </div>
                 <div className="plm-text-xs plm-opacity-75">
-                  {offer.playerPosition} &middot; {offer.playerOverall} OVR &middot; from {getClubName(offer.fromClubId)}
+                  {offer.playerPosition} &middot; {offer.playerOverall} OVR &middot; {offer.playerAge} &middot; from {getClubName(offer.fromClubId)}
                 </div>
               </div>
               <span className="plm-text-xs plm-font-medium plm-px-2 plm-py-0.5 plm-rounded plm-bg-white plm-bg-opacity-50">

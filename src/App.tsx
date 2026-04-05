@@ -201,38 +201,53 @@ function App() {
     const playerClubId = manager!.clubId;
     const sSeed = deriveSeasonSeed(gameSeed, seasonNumber);
 
-    if (currentPhase === 'summer_window') {
-      // Advance past summer window to August
-      state.setPhase('august');
-      // Generate fixtures if not already
-      if (state.fixtures.length === 0) {
-        const rng = new SeededRNG(sSeed);
-        const fixtures = generateFixtures(rng, clubs.map((c) => c.id));
-        state.initializeFixtures(fixtures);
-      }
-      // Generate fortunes if empty
-      if (fortunes.length === 0) {
-        const rng = new SeededRNG(sSeed);
-        const seasonFortunes = generateSeasonFortunes(
-          rng,
-          clubs.map((c) => ({ id: c.id, tier: c.tier })),
-        );
-        setFortunes(seasonFortunes);
-      }
-      // Auto-populate Starting XI on first entry to season
-      const playerClub = clubs.find((c) => c.id === playerClubId);
-      if (playerClub && Object.keys(state.startingXI).length === 0) {
-        const xi = autoSelectXI(formation, playerClub.roster);
-        state.setStartingXI(xi);
-      }
-      await saveGame(state.saveSlot!, store.getState());
-      setGameView('hub');
-      return;
-    }
+    if (currentPhase === 'summer_window' || currentPhase === 'january_window') {
+      // --- Offer expiry: clear all pending offers at window close ---
+      const pendingOffers = state.transferOffers;
+      const pendingOutgoing = pendingOffers.filter((o) => o.direction === 'outgoing' && (o.status === 'pending' || o.status === 'countered'));
+      const pendingIncoming = pendingOffers.filter((o) => o.direction === 'incoming' && o.status === 'pending');
 
-    if (currentPhase === 'january_window') {
-      // Advance past January window to January matches
-      state.setPhase('january');
+      if (pendingOutgoing.length > 0) {
+        state.addTickerMessage(`Window closed — ${pendingOutgoing.length} pending bid${pendingOutgoing.length !== 1 ? 's' : ''} withdrawn.`);
+      }
+      if (pendingIncoming.length > 0) {
+        state.addTickerMessage(`Window closed — ${pendingIncoming.length} incoming bid${pendingIncoming.length !== 1 ? 's' : ''} withdrawn.`);
+      }
+      state.clearTransferOffers();
+      state.clearMarketListings();
+      state.setFeaturedSlots([]);
+      state.setFeaturedRefillIndex(0);
+      state.resetMarketFilters();
+
+      if (currentPhase === 'summer_window') {
+        // Advance past summer window to August
+        state.setPhase('august');
+        // Generate fixtures if not already
+        if (state.fixtures.length === 0) {
+          const rng = new SeededRNG(sSeed);
+          const fixtures = generateFixtures(rng, clubs.map((c) => c.id));
+          state.initializeFixtures(fixtures);
+        }
+        // Generate fortunes if empty
+        if (fortunes.length === 0) {
+          const rng = new SeededRNG(sSeed);
+          const seasonFortunes = generateSeasonFortunes(
+            rng,
+            clubs.map((c) => ({ id: c.id, tier: c.tier })),
+          );
+          setFortunes(seasonFortunes);
+        }
+        // Auto-populate Starting XI on first entry to season
+        const playerClub = clubs.find((c) => c.id === playerClubId);
+        if (playerClub && Object.keys(state.startingXI).length === 0) {
+          const xi = autoSelectXI(formation, playerClub.roster);
+          state.setStartingXI(xi);
+        }
+      } else {
+        // january_window → january matches
+        state.setPhase('january');
+      }
+
       await saveGame(state.saveSlot!, store.getState());
       setGameView('hub');
       return;

@@ -165,6 +165,7 @@ export interface TransferOffer {
   playerName: string;
   playerPosition: Position;
   playerOverall: number;
+  playerAge: number;
   fromClubId: string;
   toClubId: string;
   fee: number;
@@ -178,6 +179,7 @@ export interface TransferRecord {
   playerName: string;
   playerPosition: Position;
   playerOverall: number;
+  playerAge: number;
   fromClubId: string;
   toClubId: string;
   fee: number;
