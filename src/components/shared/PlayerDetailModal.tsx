@@ -1,0 +1,395 @@
+import { useEffect, useRef, useCallback } from 'react';
+import { useGameStore } from '../../store/gameStore';
+import { useModalParams } from '../../hooks/useModalParams';
+import { refreshPlayerValue } from '../../engine/transfers';
+import type { Player, PlayerStats } from '../../types/entities';
+
+const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
+
+const STAT_COLORS: Record<string, string> = {
+  ATK: 'plm-bg-red-500',
+  DEF: 'plm-bg-blue-500',
+  MOV: 'plm-bg-green-500',
+  PWR: 'plm-bg-amber-500',
+  MEN: 'plm-bg-purple-500',
+  SKL: 'plm-bg-teal-500',
+};
+
+function getFormColor(form: number): string {
+  if (form >= 3) return 'plm-bg-emerald-100 plm-text-emerald-700';
+  if (form >= 1) return 'plm-bg-emerald-50 plm-text-emerald-600';
+  if (form <= -3) return 'plm-bg-red-100 plm-text-red-700';
+  if (form <= -1) return 'plm-bg-red-50 plm-text-red-600';
+  return 'plm-bg-warm-100 plm-text-warm-600';
+}
+
+function formatFormValue(form: number): string {
+  if (form > 0) return `+${form}`;
+  return `${form}`;
+}
+
+export function PlayerDetailModal() {
+  const { playerId, clubId, closeModal, isOpen } = useModalParams();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  const clubs = useGameStore((s) => s.clubs);
+  const manager = useGameStore((s) => s.manager);
+  const currentPhase = useGameStore((s) => s.currentPhase);
+  const shortlist = useGameStore((s) => s.shortlist);
+  const toggleShortlist = useGameStore((s) => s.toggleShortlist);
+  const addMarketListing = useGameStore((s) => s.addMarketListing);
+  const marketListings = useGameStore((s) => s.marketListings);
+
+  const playerClubId = manager?.clubId || '';
+  const isTransferWindow = currentPhase === 'summer_window' || currentPhase === 'january_window';
+
+  // Find the player across all clubs
+  const targetClub = clubs.find((c) => c.id === clubId);
+  const player = targetClub?.roster.find((p) => p.id === playerId) || null;
+  const isOwnClub = clubId === playerClubId;
+  const isOnShortlist = playerId ? shortlist.includes(playerId) : false;
+  const isListed = playerId ? marketListings.some((l) => l.playerId === playerId) : false;
+
+  // Focus trap + Esc handler
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+        return;
+      }
+
+      // Focus trap
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Focus the dialog
+    requestAnimationFrame(() => {
+      const firstButton = dialogRef.current?.querySelector<HTMLElement>('button');
+      firstButton?.focus();
+    });
+
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+      previousFocusRef.current?.focus();
+    };
+  }, [isOpen, closeModal]);
+
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) {
+        closeModal();
+      }
+    },
+    [closeModal],
+  );
+
+  const handleListForSale = useCallback(() => {
+    if (!player || !clubId) return;
+    if (isListed) return;
+    const value = refreshPlayerValue(player);
+    addMarketListing({
+      playerId: player.id,
+      clubId,
+      askingPrice: Math.round(value * 1.1 * 10) / 10,
+      listedByPlayer: false,
+    });
+  }, [player, clubId, isListed, addMarketListing]);
+
+  if (!isOpen || !player || !targetClub) return null;
+
+  const marketValue = refreshPlayerValue(player);
+
+  return (
+    <div
+      className="plm-fixed plm-inset-0 plm-z-50 plm-flex plm-items-end md:plm-items-center plm-justify-center"
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Player details for ${player.name}`}
+    >
+      {/* Backdrop */}
+      <div className="plm-absolute plm-inset-0 plm-bg-black/50 plm-transition-opacity" />
+
+      {/* Modal body */}
+      <div
+        ref={dialogRef}
+        className={[
+          'plm-relative plm-bg-white plm-w-full plm-max-h-[85vh] plm-overflow-y-auto plm-overscroll-contain',
+          // Mobile: bottom sheet
+          'plm-rounded-t-2xl plm-pb-6',
+          // Desktop: centered modal
+          'md:plm-rounded-xl md:plm-max-w-lg md:plm-mx-auto md:plm-pb-6',
+        ].join(' ')}
+      >
+        {/* Drag handle (mobile) */}
+        <div className="md:plm-hidden plm-flex plm-justify-center plm-pt-3 plm-pb-1">
+          <div className="plm-w-10 plm-h-1 plm-rounded-full plm-bg-warm-300" />
+        </div>
+
+        {/* Close button */}
+        <div className="plm-sticky plm-top-0 plm-bg-white/95 plm-backdrop-blur-sm plm-z-10 plm-px-5 plm-pt-3 md:plm-pt-5 plm-pb-3 plm-border-b plm-border-warm-100">
+          <div className="plm-flex plm-items-start plm-justify-between">
+            <div className="plm-flex-1 plm-min-w-0">
+              {/* Name + Position */}
+              <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-truncate">
+                {player.name}
+              </h2>
+              <div className="plm-flex plm-items-center plm-gap-2 plm-mt-1 plm-flex-wrap">
+                <span className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-500">
+                  {player.position}
+                </span>
+                <span className="plm-text-xs plm-text-warm-400">&middot;</span>
+                <span className="plm-text-xs plm-text-warm-600">Age {player.age}</span>
+                <span className="plm-text-xs plm-text-warm-400">&middot;</span>
+                <span className="plm-text-sm plm-font-bold plm-text-charcoal">{player.overall} OVR</span>
+              </div>
+              <div className="plm-flex plm-items-center plm-gap-1.5 plm-mt-1.5">
+                {/* Trait chip */}
+                <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wide plm-bg-warm-100 plm-text-warm-600 plm-px-2 plm-py-0.5 plm-rounded-full">
+                  {player.trait}
+                </span>
+                {/* Injury badge */}
+                {player.injured && (
+                  <span className="plm-text-[10px] plm-font-bold plm-bg-red-100 plm-text-red-600 plm-px-2 plm-py-0.5 plm-rounded-full">
+                    🏥 INJ ({player.injuryWeeks}w)
+                  </span>
+                )}
+                {/* Temp fill-in badge */}
+                {player.isTemporary && (
+                  <span className="plm-text-[10px] plm-font-medium plm-bg-warm-200 plm-text-warm-500 plm-px-2 plm-py-0.5 plm-rounded-full plm-uppercase">
+                    Fill-in
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={closeModal}
+              aria-label="Close player details"
+              className="plm-ml-3 plm-flex-shrink-0 plm-w-9 plm-h-9 plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-warm-400 hover:plm-bg-warm-100 hover:plm-text-warm-700 plm-transition-colors plm-min-h-[44px] plm-min-w-[44px]"
+            >
+              <svg className="plm-w-5 plm-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="plm-px-5 plm-pt-4 plm-space-y-5">
+          {/* Stats bars */}
+          <div>
+            <h3 className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400 plm-mb-2">
+              Attributes
+            </h3>
+            <div className="plm-space-y-2">
+              {STAT_KEYS.map((stat) => {
+                const value = player.stats[stat];
+                const pct = Math.round((value / 99) * 100);
+                return (
+                  <div key={stat} className="plm-flex plm-items-center plm-gap-2">
+                    <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-500 plm-w-8 plm-text-right">
+                      {stat}
+                    </span>
+                    <div className="plm-flex-1 plm-h-2.5 plm-bg-warm-100 plm-rounded-full plm-overflow-hidden">
+                      <div
+                        className={`plm-h-full plm-rounded-full plm-transition-all ${STAT_COLORS[stat]}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="plm-text-xs plm-font-bold plm-tabular-nums plm-text-charcoal plm-w-7 plm-text-right">
+                      {value}
+                    </span>
+                    {/* TODO: Wire positional diffs after Task 7.3 (Starting XI) */}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Form indicator */}
+          <div className="plm-flex plm-items-center plm-gap-3">
+            <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400">
+              Form
+            </span>
+            <span
+              className={`plm-text-sm plm-font-bold plm-px-3 plm-py-1 plm-rounded-full ${getFormColor(player.form)}`}
+            >
+              {formatFormValue(player.form)}
+            </span>
+          </div>
+
+          {/* Season stats */}
+          {!player.isTemporary && (
+            <div>
+              <h3 className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400 plm-mb-2">
+                Season Stats
+              </h3>
+              <div className="plm-grid plm-grid-cols-3 plm-gap-2">
+                <StatBox label="Goals" value={player.goals} />
+                <StatBox label="Assists" value={player.assists} />
+                <StatBox label="Clean Sheets" value={player.cleanSheets} />
+              </div>
+            </div>
+          )}
+
+          {/* Market value */}
+          <div className="plm-flex plm-items-center plm-justify-between plm-bg-warm-50 plm-rounded-lg plm-px-4 plm-py-3">
+            <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400">
+              Market Value
+            </span>
+            <span className="plm-text-lg plm-font-bold plm-text-charcoal">
+              &pound;{marketValue.toFixed(1)}M
+            </span>
+          </div>
+
+          {/* Club info */}
+          <div className="plm-flex plm-items-center plm-gap-2 plm-text-xs plm-text-warm-500">
+            <div
+              className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
+              style={{ backgroundColor: targetClub.colors.primary }}
+            />
+            <span>{targetClub.name}</span>
+          </div>
+
+          {/* Action buttons */}
+          {!player.isTemporary && (
+            <div className="plm-space-y-2 plm-pt-1">
+              {isOwnClub ? (
+                <OwnClubActions
+                  player={player}
+                  clubId={clubId!}
+                  isListed={isListed}
+                  isTransferWindow={isTransferWindow}
+                  onListForSale={handleListForSale}
+                />
+              ) : (
+                <OtherClubActions
+                  playerId={player.id}
+                  isOnShortlist={isOnShortlist}
+                  isTransferWindow={isTransferWindow}
+                  onToggleShortlist={() => toggleShortlist(player.id)}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatBox({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="plm-text-center plm-bg-warm-50 plm-rounded-lg plm-py-2.5 plm-px-2">
+      <div className="plm-text-[10px] plm-text-warm-400 plm-uppercase plm-tracking-wide">{label}</div>
+      <div className="plm-text-lg plm-font-bold plm-text-charcoal plm-tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function OwnClubActions({
+  player,
+  clubId: _clubId,
+  isListed,
+  isTransferWindow,
+  onListForSale,
+}: {
+  player: Player;
+  clubId: string;
+  isListed: boolean;
+  isTransferWindow: boolean;
+  onListForSale: () => void;
+}) {
+  const canSellAbroad = !player.acquiredThisWindow;
+
+  return (
+    <>
+      {isTransferWindow && (
+        <>
+          <button
+            onClick={onListForSale}
+            disabled={isListed}
+            className="plm-w-full plm-py-3 plm-px-4 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-bg-charcoal plm-text-white hover:plm-bg-charcoal-light disabled:plm-opacity-40 disabled:plm-cursor-not-allowed"
+          >
+            {isListed ? 'Already Listed' : 'List for Sale'}
+          </button>
+          <div className="plm-relative plm-group">
+            <button
+              disabled={!canSellAbroad}
+              className="plm-w-full plm-py-3 plm-px-4 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-border plm-border-warm-300 plm-text-warm-700 hover:plm-bg-warm-50 disabled:plm-opacity-40 disabled:plm-cursor-not-allowed"
+            >
+              Sell to Continent
+            </button>
+            {!canSellAbroad && (
+              <div className="plm-absolute plm-bottom-full plm-left-1/2 plm-transform plm--translate-x-1/2 plm-mb-2 plm-px-3 plm-py-2 plm-bg-charcoal plm-text-white plm-text-xs plm-rounded-lg plm-whitespace-nowrap plm-opacity-0 group-hover:plm-opacity-100 plm-transition-opacity plm-pointer-events-none plm-z-20">
+                Recently signed — cannot sell abroad this window.
+                <div className="plm-absolute plm-top-full plm-left-1/2 plm-transform plm--translate-x-1/2 plm-border-4 plm-border-transparent plm-border-t-charcoal" />
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function OtherClubActions({
+  playerId: _playerId,
+  isOnShortlist,
+  isTransferWindow,
+  onToggleShortlist,
+}: {
+  playerId: string;
+  isOnShortlist: boolean;
+  isTransferWindow: boolean;
+  onToggleShortlist: () => void;
+}) {
+  return (
+    <>
+      {isTransferWindow && (
+        <button
+          className="plm-w-full plm-py-3 plm-px-4 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-bg-charcoal plm-text-white hover:plm-bg-charcoal-light"
+        >
+          Make Offer
+        </button>
+      )}
+      <button
+        onClick={onToggleShortlist}
+        aria-pressed={isOnShortlist}
+        className={`plm-w-full plm-py-3 plm-px-4 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-border ${
+          isOnShortlist
+            ? 'plm-border-amber-400 plm-bg-amber-50 plm-text-amber-700 hover:plm-bg-amber-100'
+            : 'plm-border-warm-300 plm-text-warm-700 hover:plm-bg-warm-50'
+        }`}
+      >
+        {isOnShortlist ? '★ Remove from Shortlist' : '☆ Add to Shortlist'}
+      </button>
+    </>
+  );
+}
