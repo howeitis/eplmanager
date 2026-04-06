@@ -126,7 +126,7 @@ function App() {
           transferOffers: [],
           marketListings: [],
           tickerMessages: [],
-          shortlist: (data as Record<string, unknown>).shortlist as string[] || [],
+          shortlist: (data as unknown as Record<string, unknown>).shortlist as string[] || [],
           shortlistNotifications: [],
         });
         setScreen('game');
