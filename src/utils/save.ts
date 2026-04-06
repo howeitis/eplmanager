@@ -25,6 +25,7 @@ export interface SaveData {
   saveMetadata: SaveMetadata;
   startingXI: Record<string, string>;
   startingXIHistory: unknown[];
+  shortlist: string[];
 }
 
 function getSaveKey(slot: number): string {
@@ -51,6 +52,7 @@ export function extractSaveData(state: SaveableState): SaveData {
     saveMetadata: state.saveMetadata as SaveMetadata,
     startingXI: (state.startingXI || {}) as Record<string, string>,
     startingXIHistory: (state.startingXIHistory || []) as unknown[],
+    shortlist: (state.shortlist || []) as string[],
   };
 }
 

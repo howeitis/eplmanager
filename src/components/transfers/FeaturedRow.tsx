@@ -3,6 +3,7 @@ import type { Player, Club, MarketListing } from '../../types/entities';
 import { refreshPlayerValue } from '../../engine/transfers';
 import { useGameStore } from '../../store/gameStore';
 import { useModalParams } from '../../hooks/useModalParams';
+import { ShortlistStar } from '../shared/ShortlistStar';
 
 const ARCHETYPE_STYLES: Record<string, { label: string; bg: string; text: string }> = {
   star: { label: 'Star', bg: 'plm-bg-amber-100', text: 'plm-text-amber-700' },
@@ -126,7 +127,10 @@ function FeaturedCard({
         </span>
         <span className="plm-text-sm plm-font-bold plm-text-gray-900">{player.overall}</span>
       </div>
-      <div className="plm-text-sm plm-font-semibold plm-text-gray-900 plm-truncate">{player.name}</div>
+      <div className="plm-flex plm-items-center plm-gap-1">
+        <ShortlistStar playerId={player.id} />
+        <span className="plm-text-sm plm-font-semibold plm-text-gray-900 plm-truncate">{player.name}</span>
+      </div>
       <div className="plm-text-xs plm-text-gray-500 plm-truncate">
         {club.shortName} &middot; {player.position} &middot; Age {player.age}
       </div>

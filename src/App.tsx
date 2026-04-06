@@ -126,6 +126,8 @@ function App() {
           transferOffers: [],
           marketListings: [],
           tickerMessages: [],
+          shortlist: (data as Record<string, unknown>).shortlist as string[] || [],
+          shortlistNotifications: [],
         });
         setScreen('game');
         setGameView('hub');
@@ -515,6 +517,19 @@ function App() {
           new Map(clubs.map((c) => [c.id, c.roster])),
         );
         break; // initializeClubs updates all at once
+      }
+    }
+
+    // Remove retired players from shortlist
+    const retiredIds = new Set(
+      agingResults.flatMap((r) => r.retired.map((ret) => ret.player.id)),
+    );
+    const currentShortlist = state.shortlist;
+    if (currentShortlist.some((id) => retiredIds.has(id))) {
+      for (const id of currentShortlist) {
+        if (retiredIds.has(id)) {
+          state.removeFromShortlist(id);
+        }
       }
     }
 

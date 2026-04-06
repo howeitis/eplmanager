@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Player, Club } from '../../types/entities';
 import { getContinentSalePrice, canSellToContinent } from '../../engine/transfers';
 import { useModalParams } from '../../hooks/useModalParams';
+import { ShortlistStar } from '../shared/ShortlistStar';
 
 interface SquadPanelProps {
   club: Club;
@@ -49,6 +50,7 @@ export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
                 aria-label={`View details for ${player.name}`}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(player.id, club.id); } }}
               >
+                <ShortlistStar playerId={player.id} />
                 <div className="plm-flex-1 plm-min-w-0">
                   <div className="plm-text-sm plm-font-semibold plm-text-gray-900 plm-truncate">
                     {player.name}

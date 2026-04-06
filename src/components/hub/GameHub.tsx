@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import { PhaseIndicator } from './PhaseIndicator';
@@ -19,6 +20,17 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel }: GameHubProps) {
   const clubs = useGameStore((s) => s.clubs);
   const budgets = useGameStore((s) => s.budgets);
   const leagueTable = useGameStore((s) => s.leagueTable);
+  const shortlistNotifications = useGameStore((s) => s.shortlistNotifications);
+  const clearShortlistNotifications = useGameStore((s) => s.clearShortlistNotifications);
+
+  const [dismissedNotifications, setDismissedNotifications] = useState(false);
+
+  // Reset dismissed state when new notifications arrive
+  useEffect(() => {
+    if (shortlistNotifications.length > 0) {
+      setDismissedNotifications(false);
+    }
+  }, [shortlistNotifications.length]);
 
   const playerClub = clubs.find((c) => c.id === manager?.clubId);
   const clubData = CLUBS.find((c) => c.id === manager?.clubId);
@@ -55,6 +67,36 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel }: GameHubProps) {
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
           <PhaseIndicator phase={currentPhase} seasonNumber={seasonNumber} />
         </div>
+
+        {/* Shortlist transfer notifications */}
+        {shortlistNotifications.length > 0 && !dismissedNotifications && (
+          <div className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded-lg plm-p-4">
+            <div className="plm-flex plm-items-start plm-justify-between plm-gap-2">
+              <div className="plm-flex-1 plm-min-w-0">
+                <h3 className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-amber-700 plm-mb-1.5">
+                  Shortlist Alert
+                </h3>
+                <div className="plm-space-y-1">
+                  {shortlistNotifications.map((msg, i) => (
+                    <p key={i} className="plm-text-sm plm-text-amber-800">{msg}</p>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setDismissedNotifications(true);
+                  clearShortlistNotifications();
+                }}
+                aria-label="Dismiss shortlist notifications"
+                className="plm-flex-shrink-0 plm-w-8 plm-h-8 plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-amber-500 hover:plm-bg-amber-100 plm-transition-colors plm-min-h-[44px] plm-min-w-[44px]"
+              >
+                <svg className="plm-w-4 plm-h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Club stats row */}
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">

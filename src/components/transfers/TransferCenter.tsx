@@ -26,8 +26,9 @@ import { IncomingOffers } from './IncomingOffers';
 import { OutgoingOffers } from './OutgoingOffers';
 import { TransferTicker } from './TransferTicker';
 import { TransferLedger } from './TransferLedger';
+import { ShortlistPanel } from './ShortlistPanel';
 
-type TransferTab = 'market' | 'squad' | 'incoming' | 'outgoing' | 'ticker' | 'ledger';
+type TransferTab = 'market' | 'squad' | 'incoming' | 'outgoing' | 'ticker' | 'ledger' | 'shortlist';
 
 interface TransferCenterProps {
   onClose: () => void;
@@ -49,6 +50,9 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
   const marketFilters = useGameStore((s) => s.marketFilters);
   const featuredSlots = useGameStore((s) => s.featuredSlots);
   const featuredRefillIndex = useGameStore((s) => s.featuredRefillIndex);
+
+  const shortlist = useGameStore((s) => s.shortlist);
+  const addShortlistNotification = useGameStore((s) => s.addShortlistNotification);
 
   const addTransferOffer = useGameStore((s) => s.addTransferOffer);
   const updateTransferOffer = useGameStore((s) => s.updateTransferOffer);
@@ -102,6 +106,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
     );
 
     // Apply AI-to-AI transfers to the store
+    const currentShortlist = useGameStore.getState().shortlist;
     for (const transfer of aiResult.completedTransfers) {
       if (transfer.toClubId === 'continent') {
         removePlayerFromClub(transfer.fromClubId, transfer.playerId);
@@ -117,6 +122,15 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         }
       }
       recordTransfer(transfer);
+
+      // Queue notification for shortlisted players transferred by AI
+      if (currentShortlist.includes(transfer.playerId)) {
+        const buyerClub = clubs.find((c) => c.id === transfer.toClubId);
+        const destName = transfer.toClubId === 'continent' ? 'abroad' : (buyerClub?.name || transfer.toClubId);
+        addShortlistNotification(
+          `Shortlisted: ${transfer.playerName} → ${destName} (£${transfer.fee}M).`,
+        );
+      }
     }
 
     // Add AI incoming offers for the player
@@ -142,7 +156,8 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
     setInitialized(true);
   }, [initialized, gameSeed, seasonNumber, windowType, monthNumber, clubs, budgets, playerClubId,
     setMarketListings, removePlayerFromClub, addPlayerToClub, adjustBudget,
-    recordTransfer, addTransferOffer, setTickerMessages, setFeaturedSlots, setFeaturedRefillIndex]);
+    recordTransfer, addTransferOffer, setTickerMessages, setFeaturedSlots, setFeaturedRefillIndex,
+    addShortlistNotification]);
 
   // Initialize on mount
   useEffect(() => {
@@ -473,6 +488,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
     { key: 'squad', label: 'Squad' },
     { key: 'incoming', label: 'Incoming', badge: incomingOffers.length || undefined },
     { key: 'outgoing', label: 'Outgoing', badge: outgoingOffers.length || undefined },
+    { key: 'shortlist', label: 'Shortlist', badge: shortlist.length || undefined },
     { key: 'ledger', label: 'Ledger' },
     { key: 'ticker', label: 'Ticker' },
   ];
@@ -573,6 +589,13 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
                 onAcceptCounter={handleAcceptCounter}
               />
             )}
+            <ShortlistPanel
+              clubs={clubs}
+              playerClubId={playerClubId}
+              isTransferWindow
+              onMakeOffer={handleMakeOffer}
+              budget={playerBudget}
+            />
             <TransferLedger clubs={clubs} />
             <TransferTicker messages={tickerMessages} />
           </div>
@@ -608,6 +631,15 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
               clubs={clubs}
               budget={playerBudget}
               onAcceptCounter={handleAcceptCounter}
+            />
+          )}
+          {activeTab === 'shortlist' && (
+            <ShortlistPanel
+              clubs={clubs}
+              playerClubId={playerClubId}
+              isTransferWindow
+              onMakeOffer={handleMakeOffer}
+              budget={playerBudget}
             />
           )}
           {activeTab === 'ledger' && (

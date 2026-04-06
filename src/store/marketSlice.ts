@@ -36,6 +36,7 @@ export interface MarketSlice {
   marketListings: MarketListing[];
   tickerMessages: string[];
   shortlist: string[];
+  shortlistNotifications: string[];
   marketFilters: MarketFilters;
   featuredSlots: FeaturedSlot[];
   featuredRefillIndex: number;
@@ -58,6 +59,9 @@ export interface MarketSlice {
   addToShortlist: (playerId: string) => void;
   removeFromShortlist: (playerId: string) => void;
   toggleShortlist: (playerId: string) => void;
+  clearShortlist: () => void;
+  addShortlistNotification: (message: string) => void;
+  clearShortlistNotifications: () => void;
   setMarketFilters: (filters: Partial<MarketFilters>) => void;
   resetMarketFilters: () => void;
   setFeaturedSlots: (slots: FeaturedSlot[]) => void;
@@ -71,6 +75,7 @@ export const createMarketSlice: StateCreator<GameState, [], [], MarketSlice> = (
   marketListings: [],
   tickerMessages: [],
   shortlist: [],
+  shortlistNotifications: [],
   marketFilters: { ...DEFAULT_MARKET_FILTERS },
   featuredSlots: [],
   featuredRefillIndex: 0,
@@ -178,6 +183,20 @@ export const createMarketSlice: StateCreator<GameState, [], [], MarketSlice> = (
         ? state.shortlist.filter((id) => id !== playerId)
         : [...state.shortlist, playerId],
     }));
+  },
+
+  clearShortlist: () => {
+    set({ shortlist: [] });
+  },
+
+  addShortlistNotification: (message) => {
+    set((state) => ({
+      shortlistNotifications: [...state.shortlistNotifications, message],
+    }));
+  },
+
+  clearShortlistNotifications: () => {
+    set({ shortlistNotifications: [] });
   },
 
   setMarketFilters: (filters) => {

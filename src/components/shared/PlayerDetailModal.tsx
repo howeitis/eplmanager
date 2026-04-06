@@ -158,7 +158,8 @@ export function PlayerDetailModal() {
           <div className="plm-flex plm-items-start plm-justify-between">
             <div className="plm-flex-1 plm-min-w-0">
               {/* Name + Position */}
-              <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-truncate">
+              <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-truncate plm-flex plm-items-center plm-gap-1.5">
+                {isOnShortlist && <span className="plm-text-amber-500 plm-flex-shrink-0" aria-label="Shortlisted">★</span>}
                 {player.name}
               </h2>
               <div className="plm-flex plm-items-center plm-gap-2 plm-mt-1 plm-flex-wrap">

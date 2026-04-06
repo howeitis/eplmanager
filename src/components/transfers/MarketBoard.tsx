@@ -6,6 +6,7 @@ import { useGameStore } from '../../store/gameStore';
 import { type MarketFilters } from '../../store/marketSlice';
 import { MarketFilterPanel } from './MarketFilterPanel';
 import { FeaturedRow } from './FeaturedRow';
+import { ShortlistStar } from '../shared/ShortlistStar';
 
 interface MarketBoardProps {
   listings: { player: Player; club: Club; listing: MarketListing }[];
@@ -218,6 +219,7 @@ export function MarketBoard({ listings, budget, onMakeOffer, playerClubId, clubs
                       className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
                       style={{ backgroundColor: club.colors.primary }}
                     />
+                    <ShortlistStar playerId={player.id} />
                     <div className="plm-flex-1 plm-min-w-0">
                       <div className="plm-text-sm plm-font-semibold plm-text-gray-900 plm-truncate">
                         {player.name}

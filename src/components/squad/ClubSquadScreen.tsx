@@ -4,6 +4,7 @@ import { useNavigation } from '../../hooks/useNavigation';
 import { useModalParams } from '../../hooks/useModalParams';
 import { CLUBS } from '../../data/clubs';
 import type { Player, Position } from '../../types/entities';
+import { ShortlistStar } from '../shared/ShortlistStar';
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 type SortKey = 'position' | 'overall' | 'age' | 'form';
@@ -190,6 +191,7 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
                   <td className="plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase">{player.position}</td>
                   <td className="plm-py-2">
                     <div className="plm-flex plm-items-center plm-gap-1.5">
+                      <ShortlistStar playerId={player.id} />
                       <span className="plm-text-sm plm-font-medium plm-text-charcoal">{player.name}</span>
                       {player.injured && (
                         <span className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-rounded plm-font-semibold">
@@ -249,6 +251,7 @@ function MobilePlayerCard({
       <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-text-warm-400 plm-w-5 plm-tracking-wider">
         {player.position}
       </span>
+      <ShortlistStar playerId={player.id} />
       <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
         {player.name}
       </span>
