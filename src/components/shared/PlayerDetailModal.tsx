@@ -1,8 +1,13 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useModalParams } from '../../hooks/useModalParams';
-import { refreshPlayerValue } from '../../engine/transfers';
-import type { Player, PlayerStats } from '../../types/entities';
+import {
+  refreshPlayerValue,
+  evaluateOffer,
+  checkPlayerRefusal,
+} from '../../engine/transfers';
+import { SeededRNG } from '../../utils/rng';
+import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
 
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
 
@@ -291,7 +296,8 @@ export function PlayerDetailModal() {
                 />
               ) : (
                 <OtherClubActions
-                  playerId={player.id}
+                  player={player}
+                  clubId={clubId!}
                   isOnShortlist={isOnShortlist}
                   isTransferWindow={isTransferWindow}
                   onToggleShortlist={() => toggleShortlist(player.id)}
@@ -360,25 +366,375 @@ function OwnClubActions({
   );
 }
 
+type OfferResult = {
+  type: 'accepted' | 'rejected' | 'countered' | 'player_refused';
+  counterFee?: number;
+  message: string;
+};
+
 function OtherClubActions({
-  playerId: _playerId,
+  player,
+  clubId,
   isOnShortlist,
   isTransferWindow,
   onToggleShortlist,
 }: {
-  playerId: string;
+  player: Player;
+  clubId: string;
   isOnShortlist: boolean;
   isTransferWindow: boolean;
   onToggleShortlist: () => void;
 }) {
+  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [offerFee, setOfferFee] = useState('');
+  const [offerResult, setOfferResult] = useState<OfferResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Store actions
+  const clubs = useGameStore((s) => s.clubs);
+  const manager = useGameStore((s) => s.manager);
+  const budgets = useGameStore((s) => s.budgets);
+  const seasonNumber = useGameStore((s) => s.seasonNumber);
+  const currentPhase = useGameStore((s) => s.currentPhase);
+  const addTransferOffer = useGameStore((s) => s.addTransferOffer);
+  const removePlayerFromClub = useGameStore((s) => s.removePlayerFromClub);
+  const addPlayerToClub = useGameStore((s) => s.addPlayerToClub);
+  const adjustBudget = useGameStore((s) => s.adjustBudget);
+  const recordTransfer = useGameStore((s) => s.recordTransfer);
+  const removeMarketListing = useGameStore((s) => s.removeMarketListing);
+  const addTickerMessage = useGameStore((s) => s.addTickerMessage);
+
+  const playerClubId = manager?.clubId || '';
+  const playerClub = clubs.find((c) => c.id === playerClubId);
+  const playerBudget = budgets[playerClubId] || 0;
+  const sellerClub = clubs.find((c) => c.id === clubId);
+  const windowType: 'summer' | 'january' = currentPhase === 'january_window' ? 'january' : 'summer';
+
+  const marketValue = refreshPlayerValue(player);
+
+  // Check if player already has a pending/countered outgoing offer
+  const transferOffers = useGameStore((s) => s.transferOffers);
+  const existingOffer = transferOffers.find(
+    (o) => o.playerId === player.id && o.direction === 'outgoing' && (o.status === 'pending' || o.status === 'countered'),
+  );
+
+  const handleShowOfferForm = () => {
+    // Pre-fill with asking price from market listing, or market value
+    const listing = useGameStore.getState().marketListings.find((l) => l.playerId === player.id);
+    const suggestedFee = listing ? listing.askingPrice : marketValue;
+    setOfferFee(suggestedFee.toFixed(1));
+    setOfferResult(null);
+    setShowOfferForm(true);
+  };
+
+  const handleSubmitOffer = () => {
+    const fee = parseFloat(offerFee);
+    if (isNaN(fee) || fee <= 0 || fee > playerBudget || !sellerClub) return;
+
+    setIsSubmitting(true);
+    const roundedFee = Math.round(fee * 10) / 10;
+
+    const rng = new SeededRNG(`offer-${player.id}-${Date.now()}`);
+    const evaluation = evaluateOffer(
+      rng,
+      roundedFee,
+      player,
+      sellerClub,
+      playerClubId,
+      playerClub?.tier || 3,
+      clubs,
+    );
+
+    const offerId = `offer-${rng.randomInt(10000, 99999)}`;
+
+    if (evaluation.accepted) {
+      const refused = checkPlayerRefusal(rng, player, playerClub?.tier || 3, sellerClub.tier);
+      if (refused) {
+        addTransferOffer({
+          id: offerId,
+          playerId: player.id,
+          playerName: player.name,
+          playerPosition: player.position,
+          playerOverall: player.overall,
+          playerAge: player.age,
+          fromClubId: clubId,
+          toClubId: playerClubId,
+          fee: roundedFee,
+          status: 'player_refused',
+          direction: 'outgoing',
+        });
+        addTickerMessage(`${player.name} refused to join ${playerClub?.name}.`);
+        setOfferResult({
+          type: 'player_refused',
+          message: `${player.name} has refused to join your club.`,
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Transfer accepted!
+      removePlayerFromClub(clubId, player.id);
+      addPlayerToClub(playerClubId, { ...player, acquiredThisWindow: true });
+      adjustBudget(playerClubId, -roundedFee);
+      adjustBudget(clubId, roundedFee);
+      removeMarketListing(player.id);
+
+      const record: TransferRecord = {
+        playerId: player.id,
+        playerName: player.name,
+        playerPosition: player.position,
+        playerOverall: player.overall,
+        playerAge: player.age,
+        fromClubId: clubId,
+        toClubId: playerClubId,
+        fee: roundedFee,
+        season: seasonNumber,
+        window: windowType,
+      };
+      recordTransfer(record);
+
+      addTransferOffer({
+        id: offerId,
+        playerId: player.id,
+        playerName: player.name,
+        playerPosition: player.position,
+        playerOverall: player.overall,
+        playerAge: player.age,
+        fromClubId: clubId,
+        toClubId: playerClubId,
+        fee: roundedFee,
+        status: 'accepted',
+        direction: 'outgoing',
+      });
+      addTickerMessage(
+        `${playerClub?.name} signed ${player.name} (${player.position}, ${player.overall}) from ${sellerClub.name} for £${roundedFee}M.`,
+      );
+      setOfferResult({
+        type: 'accepted',
+        message: `${sellerClub.name} accepted! ${player.name} has joined your squad.`,
+      });
+    } else if (evaluation.counterFee !== null) {
+      addTransferOffer({
+        id: offerId,
+        playerId: player.id,
+        playerName: player.name,
+        playerPosition: player.position,
+        playerOverall: player.overall,
+        playerAge: player.age,
+        fromClubId: clubId,
+        toClubId: playerClubId,
+        fee: roundedFee,
+        status: 'countered',
+        counterFee: evaluation.counterFee,
+        direction: 'outgoing',
+      });
+      setOfferResult({
+        type: 'countered',
+        counterFee: evaluation.counterFee,
+        message: `${sellerClub.name} want £${evaluation.counterFee.toFixed(1)}M instead.`,
+      });
+    } else {
+      addTransferOffer({
+        id: offerId,
+        playerId: player.id,
+        playerName: player.name,
+        playerPosition: player.position,
+        playerOverall: player.overall,
+        playerAge: player.age,
+        fromClubId: clubId,
+        toClubId: playerClubId,
+        fee: roundedFee,
+        status: 'rejected',
+        direction: 'outgoing',
+      });
+      setOfferResult({
+        type: 'rejected',
+        message: `${sellerClub.name} rejected your offer outright.`,
+      });
+    }
+
+    setIsSubmitting(false);
+  };
+
+  const handleAcceptCounter = () => {
+    if (!offerResult?.counterFee || !sellerClub) return;
+    const counterFee = offerResult.counterFee;
+    if (counterFee > playerBudget) return;
+
+    // Find the countered offer in the store
+    const outgoing = useGameStore.getState().transferOffers.find(
+      (o) => o.playerId === player.id && o.direction === 'outgoing' && o.status === 'countered',
+    );
+
+    const rng = new SeededRNG(`accept-counter-${player.id}-${Date.now()}`);
+    const refused = checkPlayerRefusal(rng, player, playerClub?.tier || 3, sellerClub.tier);
+
+    if (refused) {
+      if (outgoing) {
+        useGameStore.getState().updateTransferOffer(outgoing.id, 'player_refused');
+      }
+      addTickerMessage(`${player.name} refused to join ${playerClub?.name}.`);
+      setOfferResult({
+        type: 'player_refused',
+        message: `${player.name} has refused to join your club.`,
+      });
+      return;
+    }
+
+    removePlayerFromClub(clubId, player.id);
+    addPlayerToClub(playerClubId, { ...player, acquiredThisWindow: true });
+    adjustBudget(playerClubId, -counterFee);
+    adjustBudget(clubId, counterFee);
+    removeMarketListing(player.id);
+
+    if (outgoing) {
+      useGameStore.getState().updateTransferOffer(outgoing.id, 'accepted');
+    }
+
+    const record: TransferRecord = {
+      playerId: player.id,
+      playerName: player.name,
+      playerPosition: player.position,
+      playerOverall: player.overall,
+      playerAge: player.age,
+      fromClubId: clubId,
+      toClubId: playerClubId,
+      fee: counterFee,
+      season: seasonNumber,
+      window: windowType,
+    };
+    recordTransfer(record);
+    addTickerMessage(
+      `${playerClub?.name} signed ${player.name} (${player.position}, ${player.overall}) from ${sellerClub.name} for £${counterFee}M.`,
+    );
+    setOfferResult({
+      type: 'accepted',
+      message: `Deal done! ${player.name} has joined your squad for £${counterFee}M.`,
+    });
+  };
+
+  // Result styling
+  const resultStyles: Record<string, string> = {
+    accepted: 'plm-bg-emerald-50 plm-border-emerald-200 plm-text-emerald-700',
+    rejected: 'plm-bg-red-50 plm-border-red-200 plm-text-red-700',
+    countered: 'plm-bg-blue-50 plm-border-blue-200 plm-text-blue-700',
+    player_refused: 'plm-bg-orange-50 plm-border-orange-200 plm-text-orange-700',
+  };
+
+  const resultIcons: Record<string, string> = {
+    accepted: '✅',
+    rejected: '❌',
+    countered: '💬',
+    player_refused: '🚫',
+  };
+
   return (
     <>
       {isTransferWindow && (
-        <button
-          className="plm-w-full plm-py-3 plm-px-4 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-bg-charcoal plm-text-white hover:plm-bg-charcoal-light"
-        >
-          Make Offer
-        </button>
+        <>
+          {/* Offer result feedback */}
+          {offerResult && (
+            <div className={`plm-rounded-lg plm-border plm-p-3 ${resultStyles[offerResult.type]}`}>
+              <div className="plm-flex plm-items-start plm-gap-2">
+                <span className="plm-text-base plm-flex-shrink-0">{resultIcons[offerResult.type]}</span>
+                <div className="plm-flex-1">
+                  <p className="plm-text-sm plm-font-medium">{offerResult.message}</p>
+                  {offerResult.type === 'countered' && offerResult.counterFee && (
+                    <div className="plm-mt-2 plm-flex plm-gap-2">
+                      <button
+                        onClick={handleAcceptCounter}
+                        disabled={offerResult.counterFee > playerBudget}
+                        className="plm-bg-blue-600 plm-text-white plm-text-sm plm-font-medium plm-px-4 plm-py-2.5 plm-rounded-lg hover:plm-bg-blue-700 disabled:plm-opacity-40 disabled:plm-cursor-not-allowed plm-transition-colors plm-min-h-[44px]"
+                      >
+                        Accept £{offerResult.counterFee.toFixed(1)}M
+                      </button>
+                      {offerResult.counterFee > playerBudget && (
+                        <span className="plm-text-xs plm-text-red-600 plm-self-center">
+                          Exceeds budget
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Make Offer button / form */}
+          {!showOfferForm && !offerResult && !existingOffer && (
+            <button
+              onClick={handleShowOfferForm}
+              className="plm-w-full plm-py-3 plm-px-4 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-bg-charcoal plm-text-white hover:plm-bg-charcoal-light"
+            >
+              Make Offer
+            </button>
+          )}
+
+          {/* Existing offer indicator */}
+          {existingOffer && !offerResult && (
+            <div className="plm-rounded-lg plm-border plm-border-yellow-200 plm-bg-yellow-50 plm-p-3">
+              <p className="plm-text-sm plm-font-medium plm-text-yellow-700">
+                You already have a {existingOffer.status} offer of £{existingOffer.fee.toFixed(1)}M for this player.
+              </p>
+            </div>
+          )}
+
+          {/* Offer form */}
+          {showOfferForm && !offerResult && (
+            <div className="plm-rounded-lg plm-border plm-border-warm-200 plm-bg-warm-50 plm-p-3 plm-space-y-3">
+              <div className="plm-flex plm-items-center plm-justify-between">
+                <span className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-500">
+                  Your Offer
+                </span>
+                <span className="plm-text-xs plm-text-warm-400">
+                  Budget: £{playerBudget.toFixed(1)}M
+                </span>
+              </div>
+              <div className="plm-flex plm-gap-2">
+                <div className="plm-relative plm-flex-1">
+                  <span className="plm-absolute plm-left-3 plm-top-1/2 plm--translate-y-1/2 plm-text-sm plm-text-warm-400">£</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.5"
+                    max={playerBudget}
+                    value={offerFee}
+                    onChange={(e) => setOfferFee(e.target.value)}
+                    className="plm-w-full plm-border plm-border-warm-300 plm-rounded-lg plm-pl-7 plm-pr-8 plm-py-2.5 plm-text-sm plm-min-h-[44px] plm-bg-white"
+                    placeholder="0.0"
+                    aria-label="Offer amount in millions"
+                  />
+                  <span className="plm-absolute plm-right-3 plm-top-1/2 plm--translate-y-1/2 plm-text-sm plm-text-warm-400">M</span>
+                </div>
+                <button
+                  onClick={handleSubmitOffer}
+                  disabled={
+                    isSubmitting ||
+                    !offerFee ||
+                    parseFloat(offerFee) <= 0 ||
+                    parseFloat(offerFee) > playerBudget ||
+                    isNaN(parseFloat(offerFee))
+                  }
+                  className="plm-bg-charcoal plm-text-white plm-text-sm plm-font-semibold plm-px-5 plm-py-2.5 plm-rounded-lg hover:plm-bg-charcoal-light disabled:plm-opacity-40 disabled:plm-cursor-not-allowed plm-transition-colors plm-whitespace-nowrap plm-min-h-[44px]"
+                >
+                  {isSubmitting ? 'Sending…' : 'Submit'}
+                </button>
+              </div>
+              {parseFloat(offerFee) > playerBudget && (
+                <p className="plm-text-xs plm-text-red-600">Exceeds your budget</p>
+              )}
+              <div className="plm-flex plm-gap-3 plm-text-xs plm-text-warm-500">
+                <span>Market value: £{marketValue.toFixed(1)}M</span>
+              </div>
+              <button
+                onClick={() => setShowOfferForm(false)}
+                className="plm-text-xs plm-text-warm-500 hover:plm-text-warm-700 plm-underline"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </>
       )}
       <button
         onClick={onToggleShortlist}
