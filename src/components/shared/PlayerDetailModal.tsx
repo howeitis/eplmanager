@@ -7,6 +7,8 @@ import {
   checkPlayerRefusal,
 } from '../../engine/transfers';
 import { SeededRNG } from '../../utils/rng';
+import { SigningCelebrationModal } from './SigningCelebrationModal';
+import type { SigningCelebrationData } from './SigningCelebrationModal';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
 
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
@@ -51,18 +53,43 @@ export function PlayerDetailModal() {
 
   // Find the player across all clubs
   const targetClub = clubs.find((c) => c.id === clubId);
-  const player = targetClub?.roster.find((p) => p.id === playerId) || null;
+  const livePlayer = targetClub?.roster.find((p) => p.id === playerId) || null;
+
+  // Keep a snapshot so the modal stays rendered after a transfer moves the player
+  const playerSnapshotRef = useRef<Player | null>(null);
+  const clubIdSnapshotRef = useRef<string | null>(null);
+  if (livePlayer) {
+    playerSnapshotRef.current = livePlayer;
+    clubIdSnapshotRef.current = clubId;
+  }
+  const player = livePlayer || playerSnapshotRef.current;
+  const playerTransferred = !livePlayer && !!playerSnapshotRef.current;
+
+  // Celebration modal state
+  const [celebrationData, setCelebrationData] = useState<SigningCelebrationData | null>(null);
+
   const isOwnClub = clubId === playerClubId;
   const isOnShortlist = playerId ? shortlist.includes(playerId) : false;
   const isListed = playerId ? marketListings.some((l) => l.playerId === playerId) : false;
 
+  // Clear snapshot when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      playerSnapshotRef.current = null;
+      clubIdSnapshotRef.current = null;
+      setCelebrationData(null);
+    }
+  }, [isOpen]);
+
   // Focus trap + Esc handler
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !player) return;
 
     previousFocusRef.current = document.activeElement as HTMLElement;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle Esc if celebration modal is showing (it handles its own)
+      if (celebrationData) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         closeModal();
@@ -104,16 +131,22 @@ export function PlayerDetailModal() {
       document.body.style.overflow = '';
       previousFocusRef.current?.focus();
     };
-  }, [isOpen, closeModal]);
+  }, [isOpen, closeModal, player, celebrationData]);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
+      if (celebrationData) return;
       if (e.target === e.currentTarget) {
         closeModal();
       }
     },
-    [closeModal],
+    [closeModal, celebrationData],
   );
+
+  const handleCelebrationDismiss = useCallback(() => {
+    setCelebrationData(null);
+    closeModal();
+  }, [closeModal]);
 
   const handleListForSale = useCallback(() => {
     if (!player || !clubId) return;
@@ -297,16 +330,23 @@ export function PlayerDetailModal() {
               ) : (
                 <OtherClubActions
                   player={player}
-                  clubId={clubId!}
+                  clubId={clubIdSnapshotRef.current || clubId!}
                   isOnShortlist={isOnShortlist}
                   isTransferWindow={isTransferWindow}
+                  playerTransferred={playerTransferred}
                   onToggleShortlist={() => toggleShortlist(player.id)}
+                  onCelebration={setCelebrationData}
                 />
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Signing Celebration overlay */}
+      {celebrationData && (
+        <SigningCelebrationModal data={celebrationData} onDismiss={handleCelebrationDismiss} />
+      )}
     </div>
   );
 }
@@ -377,13 +417,17 @@ function OtherClubActions({
   clubId,
   isOnShortlist,
   isTransferWindow,
+  playerTransferred,
   onToggleShortlist,
+  onCelebration,
 }: {
   player: Player;
   clubId: string;
   isOnShortlist: boolean;
   isTransferWindow: boolean;
+  playerTransferred: boolean;
   onToggleShortlist: () => void;
+  onCelebration: (data: SigningCelebrationData) => void;
 }) {
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [offerFee, setOfferFee] = useState('');
@@ -513,6 +557,13 @@ function OtherClubActions({
         type: 'accepted',
         message: `${sellerClub.name} accepted! ${player.name} has joined your squad.`,
       });
+      // Fire celebration modal
+      onCelebration({
+        player: { ...player },
+        fee: roundedFee,
+        fromClubId: clubId,
+        fromClubName: sellerClub.name,
+      });
     } else if (evaluation.counterFee !== null) {
       addTransferOffer({
         id: offerId,
@@ -610,6 +661,13 @@ function OtherClubActions({
     setOfferResult({
       type: 'accepted',
       message: `Deal done! ${player.name} has joined your squad for £${counterFee}M.`,
+    });
+    // Fire celebration modal
+    onCelebration({
+      player: { ...player },
+      fee: counterFee,
+      fromClubId: clubId,
+      fromClubName: sellerClub.name,
     });
   };
 
@@ -736,17 +794,19 @@ function OtherClubActions({
           )}
         </>
       )}
-      <button
-        onClick={onToggleShortlist}
-        aria-pressed={isOnShortlist}
-        className={`plm-w-full plm-py-3 plm-px-4 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-border ${
-          isOnShortlist
-            ? 'plm-border-amber-400 plm-bg-amber-50 plm-text-amber-700 hover:plm-bg-amber-100'
-            : 'plm-border-warm-300 plm-text-warm-700 hover:plm-bg-warm-50'
-        }`}
-      >
-        {isOnShortlist ? '★ Remove from Shortlist' : '☆ Add to Shortlist'}
-      </button>
+      {!playerTransferred && (
+        <button
+          onClick={onToggleShortlist}
+          aria-pressed={isOnShortlist}
+          className={`plm-w-full plm-py-3 plm-px-4 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-border ${
+            isOnShortlist
+              ? 'plm-border-amber-400 plm-bg-amber-50 plm-text-amber-700 hover:plm-bg-amber-100'
+              : 'plm-border-warm-300 plm-text-warm-700 hover:plm-bg-warm-50'
+          }`}
+        >
+          {isOnShortlist ? '★ Remove from Shortlist' : '☆ Add to Shortlist'}
+        </button>
+      )}
     </>
   );
 }
