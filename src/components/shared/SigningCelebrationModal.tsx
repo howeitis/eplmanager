@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { isRival } from '../../engine/transfers';
-import { SeededRNG } from '../../utils/rng';
 import type { Player, Club } from '../../types/entities';
 
 export interface SigningCelebrationData {
@@ -23,7 +22,6 @@ function getFlavorLine(
   buyerClub: Club,
   fromClubId: string,
   clubs: Club[],
-  rng: SeededRNG,
 ): string {
   // Priority order: Derby raid > Star > Flop-risk > Young prospect > Bargain > Veteran > Default
   const lines: { condition: boolean; line: string }[] = [
@@ -66,18 +64,12 @@ export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationM
 
   const clubs = useGameStore((s) => s.clubs);
   const manager = useGameStore((s) => s.manager);
-  const seasonNumber = useGameStore((s) => s.seasonNumber);
-  const gameSeed = useGameStore((s) => s.gameSeed);
-
   const playerClubId = manager?.clubId || '';
   const buyerClub = clubs.find((c) => c.id === playerClubId);
 
-  // Seeded RNG for deterministic flavor line
-  const rng = new SeededRNG(`celebration-${gameSeed}-${seasonNumber}-${data.player.id}`);
-
   const marketValue = data.player.value;
   const flavorLine = buyerClub
-    ? getFlavorLine(data.player, data.fee, marketValue, buyerClub, data.fromClubId, clubs, rng)
+    ? getFlavorLine(data.player, data.fee, marketValue, buyerClub, data.fromClubId, clubs)
     : `${data.player.name} has signed. The squad grows stronger.`;
 
   // Focus trap + Esc handler — Esc does NOT dismiss (must click Continue)
