@@ -11,6 +11,8 @@ interface UseModalParamsReturn extends ModalParams {
   isOpen: boolean;
 }
 
+const MODAL_CHANGE_EVENT = 'modalparamschange';
+
 function getParamsFromURL(): ModalParams {
   const params = new URLSearchParams(window.location.search);
   return {
@@ -23,11 +25,17 @@ export function useModalParams(): UseModalParamsReturn {
   const [params, setParams] = useState<ModalParams>(getParamsFromURL);
 
   useEffect(() => {
-    const handlePopState = () => {
-      setParams(getParamsFromURL());
+    const sync = () => setParams(getParamsFromURL());
+
+    // Sync on browser back/forward
+    window.addEventListener('popstate', sync);
+    // Sync on our own custom event (fired by openModal)
+    window.addEventListener(MODAL_CHANGE_EVENT, sync);
+
+    return () => {
+      window.removeEventListener('popstate', sync);
+      window.removeEventListener(MODAL_CHANGE_EVENT, sync);
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const openModal = useCallback((playerId: string, clubId: string) => {
@@ -35,13 +43,13 @@ export function useModalParams(): UseModalParamsReturn {
     url.searchParams.set('playerId', playerId);
     url.searchParams.set('clubId', clubId);
     window.history.pushState({}, '', url.toString());
-    setParams({ playerId, clubId });
+    // Notify all hook instances (including the modal) to re-read the URL
+    window.dispatchEvent(new Event(MODAL_CHANGE_EVENT));
   }, []);
 
   const closeModal = useCallback(() => {
     const current = getParamsFromURL();
     if (current.playerId) {
-      // Pop the modal state we pushed
       window.history.back();
       // State will update via popstate listener
     }
