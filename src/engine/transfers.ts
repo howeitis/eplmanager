@@ -10,6 +10,7 @@ import type {
   ContinentSaleResult,
 } from '../types/entities';
 import { SeededRNG } from '../utils/rng';
+import { resetProgressionForTransfer } from './playerGen';
 
 // --- Continent sale destinations ---
 
@@ -376,7 +377,7 @@ export function simulateAITransferWindow(
         const sellerMut = clubMap.get(sellerClub.id)!;
         sellerMut.roster = sellerMut.roster.filter((p) => p.id !== player.id);
         const buyerMut = clubMap.get(club.id)!;
-        buyerMut.roster.push({ ...player, acquiredThisWindow: true });
+        buyerMut.roster.push(resetProgressionForTransfer(player));
 
         const record: TransferRecord = {
           playerId: player.id,

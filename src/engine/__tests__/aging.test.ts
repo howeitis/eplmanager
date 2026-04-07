@@ -34,6 +34,10 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
     highPotential: false,
     earlyPeaker: false,
     seasonsAtClub: 3,
+    formHistory: [],
+    monthlyGoals: [],
+    monthlyAssists: [],
+    statsSnapshotSeasonStart: { ATK: 70, DEF: 65, MOV: 72, PWR: 68, MEN: 70, SKL: 75 },
     ...overrides,
   };
 }

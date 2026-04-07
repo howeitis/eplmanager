@@ -12,6 +12,7 @@ import {
   generateFeaturedSlots,
   refillFeaturedSlot,
 } from '../../engine/transfers';
+import { resetProgressionForTransfer } from '../../engine/playerGen';
 import { countActiveFilters } from './MarketBoard';
 import type {
   Player,
@@ -116,7 +117,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         const player = sellerClub?.roster.find((p) => p.id === transfer.playerId);
         if (player) {
           removePlayerFromClub(transfer.fromClubId, transfer.playerId);
-          addPlayerToClub(transfer.toClubId, { ...player, acquiredThisWindow: true });
+          addPlayerToClub(transfer.toClubId, resetProgressionForTransfer(player));
           adjustBudget(transfer.fromClubId, transfer.fee);
           adjustBudget(transfer.toClubId, -transfer.fee);
         }
@@ -267,7 +268,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
 
         // Transfer accepted and player agrees!
         removePlayerFromClub(sellerClubId, playerId);
-        addPlayerToClub(playerClubId, { ...player, acquiredThisWindow: true });
+        addPlayerToClub(playerClubId, resetProgressionForTransfer(player));
         adjustBudget(playerClubId, -offerFee);
         adjustBudget(sellerClubId, offerFee);
         removeMarketListing(playerId);
@@ -357,7 +358,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
       }
 
       removePlayerFromClub(offer.fromClubId, offer.playerId);
-      addPlayerToClub(playerClubId, { ...player, acquiredThisWindow: true });
+      addPlayerToClub(playerClubId, resetProgressionForTransfer(player));
       adjustBudget(playerClubId, -offer.counterFee);
       adjustBudget(offer.fromClubId, offer.counterFee);
       removeMarketListing(offer.playerId);
@@ -427,7 +428,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         if (!player) return;
 
         removePlayerFromClub(playerClubId, offer.playerId);
-        addPlayerToClub(offer.toClubId, { ...player, acquiredThisWindow: true });
+        addPlayerToClub(offer.toClubId, resetProgressionForTransfer(player));
         adjustBudget(playerClubId, offer.fee);
         adjustBudget(offer.toClubId, -offer.fee);
         updateTransferOffer(offer.id, 'accepted');

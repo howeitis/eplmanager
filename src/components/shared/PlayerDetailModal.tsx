@@ -6,6 +6,7 @@ import {
   evaluateOffer,
   checkPlayerRefusal,
 } from '../../engine/transfers';
+import { resetProgressionForTransfer } from '../../engine/playerGen';
 import { SeededRNG } from '../../utils/rng';
 import { SigningCelebrationModal } from './SigningCelebrationModal';
 import type { SigningCelebrationData } from './SigningCelebrationModal';
@@ -518,7 +519,7 @@ function OtherClubActions({
 
       // Transfer accepted!
       removePlayerFromClub(clubId, player.id);
-      addPlayerToClub(playerClubId, { ...player, acquiredThisWindow: true });
+      addPlayerToClub(playerClubId, resetProgressionForTransfer(player));
       adjustBudget(playerClubId, -roundedFee);
       adjustBudget(clubId, roundedFee);
       removeMarketListing(player.id);
@@ -633,7 +634,7 @@ function OtherClubActions({
     }
 
     removePlayerFromClub(clubId, player.id);
-    addPlayerToClub(playerClubId, { ...player, acquiredThisWindow: true });
+    addPlayerToClub(playerClubId, resetProgressionForTransfer(player));
     adjustBudget(playerClubId, -counterFee);
     adjustBudget(clubId, counterFee);
     removeMarketListing(player.id);

@@ -41,6 +41,14 @@ export interface Player {
   highPotential: boolean;
   earlyPeaker: boolean;
   seasonsAtClub: number;
+  /** One entry per monthly phase played this season (capped at 10) */
+  formHistory: number[];
+  /** Per-month goal tallies this season (capped at 10) */
+  monthlyGoals: number[];
+  /** Per-month assist tallies this season (capped at 10) */
+  monthlyAssists: number[];
+  /** Stats snapshot captured at season start (or signing time) */
+  statsSnapshotSeasonStart: PlayerStats;
 }
 
 export interface ClubColors {

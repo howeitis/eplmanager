@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import { LeagueTable } from '../shared/LeagueTable';
+import { AgingReport } from './AgingReport';
+import type { AgingResult } from '../../engine/aging';
 import type { LeagueTableRow, Player, Club } from '../../types/entities';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
@@ -17,9 +19,10 @@ interface Award {
 interface SeasonEndProps {
   onContinue: () => void;
   faCupWinner?: string | null;
+  agingResults?: AgingResult[];
 }
 
-export function SeasonEnd({ onContinue, faCupWinner }: SeasonEndProps) {
+export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: SeasonEndProps) {
   const manager = useGameStore((s) => s.manager);
   const leagueTable = useGameStore((s) => s.leagueTable);
   const clubs = useGameStore((s) => s.clubs);
@@ -245,6 +248,9 @@ export function SeasonEnd({ onContinue, faCupWinner }: SeasonEndProps) {
           ))}
         </div>
       </div>
+
+      {/* Aging Report */}
+      {agingResults.length > 0 && <AgingReport agingResults={agingResults} />}
 
       {/* The Athletic Interview */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4 md:plm-p-6">

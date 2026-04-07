@@ -5,11 +5,13 @@ import type { Formation, Mentality } from '../../engine/matchSim';
 import { FormationPicker } from './FormationPicker';
 import { MentalitySelector } from './MentalitySelector';
 import { StartingXIPicker } from './StartingXIPicker';
+import { SquadProgression } from './SquadProgression';
 import { useModalParams } from '../../hooks/useModalParams';
 import type { XISwap } from '../../engine/startingXI';
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 type SortKey = 'position' | 'overall' | 'age' | 'form' | 'name';
+type SquadView = 'roster' | 'progression';
 
 interface SquadScreenProps {
   formation: Formation;
@@ -35,6 +37,7 @@ export function SquadScreen({
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
+  const [squadView, setSquadView] = useState<SquadView>('roster');
   const { openModal } = useModalParams();
 
   const playerClub = clubs.find((c) => c.id === manager?.clubId);
@@ -99,8 +102,28 @@ export function SquadScreen({
         </div>
       </div>
 
+      {/* View Toggle: Roster / Progression */}
+      <div className="plm-flex plm-gap-1 plm-bg-warm-100 plm-rounded-lg plm-p-0.5">
+        {([['roster', 'Roster'], ['progression', 'Progression']] as [SquadView, string][]).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setSquadView(key)}
+            className={`plm-flex-1 plm-py-2 plm-text-xs plm-font-semibold plm-rounded-md plm-transition-colors plm-min-h-[44px] ${
+              squadView === key
+                ? 'plm-bg-white plm-text-charcoal plm-shadow-sm'
+                : 'plm-text-warm-500 hover:plm-text-warm-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Progression View */}
+      {squadView === 'progression' && <SquadProgression />}
+
       {/* Roster */}
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+      {squadView === 'roster' && <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
         <div className="plm-flex plm-items-center plm-justify-between plm-mb-3">
           <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal">
             Squad ({filteredPlayers.filter((p) => !p.isTemporary).length})
@@ -189,7 +212,7 @@ export function SquadScreen({
             />
           ))}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

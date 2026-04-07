@@ -215,6 +215,25 @@ export function generatePlayer(
     highPotential,
     earlyPeaker,
     seasonsAtClub: 0,
+    formHistory: [],
+    monthlyGoals: [],
+    monthlyAssists: [],
+    statsSnapshotSeasonStart: { ...stats },
+  };
+}
+
+/**
+ * Reset progression tracking fields for a player changing clubs (transfer signing).
+ * Clears history arrays and snapshots stats at signing time.
+ */
+export function resetProgressionForTransfer(player: Player): Player {
+  return {
+    ...player,
+    acquiredThisWindow: true,
+    formHistory: [],
+    monthlyGoals: [],
+    monthlyAssists: [],
+    statsSnapshotSeasonStart: { ...player.stats },
   };
 }
 

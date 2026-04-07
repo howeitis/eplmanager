@@ -41,13 +41,14 @@ import {
 } from './engine/startingXI';
 import { generateMonthlyEvents } from './engine/events';
 import { simulateFACup } from './engine/faCup';
-import { processLeagueAging } from './engine/aging';
+import { processLeagueAging, type AgingResult } from './engine/aging';
 import {
   calculateSeasonReputationChange,
   calculateSeasonEndBudget,
   calculateBoardExpectation,
 } from './engine/reputation';
 import type {
+  Club,
   ClubData,
   SaveMetadata,
   GamePhase,
@@ -93,6 +94,7 @@ function App() {
   const [monthEvents, setMonthEvents] = useState<SeasonEvent[]>([]);
   const [fortunes, setFortunes] = useState<ClubFortune[]>([]);
   const [faCupWinner, setFaCupWinner] = useState<string | null>(null);
+  const [agingResults, setAgingResults] = useState<AgingResult[]>([]);
   const [xiNotifications, setXiNotifications] = useState<XISwap[]>([]);
   const store = useGameStore;
   const managerClubId = useGameStore((s) => s.manager?.clubId);
@@ -103,9 +105,20 @@ function App() {
     if (isExisting) {
       const data = await loadGame(slot);
       if (data) {
+        // Migrate old saves: ensure all players have progression fields
+        const migratedClubs = (data.clubs as Club[]).map((club) => ({
+          ...club,
+          roster: club.roster.map((p) => ({
+            ...p,
+            formHistory: p.formHistory ?? [],
+            monthlyGoals: p.monthlyGoals ?? [],
+            monthlyAssists: p.monthlyAssists ?? [],
+            statsSnapshotSeasonStart: p.statsSnapshotSeasonStart ?? { ...p.stats },
+          })),
+        }));
         const state = store.getState();
         store.setState({
-          clubs: data.clubs as typeof state.clubs,
+          clubs: migratedClubs as typeof state.clubs,
           fixtures: data.fixtures as typeof state.fixtures,
           leagueTable: data.leagueTable as typeof state.leagueTable,
           budgets: data.budgets,
@@ -299,6 +312,22 @@ function App() {
     const { clubs, fixtures, leagueTable } = state;
     const monthRng = new SeededRNG(`${sSeed}-month-${phase}`);
 
+    // Snapshot pre-month goals/assists for monthly delta tracking
+    const preMonthGoals = new Map<string, Map<string, number>>();
+    const preMonthAssists = new Map<string, Map<string, number>>();
+    for (const club of clubs) {
+      const gMap = new Map<string, number>();
+      const aMap = new Map<string, number>();
+      for (const p of club.roster) {
+        if (!p.isTemporary) {
+          gMap.set(p.id, p.goals);
+          aMap.set(p.id, p.assists);
+        }
+      }
+      preMonthGoals.set(club.id, gMap);
+      preMonthAssists.set(club.id, aMap);
+    }
+
     const fortuneMap = new Map<string, number>();
     for (const f of fortunes) {
       fortuneMap.set(f.clubId, f.fortune);
@@ -429,6 +458,28 @@ function App() {
       state.updateReputation(eventBatch.reputationDelta);
     }
 
+    // Add event-generated new players to roster
+    for (const { clubId, player } of eventBatch.newPlayers) {
+      state.addPlayerToClub(clubId, player);
+    }
+
+    // Record monthly progression data (formHistory, monthlyGoals, monthlyAssists)
+    const updatedClubs = store.getState().clubs;
+    for (const club of updatedClubs) {
+      for (const player of club.roster) {
+        if (player.isTemporary) continue;
+        const preGoals = preMonthGoals.get(club.id)?.get(player.id) ?? 0;
+        const preAssists = preMonthAssists.get(club.id)?.get(player.id) ?? 0;
+        const monthGoals = player.goals - preGoals;
+        const monthAssists = player.assists - preAssists;
+        state.updatePlayer(club.id, player.id, {
+          formHistory: [...player.formHistory.slice(0, 9), player.form],
+          monthlyGoals: [...player.monthlyGoals.slice(0, 9), monthGoals],
+          monthlyAssists: [...player.monthlyAssists.slice(0, 9), monthAssists],
+        });
+      }
+    }
+
     // Advance to next phase
     const phaseIdx = PHASE_ORDER.indexOf(phase);
     const nextPhase = PHASE_ORDER[phaseIdx + 1];
@@ -506,9 +557,10 @@ function App() {
 
     // Process aging
     const agingRng = new SeededRNG(`${sSeed}-aging`);
-    const agingResults = processLeagueAging(agingRng, clubs, seasonNumber);
+    const agingResults_ = processLeagueAging(agingRng, clubs, seasonNumber);
+    setAgingResults(agingResults_);
     // Apply aging results to store
-    for (const result of agingResults) {
+    for (const result of agingResults_) {
       const club = clubs.find((c) => c.id === result.clubId);
       if (club) {
         // Re-set the club with mutated roster (aging mutates in place)
@@ -522,7 +574,7 @@ function App() {
 
     // Remove retired players from shortlist
     const retiredIds = new Set(
-      agingResults.flatMap((r) => r.retired.map((ret) => ret.player.id)),
+      agingResults_.flatMap((r) => r.retired.map((ret) => ret.player.id)),
     );
     const currentShortlist = state.shortlist;
     if (currentShortlist.some((id) => retiredIds.has(id))) {
@@ -545,6 +597,23 @@ function App() {
 
     // Reset season stats
     state.resetSeasonStats();
+
+    // Season-boundary progression culling (asymmetric):
+    // formHistory: keep last 2 entries (momentum continuity)
+    // monthlyGoals/monthlyAssists: clear (season-bounded counting stats)
+    // statsSnapshotSeasonStart: update to post-aging stats
+    const postAgingClubs = store.getState().clubs;
+    for (const club of postAgingClubs) {
+      for (const player of club.roster) {
+        if (player.isTemporary) continue;
+        state.updatePlayer(club.id, player.id, {
+          formHistory: player.formHistory.slice(-2),
+          monthlyGoals: [],
+          monthlyAssists: [],
+          statsSnapshotSeasonStart: { ...player.stats },
+        });
+      }
+    }
 
     // Board expectation for next season
     const updatedManager = store.getState().manager!;
@@ -755,6 +824,7 @@ function App() {
               <SeasonEnd
                 onContinue={handleContinueToOffSeason}
                 faCupWinner={faCupWinner}
+                agingResults={agingResults}
               />
             )}
           </div>
