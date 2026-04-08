@@ -63,25 +63,95 @@ type Screen = 'save_select' | 'club_select' | 'manager_creation' | 'game';
 type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'match_results' | 'season_end' | 'club_squad';
 
 const PHASE_ORDER: GamePhase[] = [
-  'summer_window', 'august', 'september', 'october', 'november', 'december',
-  'january_window', 'january', 'february', 'march', 'april', 'may', 'season_end',
+  'summer_window', 'july_advance', 'august', 'august_deadline',
+  'september', 'october', 'november', 'december',
+  'january_window', 'january', 'january_deadline',
+  'february', 'march', 'april', 'may', 'season_end',
 ];
 
 const MONTH_LABELS: Record<GamePhase, string> = {
   summer_window: 'Summer Transfer Window',
+  july_advance: 'July',
   august: 'August',
+  august_deadline: 'Transfer Deadline Day',
   september: 'September',
   october: 'October',
   november: 'November',
   december: 'December',
   january_window: 'January Transfer Window',
   january: 'January',
+  january_deadline: 'Transfer Deadline Day',
   february: 'February',
   march: 'March',
   april: 'April',
   may: 'May',
   season_end: 'Season End',
 };
+
+/** Starting calendar year for season 1 (2026 = World Cup year) */
+const BASE_YEAR = 2026;
+
+function getCalendarYear(seasonNumber: number): number {
+  return BASE_YEAR + (seasonNumber - 1);
+}
+
+/** Determine what summer tournament (if any) takes place this year */
+function getSummerTournament(calendarYear: number): 'world_cup' | 'euros' | null {
+  if (calendarYear % 4 === 2) return 'world_cup'; // 2026, 2030, 2034...
+  if (calendarYear % 4 === 0) return 'euros';      // 2028, 2032, 2036...
+  return null;
+}
+
+/** Generate a July narrative based on tournament year or preseason */
+function generateJulyNarrative(rng: import('./utils/rng').SeededRNG, calendarYear: number): string {
+  const tournament = getSummerTournament(calendarYear);
+
+  if (tournament === 'world_cup') {
+    const hosts = [
+      `USA, Mexico & Canada (${calendarYear})`,
+      `the ${calendarYear} host nation`,
+    ];
+    const winners = [
+      'Brazil', 'Argentina', 'France', 'Germany', 'Spain',
+      'England', 'Italy', 'Netherlands', 'Portugal', 'Belgium',
+    ];
+    const winner = winners[rng.randomInt(0, winners.length - 1)];
+    const host = hosts[0];
+    const dramas = [
+      `${winner} lifted the World Cup trophy in ${host} after a dramatic final.`,
+      `A golden generation delivered as ${winner} won the ${calendarYear} World Cup.`,
+      `${winner} are World Cup champions! The tournament in ${host} will be remembered for years.`,
+    ];
+    return dramas[rng.randomInt(0, dramas.length - 1)];
+  }
+
+  if (tournament === 'euros') {
+    const winners = [
+      'Spain', 'France', 'Germany', 'Italy', 'England',
+      'Netherlands', 'Portugal', 'Belgium', 'Denmark', 'Croatia',
+    ];
+    const winner = winners[rng.randomInt(0, winners.length - 1)];
+    const dramas = [
+      `${winner} won the European Championship after a thrilling summer of football.`,
+      `Euro ${calendarYear} is over — ${winner} are the new champions of Europe!`,
+      `${winner} crowned European champions! Their players return to their clubs on a high.`,
+    ];
+    return dramas[rng.randomInt(0, dramas.length - 1)];
+  }
+
+  // No major tournament — fun preseason stories
+  const stories = [
+    'Pre-season is in full swing. Managers are putting their squads through gruelling fitness regimes under the summer sun.',
+    'The pre-season friendlies are done. Time to finalise the squad before the window closes.',
+    'Clubs are jetting off on lucrative pre-season tours. The marketing teams are happy, the physios less so.',
+    'A viral video of a goalkeeper scoring an overhead kick in a pre-season friendly has the internet buzzing.',
+    'Several stars have returned from holiday looking suspiciously unfit. Nutritionists across the league are in crisis mode.',
+    'The new kits have dropped. Fan opinions range from "instant classic" to "designed by a toddler."',
+    'A manager was spotted at an airport with a mysterious briefcase. Transfer Twitter is in meltdown.',
+    'Pre-season training camps are wrapping up. The squad is looking sharp — the real business starts soon.',
+  ];
+  return stories[rng.randomInt(0, stories.length - 1)];
+}
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
@@ -99,6 +169,7 @@ function App() {
   const [faCupWinner, setFaCupWinner] = useState<string | null>(null);
   const [agingResults, setAgingResults] = useState<AgingResult[]>([]);
   const [xiNotifications, setXiNotifications] = useState<XISwap[]>([]);
+  const [julyNarrative, setJulyNarrative] = useState<string | null>(null);
   const store = useGameStore;
   const managerClubId = useGameStore((s) => s.manager?.clubId);
 
@@ -295,8 +366,9 @@ function App() {
     const playerClubId = manager!.clubId;
     const sSeed = deriveSeasonSeed(gameSeed, seasonNumber);
 
-    if (currentPhase === 'summer_window' || currentPhase === 'january_window') {
-      // --- Offer expiry: clear all pending offers at window close ---
+    // ─── Transfer deadline days (august_deadline / january_deadline) ───
+    // These close the respective transfer window, then advance.
+    if (currentPhase === 'august_deadline' || currentPhase === 'january_deadline') {
       const pendingOffers = state.transferOffers;
       const pendingOutgoing = pendingOffers.filter((o) => o.direction === 'outgoing' && (o.status === 'pending' || o.status === 'countered'));
       const pendingIncoming = pendingOffers.filter((o) => o.direction === 'incoming' && o.status === 'pending');
@@ -313,7 +385,7 @@ function App() {
       state.setFeaturedRefillIndex(0);
       state.resetMarketFilters();
 
-      // Replenish all AI squads to 16 players after window closes
+      // Replenish AI squads after window closes
       const windowRng = new SeededRNG(`${sSeed}-window-replenish-${currentPhase}`);
       for (const club of clubs) {
         if (club.id === playerClubId) continue;
@@ -323,42 +395,66 @@ function App() {
         }
       }
 
-      if (currentPhase === 'summer_window') {
-        // Advance past summer window to August
-        state.setPhase('august');
-        // Generate fixtures if not already
-        if (state.fixtures.length === 0) {
-          const rng = new SeededRNG(sSeed);
-          const fixtures = generateFixtures(rng, clubs.map((c) => c.id));
-          state.initializeFixtures(fixtures);
-        }
-        // Generate fortunes if empty
-        if (fortunes.length === 0) {
-          const rng = new SeededRNG(sSeed);
-          const seasonFortunes = generateSeasonFortunes(
-            rng,
-            clubs.map((c) => ({ id: c.id, tier: c.tier })),
-          );
-          setFortunes(seasonFortunes);
-        }
-        // Auto-populate Starting XI on first entry to season
-        const playerClub = clubs.find((c) => c.id === playerClubId);
-        if (playerClub && Object.keys(state.startingXI).length === 0) {
-          const xi = autoSelectXI(formation, playerClub.roster);
-          state.setStartingXI(xi);
-        }
-      } else {
-        // january_window → january matches
-        state.setPhase('january');
-      }
+      // august_deadline → september, january_deadline → february
+      const phaseIdx = PHASE_ORDER.indexOf(currentPhase);
+      state.setPhase(PHASE_ORDER[phaseIdx + 1]);
 
       await saveGame(state.saveSlot!, store.getState());
       setGameView('hub');
       return;
     }
 
-    if (currentPhase === 'season_end') {
-      // Process season end
+    // ─── Summer window → July advance (window stays open) ───
+    if (currentPhase === 'summer_window') {
+      // Generate fixtures if not already
+      if (state.fixtures.length === 0) {
+        const rng = new SeededRNG(sSeed);
+        const fixtures = generateFixtures(rng, clubs.map((c) => c.id));
+        state.initializeFixtures(fixtures);
+      }
+      // Generate fortunes if empty
+      if (fortunes.length === 0) {
+        const rng = new SeededRNG(sSeed);
+        const seasonFortunes = generateSeasonFortunes(
+          rng,
+          clubs.map((c) => ({ id: c.id, tier: c.tier })),
+        );
+        setFortunes(seasonFortunes);
+      }
+
+      // Generate July narrative
+      const calendarYear = getCalendarYear(seasonNumber);
+      const julyRng = new SeededRNG(`${sSeed}-july-narrative`);
+      setJulyNarrative(generateJulyNarrative(julyRng, calendarYear));
+
+      state.setPhase('july_advance');
+      await saveGame(state.saveSlot!, store.getState());
+      setGameView('hub');
+      return;
+    }
+
+    // ─── July advance → August (play matches, window still open) ───
+    if (currentPhase === 'july_advance') {
+      // Auto-populate Starting XI on first entry to season
+      const playerClub = clubs.find((c) => c.id === playerClubId);
+      if (playerClub && Object.keys(state.startingXI).length === 0) {
+        const xi = autoSelectXI(formation, playerClub.roster);
+        state.setStartingXI(xi);
+      }
+
+      // Fall through to monthly match simulation for august
+      state.setPhase('august');
+    }
+
+    // ─── January window → January (play matches, window still open) ───
+    if (currentPhase === 'january_window') {
+      state.setPhase('january');
+    }
+
+    // Re-read phase after potential changes above
+    const activePhase = store.getState().currentPhase;
+
+    if (activePhase === 'season_end') {
       handleSeasonEnd();
       return;
     }
@@ -366,14 +462,12 @@ function App() {
     // Monthly phase: Starting XI management before simulation
     const playerClub = clubs.find((c) => c.id === playerClubId);
     if (playerClub) {
-      // Auto-populate if XI is empty (first entry to this month)
       let currentXI = state.startingXI;
       if (Object.keys(currentXI).length === 0) {
         currentXI = autoSelectXI(formation, playerClub.roster);
         state.setStartingXI(currentXI);
       }
 
-      // Auto-swap injured starters (silent notification, not blocking)
       const swapResult = autoSwapInjuredPlayers(currentXI, formation, playerClub.roster);
       if (swapResult.swaps.length > 0) {
         state.setStartingXI(swapResult.newXI);
@@ -381,19 +475,16 @@ function App() {
         currentXI = swapResult.newXI;
       }
 
-      // Validate XI — block if < 11 players
       const validation = validateXI(currentXI, formation, playerClub.roster);
       if (!validation.valid) {
-        // Can't advance — stay on hub, user sees the error through SquadScreen
         return;
       }
 
-      // Lock XI to history (immutable snapshot for this month)
-      state.lockStartingXI(currentPhase, formation);
+      state.lockStartingXI(activePhase, formation);
     }
 
     // Monthly phase: simulate matches
-    simulateMonth(currentPhase, sSeed, playerClubId);
+    simulateMonth(activePhase, sSeed, playerClubId);
   }, [store, fortunes, formation]);
 
   const simulateMonth = useCallback((phase: GamePhase, sSeed: string, playerClubId: string) => {
@@ -834,6 +925,7 @@ function App() {
     setMonthFixtures([]);
     setMonthEvents([]);
     setXiNotifications([]);
+    setJulyNarrative(null);
     // Clear Starting XI for new season (will be auto-populated when first month starts)
     store.getState().clearStartingXI();
     store.getState().clearStartingXIHistory();
@@ -909,8 +1001,11 @@ function App() {
 
   const currentPhaseForLabel = useGameStore((s) => s.currentPhase);
   const advanceLabel = useMemo(() => {
-    if (currentPhaseForLabel === 'summer_window') return 'Close Transfer Window & Start Season';
-    if (currentPhaseForLabel === 'january_window') return 'Close Transfer Window';
+    if (currentPhaseForLabel === 'summer_window') return 'Advance to July';
+    if (currentPhaseForLabel === 'july_advance') return 'Play August';
+    if (currentPhaseForLabel === 'august_deadline') return 'Close Transfer Window';
+    if (currentPhaseForLabel === 'january_window') return 'Play January';
+    if (currentPhaseForLabel === 'january_deadline') return 'Close Transfer Window';
     if (currentPhaseForLabel === 'season_end') return 'Process Season End';
     return `Play ${MONTH_LABELS[currentPhaseForLabel] || currentPhaseForLabel}`;
   }, [currentPhaseForLabel]);
@@ -961,6 +1056,7 @@ function App() {
                 onNavigate={handleNavigate}
                 onAdvance={handleAdvance}
                 advanceLabel={advanceLabel}
+                julyNarrative={julyNarrative}
               />
             )}
             {gameView === 'squad' && (

@@ -10,7 +10,9 @@ interface BottomNavProps {
 export function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
   const currentPhase = useGameStore((s) => s.currentPhase);
   const isTransferWindow =
-    currentPhase === 'summer_window' || currentPhase === 'january_window';
+    currentPhase === 'summer_window' || currentPhase === 'july_advance'
+    || currentPhase === 'august_deadline' || currentPhase === 'january_window'
+    || currentPhase === 'january_deadline';
 
   const tabs: { id: NavTab; label: string; icon: string; disabled?: boolean }[] = [
     { id: 'hub', label: 'Hub', icon: '⌂' },

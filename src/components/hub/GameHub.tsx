@@ -12,9 +12,10 @@ interface GameHubProps {
   onNavigate: (tab: NavTab) => void;
   onAdvance: () => void;
   advanceLabel: string;
+  julyNarrative?: string | null;
 }
 
-export function GameHub({ onNavigate, onAdvance, advanceLabel }: GameHubProps) {
+export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: GameHubProps) {
   const manager = useGameStore((s) => s.manager);
   const seasonNumber = useGameStore((s) => s.seasonNumber);
   const currentPhase = useGameStore((s) => s.currentPhase);
@@ -46,7 +47,9 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel }: GameHubProps) {
   const playerRow = sortedTable.find((r) => r.clubId === manager?.clubId);
 
   const isTransferWindow =
-    currentPhase === 'summer_window' || currentPhase === 'january_window';
+    currentPhase === 'summer_window' || currentPhase === 'july_advance'
+    || currentPhase === 'august_deadline' || currentPhase === 'january_window'
+    || currentPhase === 'january_deadline';
 
   return (
     <div className="plm-flex plm-flex-col lg:plm-flex-row plm-gap-6 plm-w-full">
@@ -68,6 +71,28 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel }: GameHubProps) {
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
           <PhaseIndicator phase={currentPhase} seasonNumber={seasonNumber} />
         </div>
+
+        {/* July narrative (WC / Euro / preseason) */}
+        {currentPhase === 'july_advance' && julyNarrative && (
+          <div className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded-lg plm-p-4">
+            <h3 className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-amber-700 plm-mb-1.5">
+              Summer Headlines
+            </h3>
+            <p className="plm-text-sm plm-text-amber-900 plm-leading-relaxed">{julyNarrative}</p>
+          </div>
+        )}
+
+        {/* Deadline day banner */}
+        {(currentPhase === 'august_deadline' || currentPhase === 'january_deadline') && (
+          <div className="plm-bg-red-50 plm-border plm-border-red-200 plm-rounded-lg plm-p-4">
+            <h3 className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-red-700 plm-mb-1.5">
+              Transfer Deadline Day
+            </h3>
+            <p className="plm-text-sm plm-text-red-800 plm-leading-relaxed">
+              Last chance to complete your transfer business. The window closes when you advance.
+            </p>
+          </div>
+        )}
 
         {/* Shortlist transfer notifications */}
         {shortlistNotifications.length > 0 && !dismissedNotifications && (

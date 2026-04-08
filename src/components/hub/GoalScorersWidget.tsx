@@ -17,7 +17,7 @@ const MATCH_PHASES = [
 ] as const;
 
 function isPreMatch(phase: string): boolean {
-  return phase === 'summer_window';
+  return phase === 'summer_window' || phase === 'july_advance';
 }
 
 function hasMatchesPlayed(phase: string): boolean {

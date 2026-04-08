@@ -73,12 +73,15 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
   const playerBudget = budgets[playerClubId] || 0;
 
   const windowType: 'summer' | 'january' =
-    currentPhase === 'january_window' ? 'january' : 'summer';
+    (currentPhase === 'january_window' || currentPhase === 'january_deadline') ? 'january' : 'summer';
 
   // Derive month number for featured seed
   const monthNumber = useMemo(() => {
-    const phases = ['summer_window', 'january_window'];
-    return phases.indexOf(currentPhase) >= 0 ? currentPhase : 'summer_window';
+    const summerPhases = ['summer_window', 'july_advance', 'august_deadline'];
+    const janPhases = ['january_window', 'january_deadline'];
+    if (summerPhases.includes(currentPhase)) return 'summer_window';
+    if (janPhases.includes(currentPhase)) return 'january_window';
+    return 'summer_window';
   }, [currentPhase]);
 
   // Track previous listing count for refill detection
