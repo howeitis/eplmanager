@@ -444,6 +444,9 @@ export function processInjuries(
     if (player.trait === 'Fragile') chance = FRAGILE_INJURY_CHANCE;
     if (player.trait === 'Durable') chance = DURABLE_INJURY_CHANCE;
 
+    // Goalkeepers are much less prone to injury
+    if (player.position === 'GK') chance *= 0.25;
+
     if (rng.random() < chance) {
       // Duration: 1-3 months, weighted toward shorter
       let duration: number;

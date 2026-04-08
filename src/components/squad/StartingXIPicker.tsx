@@ -216,9 +216,9 @@ function PitchSlot({
         )}
 
         {/* Cross-position warning */}
-        {player && checkPositionCompatibility(slot.position, player.position) !== 'exact' && (
+        {player && checkPositionCompatibility(slot.position, player.position, player.stats) !== 'exact' && (
           <span className={`plm-text-[7px] plm-px-1 plm-rounded plm-font-bold plm-mt-0.5 ${
-            checkPositionCompatibility(slot.position, player.position) === 'compatible'
+            checkPositionCompatibility(slot.position, player.position, player.stats) === 'compatible'
               ? 'plm-bg-amber-500 plm-text-white'
               : 'plm-bg-orange-500 plm-text-white'
           }`}>
@@ -256,7 +256,7 @@ function SlotAssignmentPanel({
     const other: Player[] = [];
 
     for (const p of available) {
-      const match = checkPositionCompatibility(slot.position, p.position);
+      const match = checkPositionCompatibility(slot.position, p.position, p.stats);
       if (match === 'exact' || match === 'compatible') {
         comp.push(p);
       } else {
@@ -346,7 +346,7 @@ function PlayerOption({
   isInOtherSlot: boolean;
   onSelect: () => void;
 }) {
-  const compat = checkPositionCompatibility(slotPosition, player.position);
+  const compat = checkPositionCompatibility(slotPosition, player.position, player.stats);
 
   return (
     <button

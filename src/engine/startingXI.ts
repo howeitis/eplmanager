@@ -75,11 +75,11 @@ export function autoSelectXI(
   for (const slotDef of slots) {
     if (xi[slotDef.slot]) continue;
 
-    // Try compatible positions first
+    // Try compatible positions first (including stat-based WG↔FB adaptation)
     const compatible = available.find(
       (p) =>
         !usedPlayerIds.has(p.id) &&
-        checkPositionCompatibility(slotDef.position, p.position) === 'compatible',
+        checkPositionCompatibility(slotDef.position, p.position, p.stats) === 'compatible',
     );
     if (compatible) {
       xi[slotDef.slot] = compatible.id;
@@ -134,7 +134,7 @@ export function autoSwapInjuredPlayers(
     let replacement = benchPlayers.find((p) => p.position === slotDef.position);
     if (!replacement) {
       replacement = benchPlayers.find(
-        (p) => checkPositionCompatibility(slotDef.position, p.position) === 'compatible',
+        (p) => checkPositionCompatibility(slotDef.position, p.position, p.stats) === 'compatible',
       );
     }
     if (!replacement) {
@@ -224,7 +224,7 @@ export function validateXI(
       // Check position compatibility
       const player = roster.find((p) => p.id === playerId);
       if (player) {
-        const compat = checkPositionCompatibility(slotDef.position, player.position);
+        const compat = checkPositionCompatibility(slotDef.position, player.position, player.stats);
         if (compat === 'cross') {
           warnings.push(`${player.name} (${player.position}) playing as ${slotDef.slot} — out of position`);
         } else if (compat === 'compatible') {
