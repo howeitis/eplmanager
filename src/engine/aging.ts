@@ -121,6 +121,7 @@ const REGEN_RATING_RANGES: Record<number, [number, number]> = {
 /**
  * Generate a replacement player (regen) for a retired player.
  * The regen is a young player at the same position with a rating based on the club's tier.
+ * ~8% chance to produce a "star boy" — a youth prospect significantly above the normal range.
  */
 export function generateRegen(
   rng: SeededRNG,
@@ -130,13 +131,53 @@ export function generateRegen(
   youthBoost: number = 0,
 ): Player {
   const [rangeMin, rangeMax] = REGEN_RATING_RANGES[club.tier] || REGEN_RATING_RANGES[3];
-  const targetRating = rng.randomInt(rangeMin + youthBoost, rangeMax + youthBoost);
+
+  let targetRating: number;
+  const starBoyRoll = rng.random();
+  if (starBoyRoll < 0.08) {
+    // Star boy: 6–12 points above the normal range ceiling
+    const starBoost = rng.randomInt(6, 12);
+    targetRating = Math.min(88, rangeMax + starBoost + youthBoost);
+  } else {
+    targetRating = rng.randomInt(rangeMin + youthBoost, rangeMax + youthBoost);
+  }
+
   const regen = generatePlayer(rng, position, targetRating, club.namePool, regenId);
   regen.age = rng.randomInt(17, 20);
-  regen.highPotential = rng.random() < 0.15;
+  regen.highPotential = starBoyRoll < 0.08 ? true : rng.random() < 0.20;
   regen.earlyPeaker = false;
   regen.seasonsAtClub = 0;
   return regen;
+}
+
+/**
+ * Annual youth intake: each club promotes 1-2 academy graduates per season,
+ * independent of retirements. Keeps rosters fresh and ensures a pipeline of
+ * young talent even when no one retires.
+ */
+export function annualYouthIntake(
+  rng: SeededRNG,
+  club: Club,
+  seasonNumber: number,
+): Player[] {
+  const intakeCount = rng.randomInt(1, 2);
+  const positions: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
+  const newPlayers: Player[] = [];
+
+  for (let i = 0; i < intakeCount; i++) {
+    // If squad is already at 18+, skip (don't bloat rosters)
+    const nonTemp = club.roster.filter((p) => !p.isTemporary);
+    if (nonTemp.length >= 18) break;
+
+    const pos = positions[rng.randomInt(0, positions.length - 1)];
+    const regenId = `${club.id}-youth-s${seasonNumber}-${i}`;
+    const player = generateRegen(rng, pos, club, regenId);
+    player.age = rng.randomInt(17, 19); // Academy graduates skew younger
+    newPlayers.push(player);
+    club.roster.push(player);
+  }
+
+  return newPlayers;
 }
 
 // ─── Season End Processing ───

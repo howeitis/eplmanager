@@ -1,6 +1,6 @@
 import { useGameStore } from '../../store/gameStore';
 
-export type NavTab = 'hub' | 'squad' | 'transfers' | 'history';
+export type NavTab = 'hub' | 'squad' | 'transfers' | 'history' | 'manager';
 
 interface BottomNavProps {
   activeTab: NavTab;
@@ -17,6 +17,7 @@ export function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
     { id: 'squad', label: 'Squad', icon: '⫶' },
     { id: 'transfers', label: 'Transfers', icon: '⇄', disabled: !isTransferWindow },
     { id: 'history', label: 'History', icon: '☆' },
+    { id: 'manager', label: 'Manager', icon: '👤' },
   ];
 
   return (

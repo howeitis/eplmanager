@@ -213,10 +213,74 @@ export interface ContinentSaleResult {
   league: ContinentLeague;
 }
 
+export type PlayingBackground =
+  | 'former-pro'
+  | 'lower-league-pro'
+  | 'academy-coach'
+  | 'journalist'
+  | 'analyst'
+  | 'never-played';
+
+export type ManagerPhilosophy =
+  | 'attacking'
+  | 'possession'
+  | 'pragmatic'
+  | 'defensive'
+  | 'developmental'
+  | 'rotation-heavy';
+
+export type AccomplishmentType =
+  | 'league-title'
+  | 'fa-cup'
+  | 'promotion'
+  | 'relegation'
+  | 'milestone-games'
+  | 'manager-of-season'
+  | 'club-hired'
+  | 'club-departed';
+
+export interface ManagerAccomplishment {
+  id: string;
+  season: number;
+  clubId: string;
+  type: AccomplishmentType;
+  headline: string;
+  detail?: string;
+}
+
+export interface ClubTenure {
+  clubId: string;
+  startSeason: number;
+  endSeason?: number;
+  gamesManaged: number;
+  leagueTitles: number;
+  faCups: number;
+  bestLeagueFinish: number;
+}
+
 export interface ManagerProfile {
   name: string;
   clubId: string;
   reputation: number;
+
+  // Identity fields (set at creation)
+  nationality: string;
+  age: number;
+  playingBackground: PlayingBackground;
+  preferredFormation: string;
+  philosophy: ManagerPhilosophy;
+  avatar: string;
+  bio: string;
+  createdAt: number;
+
+  // Career state
+  tenures: ClubTenure[];
+  accomplishments: ManagerAccomplishment[];
+
+  // Career totals (denormalized for display)
+  totalGamesManaged: number;
+  totalLeagueTitles: number;
+  totalFaCups: number;
 }
 
 export interface BoardExpectation {
@@ -251,4 +315,6 @@ export interface SaveMetadata {
   seasonNumber: number;
   leaguePosition: number;
   lastSaved: string;
+  managerName?: string;
+  managerAvatar?: string;
 }

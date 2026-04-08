@@ -55,11 +55,15 @@ describe('Market Filters', () => {
     expect(result.length).toBe(listingsWithPlayers.length);
   });
 
-  it('position filter works for ST', () => {
-    const filters: MarketFilters = { ...DEFAULT_MARKET_FILTERS, positions: ['ST'] };
+  it('position filter works for a single position', () => {
+    // Find a position that actually has listings with this seed
+    const positions = [...new Set(listingsWithPlayers.map((r) => r.player.position))];
+    expect(positions.length).toBeGreaterThan(0);
+    const testPos = positions[0];
+    const filters: MarketFilters = { ...DEFAULT_MARKET_FILTERS, positions: [testPos] };
     const result = applyMarketFilters(listingsWithPlayers, filters, 999);
     expect(result.length).toBeGreaterThan(0);
-    expect(result.every((r) => r.player.position === 'ST')).toBe(true);
+    expect(result.every((r) => r.player.position === testPos)).toBe(true);
   });
 
   it('multi-position filter works for ST and MF', () => {

@@ -64,6 +64,12 @@ export function SaveSlotSelect({ onSelectSlot }: SaveSlotSelectProps) {
                     </div>
                     {save ? (
                       <>
+                        {save.managerAvatar && save.managerName && (
+                          <div className="plm-flex plm-items-center plm-gap-1.5 plm-mb-1">
+                            <span className="plm-text-base">{save.managerAvatar}</span>
+                            <span className="plm-text-sm plm-font-medium plm-text-gray-700">{save.managerName}</span>
+                          </div>
+                        )}
                         <div className="plm-font-semibold plm-text-gray-900">
                           {save.clubName}
                         </div>

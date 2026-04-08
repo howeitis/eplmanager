@@ -19,7 +19,7 @@ const POSITION_STAT_BIAS: Record<Position, Partial<Record<keyof PlayerStats, num
   FB: { MOV: 12, SKL: 8, DEF: 5 },
   MF: { SKL: 12, MEN: 10, MOV: 5 },
   WG: { ATK: 10, MOV: 12, SKL: 10 },
-  ST: { ATK: 15, MOV: 8, PWR: 5 },
+  ST: { ATK: 18, MOV: 10, PWR: 8 },
 };
 
 // Tier rating ranges: [avgMin, avgMax] for the squad overall
@@ -154,8 +154,8 @@ function generateTargetOveralls(
     let target: number;
 
     if (i < 2) {
-      // Top 2 players: 2-6 above average (standout players every team has)
-      target = targetAvg + rng.randomFloat(2, 6);
+      // Top 2 players: 3-7 above average (standout players every team has)
+      target = targetAvg + rng.randomFloat(3, 7);
     } else if (i < 6) {
       // Next 4: around average to slightly above
       target = targetAvg + rng.randomFloat(-1, 3);
@@ -167,7 +167,14 @@ function generateTargetOveralls(
       target = targetAvg + rng.randomFloat(-6, -2);
     }
 
-    overalls.push(Math.round(Math.max(45, Math.min(92, target))));
+    overalls.push(Math.round(Math.max(45, Math.min(95, target))));
+  }
+
+  // Shuffle so that no position group is systematically stuck with the
+  // worst (or best) targets — every position has a fair chance at stars.
+  for (let i = overalls.length - 1; i > 0; i--) {
+    const j = rng.randomInt(0, i);
+    [overalls[i], overalls[j]] = [overalls[j], overalls[i]];
   }
 
   return overalls;

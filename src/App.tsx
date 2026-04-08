@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import './index.css';
 import { SaveSlotSelect } from './components/shared/SaveSlotSelect';
 import { ClubSelect } from './components/shared/ClubSelect';
+import { ManagerCreation, type ManagerCreationData } from './components/shared/ManagerCreation';
 import { TransferCenter } from './components/transfers/TransferCenter';
 import { GameHub } from './components/hub/GameHub';
 import { SquadScreen } from './components/squad/SquadScreen';
@@ -9,6 +10,7 @@ import { ClubSquadScreen } from './components/squad/ClubSquadScreen';
 import { MatchResults } from './components/match/MatchResults';
 import { SeasonEnd } from './components/season/SeasonEnd';
 import { SeasonHistoryScreen } from './components/history/SeasonHistory';
+import { ManagerProfileScreen } from './components/manager/ManagerProfileScreen';
 import { BottomNav, type NavTab } from './components/shared/BottomNav';
 import { DesktopSidebar } from './components/shared/DesktopSidebar';
 import { PlayerDetailModal } from './components/shared/PlayerDetailModal';
@@ -41,7 +43,7 @@ import {
 } from './engine/startingXI';
 import { generateMonthlyEvents } from './engine/events';
 import { simulateFACup } from './engine/faCup';
-import { processLeagueAging, type AgingResult } from './engine/aging';
+import { processLeagueAging, replenishSquad, annualYouthIntake, type AgingResult } from './engine/aging';
 import {
   calculateSeasonReputationChange,
   calculateSeasonEndBudget,
@@ -57,8 +59,8 @@ import type {
   SeasonPlayerStats,
 } from './types/entities';
 
-type Screen = 'save_select' | 'club_select' | 'game';
-type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'match_results' | 'season_end' | 'club_squad';
+type Screen = 'save_select' | 'club_select' | 'manager_creation' | 'game';
+type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'match_results' | 'season_end' | 'club_squad';
 
 const PHASE_ORDER: GamePhase[] = [
   'summer_window', 'august', 'september', 'october', 'november', 'december',
@@ -87,6 +89,7 @@ function App() {
   const [screen, setScreen] = useState<Screen>('save_select');
   const [gameView, setGameView] = useState<GameView>('hub');
   const [viewingClubId, setViewingClubId] = useState<string | null>(null);
+  const [selectedClub, setSelectedClub] = useState<ClubData | null>(null);
   const [_viewHistory, setViewHistory] = useState<GameView[]>([]);
   const [formation, setFormation] = useState<Formation>('4-4-2');
   const [mentality, setMentality] = useState<Mentality>('balanced');
@@ -116,6 +119,35 @@ function App() {
             statsSnapshotSeasonStart: p.statsSnapshotSeasonStart ?? { ...p.stats },
           })),
         }));
+        // Migrate old manager profiles: backfill new fields
+        const rawManager = data.manager as Record<string, unknown> | null;
+        let migratedManager = data.manager as import('./types/entities').ManagerProfile | null;
+        if (rawManager && !rawManager.avatar) {
+          migratedManager = {
+            ...(rawManager as unknown as import('./types/entities').ManagerProfile),
+            nationality: (rawManager.nationality as string) || 'English',
+            age: (rawManager.age as number) || 40,
+            playingBackground: (rawManager.playingBackground as import('./types/entities').PlayingBackground) || 'former-pro',
+            preferredFormation: (rawManager.preferredFormation as string) || '4-4-2',
+            philosophy: (rawManager.philosophy as import('./types/entities').ManagerPhilosophy) || 'pragmatic',
+            avatar: '😎',
+            bio: '',
+            createdAt: Date.now(),
+            tenures: [{
+              clubId: rawManager.clubId as string,
+              startSeason: 1,
+              gamesManaged: 0,
+              leagueTitles: 0,
+              faCups: 0,
+              bestLeagueFinish: 20,
+            }],
+            accomplishments: [],
+            totalGamesManaged: 0,
+            totalLeagueTitles: 0,
+            totalFaCups: 0,
+          };
+        }
+
         const state = store.getState();
         store.setState({
           clubs: migratedClubs as typeof state.clubs,
@@ -128,7 +160,7 @@ function App() {
           gameSeed: data.gameSeed,
           events: data.events as typeof state.events,
           activeModifiers: data.activeModifiers as typeof state.activeModifiers,
-          manager: data.manager as typeof state.manager,
+          manager: migratedManager,
           boardExpectation: data.boardExpectation as typeof state.boardExpectation,
           seasonHistories: data.seasonHistories as typeof state.seasonHistories,
           saveSlot: data.saveSlot,
@@ -151,7 +183,13 @@ function App() {
     }
   }, [store]);
 
-  const handleSelectClub = useCallback(async (club: ClubData) => {
+  const handleSelectClub = useCallback((club: ClubData) => {
+    setSelectedClub(club);
+    setScreen('manager_creation');
+  }, []);
+
+  const handleManagerCreated = useCallback(async (data: ManagerCreationData) => {
+    const club = selectedClub!;
     const state = store.getState();
     const slot = state.saveSlot!;
 
@@ -168,7 +206,39 @@ function App() {
     state.initializeBudgets(budgets);
     state.initializeLeagueTable(CLUBS.map((c) => c.id));
 
-    state.setManager({ name: 'Manager', clubId: club.id, reputation: 50 });
+    // Create full manager profile
+    const managerProfile: import('./types/entities').ManagerProfile = {
+      name: data.name,
+      clubId: club.id,
+      reputation: 50,
+      nationality: data.nationality,
+      age: data.age,
+      playingBackground: data.playingBackground,
+      preferredFormation: data.preferredFormation,
+      philosophy: data.philosophy,
+      avatar: data.avatar,
+      bio: data.bio,
+      createdAt: Date.now(),
+      tenures: [{
+        clubId: club.id,
+        startSeason: 1,
+        gamesManaged: 0,
+        leagueTitles: 0,
+        faCups: 0,
+        bestLeagueFinish: 20,
+      }],
+      accomplishments: [{
+        id: `acc-hired-${Date.now()}`,
+        season: 1,
+        clubId: club.id,
+        type: 'club-hired',
+        headline: `Took charge at ${club.name}`,
+      }],
+      totalGamesManaged: 0,
+      totalLeagueTitles: 0,
+      totalFaCups: 0,
+    };
+    state.setManager(managerProfile);
 
     const expectations: Record<number, { minPosition: number; description: string }> = {
       1: { minPosition: 4, description: 'Top 4 finish' },
@@ -186,6 +256,8 @@ function App() {
       seasonNumber: 1,
       leaguePosition: 0,
       lastSaved: new Date().toISOString(),
+      managerName: data.name,
+      managerAvatar: data.avatar,
     };
     state.setSaveMetadata(metadata);
 
@@ -206,7 +278,7 @@ function App() {
 
     setScreen('game');
     setGameView('hub');
-  }, [store]);
+  }, [store, selectedClub]);
 
   // ─── Game advance logic ───
 
@@ -233,6 +305,16 @@ function App() {
       state.setFeaturedSlots([]);
       state.setFeaturedRefillIndex(0);
       state.resetMarketFilters();
+
+      // Replenish all AI squads to 16 players after window closes
+      const windowRng = new SeededRNG(`${sSeed}-window-replenish-${currentPhase}`);
+      for (const club of clubs) {
+        if (club.id === playerClubId) continue;
+        const nonTemp = club.roster.filter((p) => !p.isTemporary);
+        if (nonTemp.length < 16) {
+          replenishSquad(windowRng, club, seasonNumber);
+        }
+      }
 
       if (currentPhase === 'summer_window') {
         // Advance past summer window to August
@@ -526,6 +608,57 @@ function App() {
     );
     state.updateReputation(repResult.delta);
 
+    // Log accomplishments
+    if (playerPosition === 1) {
+      state.addAccomplishment({
+        id: `acc-title-s${seasonNumber}`,
+        season: seasonNumber,
+        clubId: playerClubId,
+        type: 'league-title',
+        headline: `Won the Premier League with ${clubDataMap.get(playerClubId)?.name}`,
+      });
+      state.updateCurrentTenure({ leagueTitles: (manager!.tenures?.at(-1)?.leagueTitles || 0) + 1 });
+    }
+    if (cupResult.winner === playerClubId) {
+      state.addAccomplishment({
+        id: `acc-facup-s${seasonNumber}`,
+        season: seasonNumber,
+        clubId: playerClubId,
+        type: 'fa-cup',
+        headline: `Won the FA Cup with ${clubDataMap.get(playerClubId)?.name}`,
+      });
+      state.updateCurrentTenure({ faCups: (manager!.tenures?.at(-1)?.faCups || 0) + 1 });
+    }
+    // Update tenure stats
+    const gamesThisSeason = sorted.find((r) => r.clubId === playerClubId)?.played || 0;
+    state.updateCurrentTenure({
+      gamesManaged: (manager!.tenures?.at(-1)?.gamesManaged || 0) + gamesThisSeason,
+      bestLeagueFinish: playerPosition,
+    });
+
+    // Update career totals
+    const updatedMgr = store.getState().manager!;
+    state.setManager({
+      ...updatedMgr,
+      totalGamesManaged: updatedMgr.tenures.reduce((sum, t) => sum + t.gamesManaged, 0),
+      totalLeagueTitles: updatedMgr.tenures.reduce((sum, t) => sum + t.leagueTitles, 0),
+      totalFaCups: updatedMgr.tenures.reduce((sum, t) => sum + t.faCups, 0),
+    });
+
+    // Check milestone games
+    const totalGames = store.getState().manager!.totalGamesManaged;
+    for (const milestone of [50, 100, 250, 500, 1000]) {
+      if (totalGames >= milestone && (totalGames - gamesThisSeason) < milestone) {
+        state.addAccomplishment({
+          id: `acc-milestone-${milestone}-s${seasonNumber}`,
+          season: seasonNumber,
+          clubId: playerClubId,
+          type: 'milestone-games',
+          headline: `${milestone} career games managed`,
+        });
+      }
+    }
+
     // Collect player stats for season history
     const playerStats: SeasonPlayerStats[] = [];
     for (const club of clubs) {
@@ -570,6 +703,18 @@ function App() {
         );
         break; // initializeClubs updates all at once
       }
+    }
+
+    // Annual youth intake: each club promotes 1-2 academy graduates
+    for (const club of clubs) {
+      const youthRng = new SeededRNG(`${sSeed}-youth-${club.id}`);
+      annualYouthIntake(youthRng, club, seasonNumber);
+    }
+
+    // Replenish all squads to 16 players (fills gaps from retirements + transfers)
+    for (const club of clubs) {
+      const replenishRng = new SeededRNG(`${sSeed}-replenish-${club.id}`);
+      replenishSquad(replenishRng, club, seasonNumber);
     }
 
     // Remove retired players from shortlist
@@ -656,6 +801,9 @@ function App() {
     );
     setFortunes(seasonFortunes);
 
+    // Increment manager age at new season
+    store.getState().incrementManagerAge();
+
     // Update save metadata
     const manager = store.getState().manager!;
     store.getState().setSaveMetadata({
@@ -665,6 +813,8 @@ function App() {
       seasonNumber: newSeasonNumber,
       leaguePosition: 0,
       lastSaved: new Date().toISOString(),
+      managerName: manager.name,
+      managerAvatar: manager.avatar,
     });
 
     await saveGame(store.getState().saveSlot!, store.getState());
@@ -732,6 +882,8 @@ function App() {
       ...state.saveMetadata!,
       leaguePosition: pos,
       lastSaved: new Date().toISOString(),
+      managerName: state.manager?.name,
+      managerAvatar: state.manager?.avatar,
     });
 
     setGameView('hub');
@@ -762,8 +914,18 @@ function App() {
     );
   }
 
+  if (screen === 'manager_creation' && selectedClub) {
+    return (
+      <ManagerCreation
+        clubName={selectedClub.name}
+        onSubmit={handleManagerCreated}
+        onBack={() => setScreen('club_select')}
+      />
+    );
+  }
+
   // Game screen with navigation
-  const activeNavTab: NavTab = (['hub', 'squad', 'transfers', 'history'] as NavTab[]).includes(gameView as NavTab)
+  const activeNavTab: NavTab = (['hub', 'squad', 'transfers', 'history', 'manager'] as NavTab[]).includes(gameView as NavTab)
     ? (gameView as NavTab)
     : 'hub';
 
@@ -811,6 +973,9 @@ function App() {
             )}
             {gameView === 'history' && (
               <SeasonHistoryScreen />
+            )}
+            {gameView === 'manager' && (
+              <ManagerProfileScreen />
             )}
             {gameView === 'match_results' && (
               <MatchResults

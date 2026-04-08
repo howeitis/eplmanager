@@ -4,6 +4,7 @@ import { CLUBS } from '../../data/clubs';
 import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { SquadMiniView } from './SquadMiniView';
+import { GoalScorersWidget } from './GoalScorersWidget';
 import { LeagueTable } from '../shared/LeagueTable';
 import type { NavTab } from '../shared/BottomNav';
 
@@ -162,6 +163,11 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel }: GameHubProps) {
             </h2>
             <LeagueTable compact />
           </div>
+        </div>
+
+        {/* Goal Scorers leaderboard */}
+        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+          <GoalScorersWidget />
         </div>
 
         {/* Squad mini-view */}

@@ -21,6 +21,7 @@ export function DesktopSidebar({ activeTab, onNavigate, onBack }: DesktopSidebar
     { id: 'squad', label: 'Squad' },
     { id: 'transfers', label: 'Transfers', disabled: !isTransferWindow },
     { id: 'history', label: 'History' },
+    { id: 'manager', label: 'Manager' },
   ];
 
   return (
