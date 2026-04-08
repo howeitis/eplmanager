@@ -50,7 +50,9 @@ export function PlayerDetailModal() {
   const marketListings = useGameStore((s) => s.marketListings);
 
   const playerClubId = manager?.clubId || '';
-  const isTransferWindow = currentPhase === 'summer_window' || currentPhase === 'january_window';
+  const isTransferWindow = currentPhase === 'summer_window' || currentPhase === 'july_advance'
+    || currentPhase === 'august_deadline' || currentPhase === 'january_window'
+    || currentPhase === 'january_deadline';
 
   // Find the player across all clubs
   const targetClub = clubs.find((c) => c.id === clubId);
@@ -453,7 +455,7 @@ function OtherClubActions({
   const playerClub = clubs.find((c) => c.id === playerClubId);
   const playerBudget = budgets[playerClubId] || 0;
   const sellerClub = clubs.find((c) => c.id === clubId);
-  const windowType: 'summer' | 'january' = currentPhase === 'january_window' ? 'january' : 'summer';
+  const windowType: 'summer' | 'january' = (currentPhase === 'january_window' || currentPhase === 'january_deadline') ? 'january' : 'summer';
 
   const marketValue = refreshPlayerValue(player);
 

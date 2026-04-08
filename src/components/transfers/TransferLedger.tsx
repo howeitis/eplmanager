@@ -22,7 +22,7 @@ export function TransferLedger({ clubs }: TransferLedgerProps) {
   const playerClubId = manager?.clubId || '';
 
   const currentWindow: 'summer' | 'january' =
-    currentPhase === 'january_window' || currentPhase === 'january' ? 'january' : 'summer';
+    currentPhase === 'january_window' || currentPhase === 'january' || currentPhase === 'january_deadline' ? 'january' : 'summer';
 
   const filtered = useMemo(() => {
     let records = [...transferHistory];

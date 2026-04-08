@@ -45,9 +45,10 @@ export interface EventContext {
 // ─── Helper: next phase for modifier expiry ───
 
 const PHASE_ORDER: GamePhase[] = [
-  'summer_window', 'august', 'september', 'october', 'november',
-  'december', 'january_window', 'january', 'february', 'march',
-  'april', 'may', 'season_end',
+  'summer_window', 'july_advance', 'august', 'august_deadline',
+  'september', 'october', 'november', 'december',
+  'january_window', 'january', 'january_deadline',
+  'february', 'march', 'april', 'may', 'season_end',
 ];
 
 function nextPhase(current: GamePhase): GamePhase {
@@ -61,7 +62,7 @@ function phaseAfterN(current: GamePhase, n: number): GamePhase {
   for (let i = 0; i < n; i++) {
     idx++;
     // Skip window phases when advancing
-    while (idx < PHASE_ORDER.length && (PHASE_ORDER[idx] === 'summer_window' || PHASE_ORDER[idx] === 'january_window')) {
+    while (idx < PHASE_ORDER.length && ['summer_window', 'july_advance', 'august_deadline', 'january_window', 'january_deadline'].includes(PHASE_ORDER[idx])) {
       idx++;
     }
     if (idx >= PHASE_ORDER.length) return 'season_end';
@@ -70,11 +71,11 @@ function phaseAfterN(current: GamePhase, n: number): GamePhase {
 }
 
 function isMonthlyPhase(phase: GamePhase): boolean {
-  return !['summer_window', 'january_window', 'season_end'].includes(phase);
+  return !['summer_window', 'july_advance', 'august_deadline', 'january_window', 'january_deadline', 'season_end'].includes(phase);
 }
 
 function isTransferPhase(phase: GamePhase): boolean {
-  return phase === 'summer_window' || phase === 'january_window';
+  return ['summer_window', 'july_advance', 'august_deadline', 'january_window', 'january_deadline'].includes(phase);
 }
 
 function getPlayerClub(clubs: Club[], clubId: string): Club | undefined {

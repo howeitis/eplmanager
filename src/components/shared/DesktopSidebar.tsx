@@ -13,7 +13,9 @@ export function DesktopSidebar({ activeTab, onNavigate, onBack }: DesktopSidebar
   const clubs = useGameStore((s) => s.clubs);
 
   const isTransferWindow =
-    currentPhase === 'summer_window' || currentPhase === 'january_window';
+    currentPhase === 'summer_window' || currentPhase === 'july_advance'
+    || currentPhase === 'august_deadline' || currentPhase === 'january_window'
+    || currentPhase === 'january_deadline';
   const playerClub = clubs.find((c) => c.id === manager?.clubId);
 
   const tabs: { id: NavTab; label: string; disabled?: boolean }[] = [

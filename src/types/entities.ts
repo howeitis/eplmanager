@@ -115,13 +115,16 @@ export interface Fixture {
 
 export type GamePhase =
   | 'summer_window'
+  | 'july_advance'
   | 'august'
+  | 'august_deadline'
   | 'september'
   | 'october'
   | 'november'
   | 'december'
   | 'january_window'
   | 'january'
+  | 'january_deadline'
   | 'february'
   | 'march'
   | 'april'
