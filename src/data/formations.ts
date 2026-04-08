@@ -119,10 +119,15 @@ export function getSlotPosition(formation: Formation, slotName: string): Positio
  * Returns 'exact' for same position, 'compatible' for related positions
  * (warn but allow), 'cross' for unrelated (strong warning, still allowed).
  * GK is strictly GK-only.
+ *
+ * Stat-based adaptation: wingers with high DEF (>=65) can adapt to FB,
+ * and fullbacks with high ATK (>=65) can adapt to WG.
+ * Pass playerStats to enable this check.
  */
 export function checkPositionCompatibility(
   slotPosition: Position,
   playerPosition: Position,
+  playerStats?: { ATK: number; DEF: number },
 ): 'exact' | 'compatible' | 'cross' {
   if (slotPosition === playerPosition) return 'exact';
 
@@ -138,6 +143,16 @@ export function checkPositionCompatibility(
 
   for (const group of compatGroups) {
     if (group.includes(slotPosition) && group.includes(playerPosition)) {
+      return 'compatible';
+    }
+  }
+
+  // Stat-based adaptation: WG → FB if high DEF, FB → WG if high ATK
+  if (playerStats) {
+    if (playerPosition === 'WG' && slotPosition === 'FB' && playerStats.DEF >= 65) {
+      return 'compatible';
+    }
+    if (playerPosition === 'FB' && slotPosition === 'WG' && playerStats.ATK >= 65) {
       return 'compatible';
     }
   }

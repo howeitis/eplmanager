@@ -576,6 +576,7 @@ function App() {
 
     // Show match results
     setGameView('match_results');
+    window.scrollTo(0, 0);
   }, [store, formation, mentality, fortunes]);
 
   const handleSeasonEnd = useCallback(async () => {
@@ -776,6 +777,7 @@ function App() {
 
     // Show season end screen
     setGameView('season_end');
+    window.scrollTo(0, 0);
   }, [store, fortunes]);
 
   const handleContinueToOffSeason = useCallback(async () => {
@@ -835,6 +837,7 @@ function App() {
     setViewHistory([]);
     setViewingClubId(null);
     setGameView(tab);
+    window.scrollTo(0, 0);
   }, []);
 
   const navigateToClub = useCallback((clubId: string) => {
@@ -844,6 +847,7 @@ function App() {
       setViewHistory((prev) => [...prev, gameView]);
       setViewingClubId(clubId);
       setGameView('club_squad');
+      window.scrollTo(0, 0);
     }
   }, [managerClubId, gameView, handleNavigate]);
 
@@ -859,6 +863,7 @@ function App() {
       return copy;
     });
     setViewingClubId(null);
+    window.scrollTo(0, 0);
   }, []);
 
   const navigationContextValue = useMemo(() => ({
@@ -886,7 +891,9 @@ function App() {
       managerAvatar: state.manager?.avatar,
     });
 
-    setGameView('hub');
+    // Navigate to squad page so the user can adjust tactics before next month
+    setGameView('squad');
+    window.scrollTo(0, 0);
   }, [store]);
 
   // ─── Advance button label ───

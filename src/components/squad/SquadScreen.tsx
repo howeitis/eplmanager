@@ -75,8 +75,24 @@ export function SquadScreen({
     return result;
   }, [allPlayers, sortKey, filterPos]);
 
+  // Check if any starter in the current XI is injured
+  const hasInjuredStarter = useMemo(() => {
+    const xiPlayerIds = Object.values(startingXI);
+    return allPlayers.some((p) => xiPlayerIds.includes(p.id) && p.injured);
+  }, [allPlayers, startingXI]);
+
   return (
     <div className="plm-space-y-4 plm-w-full">
+      {/* Injured starter banner */}
+      {hasInjuredStarter && (
+        <div className="plm-bg-red-50 plm-border plm-border-red-200 plm-rounded-lg plm-px-4 plm-py-3 plm-flex plm-items-center plm-gap-2">
+          <span className="plm-text-red-500 plm-text-lg plm-flex-shrink-0" aria-hidden="true">!</span>
+          <p className="plm-text-sm plm-text-red-800 plm-font-medium">
+            One or more starters are injured. Review your Starting XI before advancing.
+          </p>
+        </div>
+      )}
+
       {/* Formation & Mentality */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
         <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-3">

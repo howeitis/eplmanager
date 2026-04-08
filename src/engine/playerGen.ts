@@ -251,10 +251,20 @@ export function generateSquad(
   const targetOveralls = generateTargetOveralls(rng, club.tier, 16);
   const players: Player[] = [];
   let playerIndex = 0;
+  let gkIndex = 0;
 
   for (const { position, count } of SQUAD_COMPOSITION) {
     for (let i = 0; i < count; i++) {
-      const target = targetOveralls[playerIndex];
+      let target = targetOveralls[playerIndex];
+
+      // Backup goalkeeper: noticeably weaker than the starter (−8 to −12 OVR)
+      if (position === 'GK') {
+        if (gkIndex === 1) {
+          target = Math.max(45, target - rng.randomInt(8, 12));
+        }
+        gkIndex++;
+      }
+
       const playerId = `${club.id}-p${playerIndex}`;
       players.push(generatePlayer(rng, position, target, club.namePool, playerId));
       playerIndex++;
