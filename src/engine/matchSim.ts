@@ -300,6 +300,7 @@ export interface TSSConfig {
   fortune: number;
   managerReputation?: number;
   narrativeModifier?: number;
+  preferredFormation?: string;
 }
 
 /**
@@ -385,8 +386,11 @@ export function calculateTSS(
   const hasLeader = startingXIPlayers.some((p) => p.trait === 'Leader' && !p.injured);
   const leaderBonus = hasLeader ? 1 : 0;
 
+  // Preferred formation bonus: +1 ATK, +1 DEF (averages to +1 TSS)
+  const preferredFormationBonus = config.preferredFormation && config.formation === config.preferredFormation ? 1 : 0;
+
   return baseRating + formationBonus + mentalityBonus + homeBonus +
-    formBonus + derbyBonus + fortuneBonus + repBonus + narrativeBonus + leaderBonus;
+    formBonus + derbyBonus + fortuneBonus + repBonus + narrativeBonus + leaderBonus + preferredFormationBonus;
 }
 
 /**
@@ -636,6 +640,8 @@ export interface MatchContext {
   awayReputation?: number;
   homeNarrativeMod?: number;
   awayNarrativeMod?: number;
+  homePreferredFormation?: string;
+  awayPreferredFormation?: string;
   homeStartingXI?: StartingXIMap;
   awayStartingXI?: StartingXIMap;
   seasonSeed: string;
@@ -675,6 +681,7 @@ export function simulateMatch(
       fortune: context.homeFortune,
       managerReputation: context.homeReputation,
       narrativeModifier: context.homeNarrativeMod,
+      preferredFormation: context.homePreferredFormation,
     },
     isDerby,
     rng,
@@ -690,6 +697,7 @@ export function simulateMatch(
       fortune: context.awayFortune,
       managerReputation: context.awayReputation,
       narrativeModifier: context.awayNarrativeMod,
+      preferredFormation: context.awayPreferredFormation,
     },
     isDerby,
     rng,
