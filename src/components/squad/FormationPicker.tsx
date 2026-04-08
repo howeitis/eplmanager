@@ -1,5 +1,6 @@
 import type { Formation } from '../../engine/matchSim';
 import type { Player } from '../../types/entities';
+import { useGameStore } from '../../store/gameStore';
 
 const FORMATIONS: { id: Formation; label: string; description: string }[] = [
   { id: '4-4-2', label: '4-4-2', description: 'Balanced classic' },
@@ -26,6 +27,7 @@ interface FormationPickerProps {
 }
 
 export function FormationPicker({ formation, onFormationChange }: FormationPickerProps) {
+  const preferredFormation = useGameStore((s) => s.manager?.preferredFormation);
   const mod = FORMATION_MODIFIERS[formation];
 
   return (
@@ -46,7 +48,9 @@ export function FormationPicker({ formation, onFormationChange }: FormationPicke
                 : 'plm-bg-warm-50 plm-text-warm-700 hover:plm-bg-warm-100 plm-border plm-border-warm-200'
             }`}
           >
-            <div className="plm-text-sm plm-font-bold plm-tabular-nums">{f.label}</div>
+            <div className="plm-text-sm plm-font-bold plm-tabular-nums">
+              {f.label}{f.id === preferredFormation ? ' ★' : ''}
+            </div>
             <div className={`plm-text-[9px] ${formation === f.id ? 'plm-text-warm-300' : 'plm-text-warm-400'}`}>
               {f.description}
             </div>
@@ -60,6 +64,9 @@ export function FormationPicker({ formation, onFormationChange }: FormationPicke
         <span className={`plm-font-semibold ${mod.def > 0 ? 'plm-text-emerald-600' : mod.def < 0 ? 'plm-text-red-500' : 'plm-text-warm-500'}`}>
           DEF {mod.def > 0 ? '+' : ''}{mod.def}
         </span>
+        {formation === preferredFormation && (
+          <span className="plm-font-semibold plm-text-amber-600">★ +1 ATK, +1 DEF</span>
+        )}
       </div>
     </div>
   );

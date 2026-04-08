@@ -2,11 +2,11 @@ import { useState } from 'react';
 import type { PlayingBackground, ManagerPhilosophy } from '../../types/entities';
 
 const NATIONALITIES = [
-  'English', 'Scottish', 'Welsh', 'Irish', 'French', 'German',
-  'Spanish', 'Italian', 'Portuguese', 'Dutch', 'Belgian', 'Argentine',
-  'Brazilian', 'Chilean', 'Mexican', 'Japanese', 'South Korean',
-  'Nigerian', 'Ghanaian', 'South African', 'Australian',
-  'American', 'Canadian', 'Swedish', 'Norwegian',
+  'American', 'Argentine', 'Australian', 'Belgian', 'Brazilian',
+  'Canadian', 'Chilean', 'Dutch', 'English', 'French',
+  'German', 'Ghanaian', 'Irish', 'Italian', 'Japanese',
+  'Mexican', 'Nigerian', 'Norwegian', 'Portuguese', 'Scottish',
+  'South African', 'South Korean', 'Spanish', 'Swedish', 'Welsh',
 ];
 
 const PLAYING_BACKGROUNDS: { value: PlayingBackground; label: string }[] = [
@@ -20,21 +20,28 @@ const PLAYING_BACKGROUNDS: { value: PlayingBackground; label: string }[] = [
 
 const FORMATIONS = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '5-3-2', '3-4-3'];
 
-const PHILOSOPHIES: { value: ManagerPhilosophy; label: string }[] = [
-  { value: 'attacking', label: 'Attacking' },
-  { value: 'possession', label: 'Possession' },
-  { value: 'pragmatic', label: 'Pragmatic' },
-  { value: 'defensive', label: 'Defensive' },
-  { value: 'developmental', label: 'Developmental' },
-  { value: 'rotation-heavy', label: 'Rotation-Heavy' },
+const PHILOSOPHIES: { value: ManagerPhilosophy; label: string; bonus: string }[] = [
+  { value: 'attacking', label: 'Attacking', bonus: 'Extra attacker in starting squad' },
+  { value: 'possession', label: 'Possession', bonus: 'Extra midfielder in starting squad' },
+  { value: 'pragmatic', label: 'Pragmatic', bonus: 'Extra player (random position) in starting squad' },
+  { value: 'defensive', label: 'Defensive', bonus: 'Extra defender in starting squad' },
+  { value: 'developmental', label: 'Developmental', bonus: 'Extra young player (U20) in starting squad' },
+  { value: 'rotation-heavy', label: 'Rotation-Heavy', bonus: 'Extra player (random position) in starting squad' },
 ];
 
 const AVATAR_EMOJIS = [
-  '😎', '🧠', '🦊', '🦁', '🐺', '🦅',
-  '🎩', '👨‍💼', '👴', '🧔', '🕴️', '🎯',
-  '⚽', '🏆', '🔥', '💎', '🌟', '👑',
-  '🐉', '🦈', '🐻', '🦉', '🐯', '🐘',
-  '⚡', '🛡️', '🗡️', '🎖️', '🏅', '🧭',
+  // Women
+  '👩🏻', '👩🏼', '👩🏽', '👩🏾', '👩🏿', '👩',
+  // Men
+  '👨🏻', '👨🏼', '👨🏽', '👨🏾', '👨🏿', '👨',
+  // Person (gender-neutral)
+  '🧑🏻', '🧑🏼', '🧑🏽', '🧑🏾', '🧑🏿', '🧑',
+  // Older women
+  '👵🏻', '👵🏼', '👵🏽', '👵🏾', '👵🏿', '👵',
+  // Older men
+  '👴🏻', '👴🏼', '👴🏽', '👴🏾', '👴🏿', '👴',
+  // Bearded
+  '🧔🏻', '🧔🏼', '🧔🏽', '🧔🏾', '🧔🏿', '🧔',
 ];
 
 export interface ManagerCreationData {
@@ -209,7 +216,7 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
 
           {/* Preferred Formation */}
           <div>
-            <label className={labelClass} htmlFor="mgr-formation">Preferred Formation</label>
+            <label className={labelClass} htmlFor="mgr-formation">Preferred Formation ★</label>
             <select
               id="mgr-formation"
               value={preferredFormation}
@@ -221,6 +228,7 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
+            <p className="plm-text-xs plm-text-gray-400 plm-mt-1">★ +1 ATK, +1 DEF bonus when using this formation</p>
             {errors.preferredFormation && <p className={errorClass}>{errors.preferredFormation}</p>}
           </div>
 
@@ -238,6 +246,11 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
                 <option key={p.value} value={p.value}>{p.label}</option>
               ))}
             </select>
+            {philosophy && (
+              <p className="plm-text-xs plm-text-gray-400 plm-mt-1">
+                {PHILOSOPHIES.find((p) => p.value === philosophy)?.bonus}
+              </p>
+            )}
             {errors.philosophy && <p className={errorClass}>{errors.philosophy}</p>}
           </div>
 

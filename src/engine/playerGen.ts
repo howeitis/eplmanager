@@ -1,4 +1,4 @@
-import type { Player, PlayerStats, Position, Trait, ClubData, NationalityWeight } from '../types/entities';
+import type { Player, PlayerStats, Position, Trait, ClubData, NationalityWeight, ManagerPhilosophy } from '../types/entities';
 import { SeededRNG } from '../utils/rng';
 import { getNamePool } from '../data/namePool';
 
@@ -272,6 +272,63 @@ export function generateSquad(
   }
 
   return players;
+}
+
+const ALL_OUTFIELD_POSITIONS: Position[] = ['CB', 'FB', 'MF', 'WG', 'ST'];
+
+/**
+ * Generate a bonus 17th player for the user's squad based on their manager philosophy.
+ * - attacking: extra ST or WG
+ * - defensive: extra CB or FB
+ * - possession: extra MF
+ * - pragmatic / rotation-heavy: extra random position
+ * - developmental: extra random position, forced age under 20
+ */
+export function generatePhilosophyBonusPlayer(
+  rng: SeededRNG,
+  club: ClubData,
+  philosophy: ManagerPhilosophy,
+  existingCount: number,
+): Player {
+  let position: Position;
+  let forceYoung = false;
+
+  switch (philosophy) {
+    case 'attacking':
+      position = rng.weightedPick(['ST', 'WG'] as Position[], [50, 50]);
+      break;
+    case 'defensive':
+      position = rng.weightedPick(['CB', 'FB'] as Position[], [50, 50]);
+      break;
+    case 'possession':
+      position = 'MF';
+      break;
+    case 'developmental':
+      position = ALL_OUTFIELD_POSITIONS[rng.randomInt(0, ALL_OUTFIELD_POSITIONS.length - 1)];
+      forceYoung = true;
+      break;
+    case 'pragmatic':
+    case 'rotation-heavy':
+    default:
+      position = ALL_OUTFIELD_POSITIONS[rng.randomInt(0, ALL_OUTFIELD_POSITIONS.length - 1)];
+      break;
+  }
+
+  const [rangeMin, rangeMax] = TIER_RATING_RANGES[club.tier];
+  const targetAvg = (rangeMin + rangeMax) / 2;
+  // Bonus player sits around squad average (slightly below)
+  const targetOverall = Math.round(targetAvg + rng.randomFloat(-3, 1));
+
+  const playerId = `${club.id}-p${existingCount}`;
+  const player = generatePlayer(rng, position, targetOverall, club.namePool, playerId);
+
+  if (forceYoung && player.age >= 20) {
+    player.age = rng.randomInt(17, 19);
+    // Re-evaluate trait for young age
+    player.trait = assignTrait(rng, player.age);
+  }
+
+  return player;
 }
 
 export function generateAllSquads(

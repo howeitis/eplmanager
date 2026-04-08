@@ -17,7 +17,7 @@ import { PlayerDetailModal } from './components/shared/PlayerDetailModal';
 import { NavigationContext } from './hooks/useNavigation';
 import { useGameStore } from './store/gameStore';
 import { CLUBS } from './data/clubs';
-import { generateAllSquads } from './engine/playerGen';
+import { generateAllSquads, generatePhilosophyBonusPlayer } from './engine/playerGen';
 import { saveGame, loadGame } from './utils/save';
 import { SeededRNG, seasonSeed as deriveSeasonSeed } from './utils/rng';
 import {
@@ -197,6 +197,13 @@ function App() {
     state.setGameSeed(gameSeed);
 
     const squads = generateAllSquads(gameSeed, CLUBS);
+
+    // Philosophy bonus: add an extra 17th player to the user's squad
+    const userSquad = squads.get(club.id)!;
+    const bonusRng = new SeededRNG(`${gameSeed}-philosophy-${club.id}`);
+    const bonusPlayer = generatePhilosophyBonusPlayer(bonusRng, club, data.philosophy, userSquad.length);
+    userSquad.push(bonusPlayer);
+
     state.initializeClubs(CLUBS, squads);
 
     const budgets: Record<string, number> = {};
@@ -453,6 +460,8 @@ function App() {
         awayFortune: fortuneMap.get(awayClub.id) || 0,
         homeReputation: isPlayerHome ? state.manager!.reputation : undefined,
         awayReputation: isPlayerAway ? state.manager!.reputation : undefined,
+        homePreferredFormation: isPlayerHome ? state.manager!.preferredFormation : undefined,
+        awayPreferredFormation: isPlayerAway ? state.manager!.preferredFormation : undefined,
         homeStartingXI: homeXI,
         awayStartingXI: awayXI,
         seasonSeed: sSeed,
