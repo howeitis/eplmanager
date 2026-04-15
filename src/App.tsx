@@ -9,6 +9,7 @@ import { SquadScreen } from './components/squad/SquadScreen';
 import { ClubSquadScreen } from './components/squad/ClubSquadScreen';
 import { MatchResults } from './components/match/MatchResults';
 import { SeasonEnd } from './components/season/SeasonEnd';
+import { BoardMeeting } from './components/season/BoardMeeting';
 import { SeasonHistoryScreen } from './components/history/SeasonHistory';
 import { ManagerProfileScreen } from './components/manager/ManagerProfileScreen';
 import { BottomNav, type NavTab } from './components/shared/BottomNav';
@@ -60,7 +61,7 @@ import type {
 } from './types/entities';
 
 type Screen = 'save_select' | 'club_select' | 'manager_creation' | 'game';
-type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'match_results' | 'season_end' | 'club_squad';
+type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'match_results' | 'season_end' | 'club_squad' | 'board_meeting';
 
 const PHASE_ORDER: GamePhase[] = [
   'summer_window', 'july_advance', 'august', 'august_deadline',
@@ -244,9 +245,11 @@ function App() {
           tickerMessages: [],
           shortlist: (data as unknown as Record<string, unknown>).shortlist as string[] || [],
           shortlistNotifications: [],
+          boardMeetingPending: (data as unknown as Record<string, unknown>).boardMeetingPending as boolean || false,
         });
         setScreen('game');
-        setGameView('hub');
+        const isBoardMeetingPending = (data as unknown as Record<string, unknown>).boardMeetingPending as boolean || false;
+        setGameView(isBoardMeetingPending ? 'board_meeting' : 'hub');
       }
     } else {
       store.getState().setSaveSlot(slot);
@@ -352,10 +355,13 @@ function App() {
     );
     setFortunes(seasonFortunes);
 
+    // Trigger board meeting before first summer window
+    store.getState().setBoardMeetingPending(true);
+
     await saveGame(slot, store.getState());
 
     setScreen('game');
-    setGameView('hub');
+    setGameView('board_meeting');
   }, [store, selectedClub]);
 
   // ─── Game advance logic ───
@@ -929,7 +935,10 @@ function App() {
     // Clear Starting XI for new season (will be auto-populated when first month starts)
     store.getState().clearStartingXI();
     store.getState().clearStartingXIHistory();
-    setGameView('hub');
+
+    // Trigger board meeting before new season
+    store.getState().setBoardMeetingPending(true);
+    setGameView('board_meeting');
   }, [store, fortunes]);
 
   // ─── Navigation ───
@@ -971,6 +980,12 @@ function App() {
     navigateToClub,
     navigateBack,
   }), [navigateToClub, navigateBack]);
+
+  const handleBoardMeetingContinue = useCallback(async () => {
+    store.getState().setBoardMeetingPending(false);
+    await saveGame(store.getState().saveSlot!, store.getState());
+    setGameView('hub');
+  }, [store]);
 
   const handleMatchResultsContinue = useCallback(async () => {
     const state = store.getState();
@@ -1096,6 +1111,9 @@ function App() {
                 events={monthEvents}
                 onContinue={handleMatchResultsContinue}
               />
+            )}
+            {gameView === 'board_meeting' && (
+              <BoardMeeting onContinue={handleBoardMeetingContinue} />
             )}
             {gameView === 'season_end' && (
               <SeasonEnd

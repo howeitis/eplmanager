@@ -8,6 +8,7 @@ export interface SeasonSlice {
   gameSeed: string;
   events: SeasonEvent[];
   activeModifiers: ActiveModifier[];
+  boardMeetingPending: boolean;
 
   setPhase: (phase: GamePhase) => void;
   advanceSeason: () => void;
@@ -17,6 +18,7 @@ export interface SeasonSlice {
   addModifier: (modifier: ActiveModifier) => void;
   removeModifier: (modifierId: string) => void;
   clearExpiredModifiers: (currentPhase: GamePhase) => void;
+  setBoardMeetingPending: (pending: boolean) => void;
 }
 
 export const createSeasonSlice: StateCreator<GameState, [], [], SeasonSlice> = (set) => ({
@@ -25,6 +27,7 @@ export const createSeasonSlice: StateCreator<GameState, [], [], SeasonSlice> = (
   gameSeed: '',
   events: [],
   activeModifiers: [],
+  boardMeetingPending: false,
 
   setPhase: (phase) => {
     set({ currentPhase: phase });
@@ -69,5 +72,9 @@ export const createSeasonSlice: StateCreator<GameState, [], [], SeasonSlice> = (
         (m) => m.expiresAt !== currentPhase,
       ),
     }));
+  },
+
+  setBoardMeetingPending: (pending) => {
+    set({ boardMeetingPending: pending });
   },
 });
