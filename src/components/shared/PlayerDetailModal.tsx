@@ -10,6 +10,7 @@ import { resetProgressionForTransfer } from '../../engine/playerGen';
 import { SeededRNG } from '../../utils/rng';
 import { SigningCelebrationModal } from './SigningCelebrationModal';
 import type { SigningCelebrationData } from './SigningCelebrationModal';
+import { RetroPlayerCard } from './RetroPlayerCard';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
 
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
@@ -70,6 +71,8 @@ export function PlayerDetailModal() {
 
   // Celebration modal state
   const [celebrationData, setCelebrationData] = useState<SigningCelebrationData | null>(null);
+  // Card view toggle
+  const [showCardView, setShowCardView] = useState(false);
 
   const isOwnClub = clubId === playerClubId;
   const isOnShortlist = playerId ? shortlist.includes(playerId) : false;
@@ -81,6 +84,7 @@ export function PlayerDetailModal() {
       playerSnapshotRef.current = null;
       clubIdSnapshotRef.current = null;
       setCelebrationData(null);
+      setShowCardView(false);
     }
   }, [isOpen]);
 
@@ -231,119 +235,182 @@ export function PlayerDetailModal() {
                 )}
               </div>
             </div>
-            <button
-              onClick={closeModal}
-              aria-label="Close player details"
-              className="plm-ml-3 plm-flex-shrink-0 plm-w-9 plm-h-9 plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-warm-400 hover:plm-bg-warm-100 hover:plm-text-warm-700 plm-transition-colors plm-min-h-[44px] plm-min-w-[44px]"
-            >
-              <svg className="plm-w-5 plm-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="plm-flex plm-items-center plm-gap-1 plm-ml-3 plm-flex-shrink-0">
+              {/* Card view toggle */}
+              <button
+                onClick={() => setShowCardView(!showCardView)}
+                aria-label={showCardView ? 'Switch to stats view' : 'Switch to card view'}
+                className={`plm-w-9 plm-h-9 plm-flex plm-items-center plm-justify-center plm-rounded-full plm-transition-colors plm-min-h-[44px] plm-min-w-[44px] ${
+                  showCardView
+                    ? 'plm-bg-charcoal plm-text-white'
+                    : 'plm-text-warm-400 hover:plm-bg-warm-100 hover:plm-text-warm-700'
+                }`}
+              >
+                <svg className="plm-w-5 plm-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="10" rx="1" strokeWidth={2} />
+                  <rect x="14" y="3" width="7" height="10" rx="1" strokeWidth={2} />
+                  <path strokeLinecap="round" strokeWidth={2} d="M3 16h18M3 19h12" />
+                </svg>
+              </button>
+              <button
+                onClick={closeModal}
+                aria-label="Close player details"
+                className="plm-w-9 plm-h-9 plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-warm-400 hover:plm-bg-warm-100 hover:plm-text-warm-700 plm-transition-colors plm-min-h-[44px] plm-min-w-[44px]"
+              >
+                <svg className="plm-w-5 plm-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="plm-px-5 plm-pt-4 plm-space-y-5">
-          {/* Stats bars */}
-          <div>
-            <h3 className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400 plm-mb-2">
-              Attributes
-            </h3>
-            <div className="plm-space-y-2">
-              {STAT_KEYS.map((stat) => {
-                const value = player.stats[stat];
-                const pct = Math.round((value / 99) * 100);
-                return (
-                  <div key={stat} className="plm-flex plm-items-center plm-gap-2">
-                    <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-500 plm-w-8 plm-text-right">
-                      {stat}
-                    </span>
-                    <div className="plm-flex-1 plm-h-2.5 plm-bg-warm-100 plm-rounded-full plm-overflow-hidden">
-                      <div
-                        className={`plm-h-full plm-rounded-full plm-transition-all ${STAT_COLORS[stat]}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="plm-text-xs plm-font-bold plm-tabular-nums plm-text-charcoal plm-w-7 plm-text-right">
-                      {value}
-                    </span>
-                    {/* TODO: Wire positional diffs after Task 7.3 (Starting XI) */}
-                  </div>
-                );
-              })}
+        {showCardView ? (
+          /* ──── Card View ──── */
+          <div className="plm-px-5 plm-pt-4 plm-pb-2 plm-flex plm-flex-col plm-items-center plm-space-y-4">
+            <RetroPlayerCard
+              player={player}
+              clubName={targetClub.shortName || targetClub.name}
+              clubColors={targetClub.colors}
+              size="lg"
+            />
+            {/* Market value under card */}
+            <div className="plm-flex plm-items-center plm-justify-center plm-gap-2">
+              <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400">
+                Value
+              </span>
+              <span className="plm-text-lg plm-font-bold plm-text-charcoal">
+                &pound;{marketValue.toFixed(1)}M
+              </span>
             </div>
+            {/* Action buttons */}
+            {!player.isTemporary && (
+              <div className="plm-space-y-2 plm-pt-1 plm-w-full">
+                {isOwnClub ? (
+                  <OwnClubActions
+                    player={player}
+                    clubId={clubId!}
+                    isListed={isListed}
+                    isTransferWindow={isTransferWindow}
+                    onListForSale={handleListForSale}
+                  />
+                ) : (
+                  <OtherClubActions
+                    player={player}
+                    clubId={clubIdSnapshotRef.current || clubId!}
+                    isOnShortlist={isOnShortlist}
+                    isTransferWindow={isTransferWindow}
+                    playerTransferred={playerTransferred}
+                    onToggleShortlist={() => toggleShortlist(player.id)}
+                    onCelebration={setCelebrationData}
+                  />
+                )}
+              </div>
+            )}
           </div>
-
-          {/* Form indicator */}
-          <div className="plm-flex plm-items-center plm-gap-3">
-            <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400">
-              Form
-            </span>
-            <span
-              className={`plm-text-sm plm-font-bold plm-px-3 plm-py-1 plm-rounded-full ${getFormColor(player.form)}`}
-            >
-              {formatFormValue(player.form)}
-            </span>
-          </div>
-
-          {/* Season stats */}
-          {!player.isTemporary && (
+        ) : (
+          /* ──── Stats View (original) ──── */
+          <div className="plm-px-5 plm-pt-4 plm-space-y-5">
+            {/* Stats bars */}
             <div>
               <h3 className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400 plm-mb-2">
-                Season Stats
+                Attributes
               </h3>
-              <div className="plm-grid plm-grid-cols-3 plm-gap-2">
-                <StatBox label="Goals" value={player.goals} />
-                <StatBox label="Assists" value={player.assists} />
-                <StatBox label="Clean Sheets" value={player.cleanSheets} />
+              <div className="plm-space-y-2">
+                {STAT_KEYS.map((stat) => {
+                  const value = player.stats[stat];
+                  const pct = Math.round((value / 99) * 100);
+                  return (
+                    <div key={stat} className="plm-flex plm-items-center plm-gap-2">
+                      <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-500 plm-w-8 plm-text-right">
+                        {stat}
+                      </span>
+                      <div className="plm-flex-1 plm-h-2.5 plm-bg-warm-100 plm-rounded-full plm-overflow-hidden">
+                        <div
+                          className={`plm-h-full plm-rounded-full plm-transition-all ${STAT_COLORS[stat]}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="plm-text-xs plm-font-bold plm-tabular-nums plm-text-charcoal plm-w-7 plm-text-right">
+                        {value}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          )}
 
-          {/* Market value */}
-          <div className="plm-flex plm-items-center plm-justify-between plm-bg-warm-50 plm-rounded-lg plm-px-4 plm-py-3">
-            <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400">
-              Market Value
-            </span>
-            <span className="plm-text-lg plm-font-bold plm-text-charcoal">
-              &pound;{marketValue.toFixed(1)}M
-            </span>
-          </div>
-
-          {/* Club info */}
-          <div className="plm-flex plm-items-center plm-gap-2 plm-text-xs plm-text-warm-500">
-            <div
-              className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
-              style={{ backgroundColor: targetClub.colors.primary }}
-            />
-            <span>{targetClub.name}</span>
-          </div>
-
-          {/* Action buttons */}
-          {!player.isTemporary && (
-            <div className="plm-space-y-2 plm-pt-1">
-              {isOwnClub ? (
-                <OwnClubActions
-                  player={player}
-                  clubId={clubId!}
-                  isListed={isListed}
-                  isTransferWindow={isTransferWindow}
-                  onListForSale={handleListForSale}
-                />
-              ) : (
-                <OtherClubActions
-                  player={player}
-                  clubId={clubIdSnapshotRef.current || clubId!}
-                  isOnShortlist={isOnShortlist}
-                  isTransferWindow={isTransferWindow}
-                  playerTransferred={playerTransferred}
-                  onToggleShortlist={() => toggleShortlist(player.id)}
-                  onCelebration={setCelebrationData}
-                />
-              )}
+            {/* Form indicator */}
+            <div className="plm-flex plm-items-center plm-gap-3">
+              <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400">
+                Form
+              </span>
+              <span
+                className={`plm-text-sm plm-font-bold plm-px-3 plm-py-1 plm-rounded-full ${getFormColor(player.form)}`}
+              >
+                {formatFormValue(player.form)}
+              </span>
             </div>
-          )}
-        </div>
+
+            {/* Season stats */}
+            {!player.isTemporary && (
+              <div>
+                <h3 className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400 plm-mb-2">
+                  Season Stats
+                </h3>
+                <div className="plm-grid plm-grid-cols-3 plm-gap-2">
+                  <StatBox label="Goals" value={player.goals} />
+                  <StatBox label="Assists" value={player.assists} />
+                  <StatBox label="Clean Sheets" value={player.cleanSheets} />
+                </div>
+              </div>
+            )}
+
+            {/* Market value */}
+            <div className="plm-flex plm-items-center plm-justify-between plm-bg-warm-50 plm-rounded-lg plm-px-4 plm-py-3">
+              <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400">
+                Market Value
+              </span>
+              <span className="plm-text-lg plm-font-bold plm-text-charcoal">
+                &pound;{marketValue.toFixed(1)}M
+              </span>
+            </div>
+
+            {/* Club info */}
+            <div className="plm-flex plm-items-center plm-gap-2 plm-text-xs plm-text-warm-500">
+              <div
+                className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
+                style={{ backgroundColor: targetClub.colors.primary }}
+              />
+              <span>{targetClub.name}</span>
+            </div>
+
+            {/* Action buttons */}
+            {!player.isTemporary && (
+              <div className="plm-space-y-2 plm-pt-1">
+                {isOwnClub ? (
+                  <OwnClubActions
+                    player={player}
+                    clubId={clubId!}
+                    isListed={isListed}
+                    isTransferWindow={isTransferWindow}
+                    onListForSale={handleListForSale}
+                  />
+                ) : (
+                  <OtherClubActions
+                    player={player}
+                    clubId={clubIdSnapshotRef.current || clubId!}
+                    isOnShortlist={isOnShortlist}
+                    isTransferWindow={isTransferWindow}
+                    playerTransferred={playerTransferred}
+                    onToggleShortlist={() => toggleShortlist(player.id)}
+                    onCelebration={setCelebrationData}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Signing Celebration overlay */}

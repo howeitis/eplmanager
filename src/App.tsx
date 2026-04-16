@@ -15,6 +15,7 @@ import { ManagerProfileScreen } from './components/manager/ManagerProfileScreen'
 import { BottomNav, type NavTab } from './components/shared/BottomNav';
 import { DesktopSidebar } from './components/shared/DesktopSidebar';
 import { PlayerDetailModal } from './components/shared/PlayerDetailModal';
+import { PackOpening } from './components/shared/PackOpening';
 import { NavigationContext } from './hooks/useNavigation';
 import { useGameStore } from './store/gameStore';
 import { CLUBS } from './data/clubs';
@@ -171,6 +172,9 @@ function App() {
   const [agingResults, setAgingResults] = useState<AgingResult[]>([]);
   const [xiNotifications, setXiNotifications] = useState<XISwap[]>([]);
   const [julyNarrative, setJulyNarrative] = useState<string | null>(null);
+  const [packPlayers, setPackPlayers] = useState<import('./types/entities').Player[]>([]);
+  const [packConfig, setPackConfig] = useState<{ title: string; subtitle?: string; onComplete?: () => void } | null>(null);
+  const [youthIntakePlayers, setYouthIntakePlayers] = useState<import('./types/entities').Player[]>([]);
   const store = useGameStore;
   const managerClubId = useGameStore((s) => s.manager?.clubId);
 
@@ -185,6 +189,7 @@ function App() {
           ...club,
           roster: club.roster.map((p) => ({
             ...p,
+            nationality: p.nationality ?? 'English',
             formHistory: p.formHistory ?? [],
             monthlyGoals: p.monthlyGoals ?? [],
             monthlyAssists: p.monthlyAssists ?? [],
@@ -813,9 +818,13 @@ function App() {
     }
 
     // Annual youth intake: each club promotes 1-2 academy graduates
+    let playerYouthIntake: import('./types/entities').Player[] = [];
     for (const club of clubs) {
       const youthRng = new SeededRNG(`${sSeed}-youth-${club.id}`);
-      annualYouthIntake(youthRng, club, seasonNumber);
+      const youthPlayers = annualYouthIntake(youthRng, club, seasonNumber);
+      if (club.id === playerClubId) {
+        playerYouthIntake = youthPlayers;
+      }
     }
 
     // Replenish all squads to 16 players (fills gaps from retirements + transfers)
@@ -880,6 +889,9 @@ function App() {
       consecutiveOver,
     );
     state.setBoardExpectation({ minPosition: newExpectation.minPosition, description: newExpectation.description });
+
+    // Save youth intake players for the pack reveal
+    setYouthIntakePlayers(playerYouthIntake);
 
     // Show season end screen
     setGameView('season_end');
@@ -982,8 +994,24 @@ function App() {
   }), [navigateToClub, navigateBack]);
 
   const handleBoardMeetingContinue = useCallback(async () => {
-    store.getState().setBoardMeetingPending(false);
-    await saveGame(store.getState().saveSlot!, store.getState());
+    const state = store.getState();
+    state.setBoardMeetingPending(false);
+    await saveGame(state.saveSlot!, store.getState());
+
+    // On first season, show starter pack with the starting squad
+    if (state.seasonNumber === 1 && state.manager) {
+      const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
+      if (playerClub) {
+        // Sort by overall (best first) and take the top 11
+        const starters = [...playerClub.roster]
+          .filter((p) => !p.isTemporary)
+          .sort((a, b) => b.overall - a.overall)
+          .slice(0, 11);
+        setPackPlayers(starters);
+        setPackConfig({ title: 'Starter Pack', subtitle: playerClub.name });
+        return;
+      }
+    }
     setGameView('hub');
   }, [store]);
 
@@ -1117,7 +1145,22 @@ function App() {
             )}
             {gameView === 'season_end' && (
               <SeasonEnd
-                onContinue={handleContinueToOffSeason}
+                onContinue={() => {
+                  // If there are youth intake players, show youth pack first
+                  if (youthIntakePlayers.length > 0) {
+                    const state = store.getState();
+                    const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
+                    setPackPlayers(youthIntakePlayers);
+                    setPackConfig({
+                      title: 'Youth Academy',
+                      subtitle: `${playerClub?.name || 'Club'} Graduates`,
+                      onComplete: handleContinueToOffSeason,
+                    });
+                    setYouthIntakePlayers([]);
+                    return;
+                  }
+                  handleContinueToOffSeason();
+                }}
                 faCupWinner={faCupWinner}
                 agingResults={agingResults}
               />
@@ -1127,6 +1170,31 @@ function App() {
 
         <BottomNav activeTab={activeNavTab} onNavigate={handleNavigate} />
         <PlayerDetailModal />
+
+        {/* Pack Opening overlay */}
+        {packConfig && packPlayers.length > 0 && (() => {
+          const state = store.getState();
+          const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
+          const customOnComplete = packConfig.onComplete;
+          return (
+            <PackOpening
+              players={packPlayers}
+              clubName={playerClub?.name || ''}
+              clubColors={playerClub?.colors || { primary: '#1A1A1A', secondary: '#333' }}
+              packTitle={packConfig.title}
+              packSubtitle={packConfig.subtitle}
+              onComplete={() => {
+                setPackPlayers([]);
+                setPackConfig(null);
+                if (customOnComplete) {
+                  customOnComplete();
+                } else {
+                  setGameView('hub');
+                }
+              }}
+            />
+          );
+        })()}
       </div>
     </NavigationContext.Provider>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { isRival } from '../../engine/transfers';
+import { RetroPlayerCard } from './RetroPlayerCard';
 import type { Player, Club } from '../../types/entities';
 
 export interface SigningCelebrationData {
@@ -165,26 +166,15 @@ export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationM
             Welcome to {buyerClub?.name || 'the Club'}!
           </h2>
 
-          {/* Player info card */}
-          <div className="plm-mt-5 plm-bg-warm-50 plm-rounded-xl plm-px-5 plm-py-4">
-            <div className="plm-text-xl plm-font-bold plm-text-charcoal">{data.player.name}</div>
-            <div className="plm-flex plm-items-center plm-justify-center plm-gap-2 plm-mt-1.5 plm-flex-wrap">
-              <span className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-500">
-                {data.player.position}
-              </span>
-              <span className="plm-text-xs plm-text-warm-400">&middot;</span>
-              <span className="plm-text-xs plm-text-warm-600">Age {data.player.age}</span>
-              <span className="plm-text-xs plm-text-warm-400">&middot;</span>
-              <span className="plm-text-sm plm-font-bold plm-text-charcoal">
-                {data.player.overall} OVR
-              </span>
-            </div>
-            {/* Trait chip */}
-            <div className="plm-mt-2">
-              <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wide plm-bg-white plm-text-warm-600 plm-px-2.5 plm-py-1 plm-rounded-full plm-border plm-border-warm-200">
-                {data.player.trait}
-              </span>
-            </div>
+          {/* Player card */}
+          <div className="plm-mt-5 plm-flex plm-justify-center">
+            <RetroPlayerCard
+              player={data.player}
+              clubName={buyerClub?.shortName || buyerClub?.name}
+              clubColors={buyerClub?.colors}
+              size="md"
+              animated
+            />
           </div>
 
           {/* Fee */}
