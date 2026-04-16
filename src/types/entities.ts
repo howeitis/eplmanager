@@ -24,6 +24,7 @@ export interface PlayerStats {
 export interface Player {
   id: string;
   name: string;
+  nationality: string;
   age: number;
   position: Position;
   stats: PlayerStats;

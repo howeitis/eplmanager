@@ -18,6 +18,7 @@ function makePlayer(overrides: Partial<Player> & { position: Position; overall: 
   return {
     id: `test-${overrides.name}`,
     name: overrides.name,
+    nationality: overrides.nationality ?? 'english',
     age: overrides.age ?? 25,
     position: overrides.position,
     stats: { ATK: 70, DEF: 70, MOV: 70, PWR: 70, MEN: 70, SKL: 70 },

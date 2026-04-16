@@ -1,5 +1,8 @@
+import { useState, useCallback } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
+import { ManagerCard } from '../shared/ManagerCard';
+import { saveGame } from '../../utils/save';
 
 const PHILOSOPHY_LABELS: Record<string, string> = {
   attacking: 'Attacking',
@@ -35,6 +38,22 @@ const clubMap = new Map(CLUBS.map((c) => [c.id, c]));
 export function ManagerProfileScreen() {
   const manager = useGameStore((s) => s.manager);
   const seasonNumber = useGameStore((s) => s.seasonNumber);
+  const saveSlot = useGameStore((s) => s.saveSlot);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = useCallback(async () => {
+    if (!saveSlot || saving) return;
+    setSaving(true);
+    try {
+      const state = useGameStore.getState();
+      await saveGame(saveSlot, state);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }, [saveSlot, saving]);
 
   if (!manager) {
     return (
@@ -100,6 +119,19 @@ export function ManagerProfileScreen() {
             &ldquo;{manager.bio}&rdquo;
           </p>
         )}
+      </div>
+
+      {/* Manager Card */}
+      <div className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-p-5">
+        <h2 className="plm-font-display plm-font-bold plm-text-charcoal plm-mb-4">Manager Card</h2>
+        <div className="plm-flex plm-justify-center">
+          <ManagerCard
+            manager={manager}
+            clubName={currentClub?.shortName || currentClub?.name}
+            clubColors={currentClub?.colors}
+            seasonNumber={seasonNumber}
+          />
+        </div>
       </div>
 
       {/* Career Totals */}
@@ -203,6 +235,19 @@ export function ManagerProfileScreen() {
           </div>
         </div>
       )}
+
+      {/* Save Button */}
+      <button
+        onClick={handleSave}
+        disabled={saving || !saveSlot}
+        className={`plm-w-full plm-py-3.5 plm-rounded-lg plm-font-body plm-font-semibold plm-text-sm plm-transition-all plm-duration-200 plm-min-h-[44px] plm-border ${
+          saved
+            ? 'plm-bg-emerald-50 plm-border-emerald-300 plm-text-emerald-700'
+            : 'plm-bg-charcoal plm-text-white plm-border-charcoal hover:plm-bg-charcoal-light'
+        } disabled:plm-opacity-50 disabled:plm-cursor-not-allowed`}
+      >
+        {saving ? 'Saving...' : saved ? 'Game Saved!' : 'Save Game'}
+      </button>
     </div>
   );
 }

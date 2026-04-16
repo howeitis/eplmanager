@@ -76,7 +76,7 @@ export function calculateMarketValue(overall: number, age: number, form: number)
   return Math.max(0.5, Math.round(value * 10) / 10);
 }
 
-function generateName(rng: SeededRNG, namePool: NationalityWeight[]): string {
+function generateNameAndNationality(rng: SeededRNG, namePool: NationalityWeight[]): { name: string; nationality: string } {
   const nationalities = namePool.map((n) => n.nationality);
   const weights = namePool.map((n) => n.weight);
   const nationality = rng.weightedPick(nationalities, weights);
@@ -84,7 +84,7 @@ function generateName(rng: SeededRNG, namePool: NationalityWeight[]): string {
 
   const firstName = pool.firstNames[rng.randomInt(0, pool.firstNames.length - 1)];
   const lastName = pool.lastNames[rng.randomInt(0, pool.lastNames.length - 1)];
-  return `${firstName} ${lastName}`;
+  return { name: `${firstName} ${lastName}`, nationality };
 }
 
 function generateAge(rng: SeededRNG): number {
@@ -202,9 +202,12 @@ export function generatePlayer(
     else if (rng.random() < 0.05) earlyPeaker = true;
   }
 
+  const { name, nationality } = generateNameAndNationality(rng, namePool);
+
   return {
     id: playerId,
-    name: generateName(rng, namePool),
+    name,
+    nationality,
     age,
     position,
     stats,
