@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import { LeagueTable } from '../shared/LeagueTable';
 import { AgingReport } from './AgingReport';
+import { Confetti } from '../shared/Confetti';
 import type { AgingResult } from '../../engine/aging';
 import type { LeagueTableRow, Player, Club } from '../../types/entities';
 
@@ -25,6 +26,7 @@ interface SeasonEndProps {
 export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: SeasonEndProps) {
   const manager = useGameStore((s) => s.manager);
   const leagueTable = useGameStore((s) => s.leagueTable);
+  const [showConfetti, setShowConfetti] = useState(false);
   const clubs = useGameStore((s) => s.clubs);
   const boardExpectation = useGameStore((s) => s.boardExpectation);
   const seasonNumber = useGameStore((s) => s.seasonNumber);
@@ -40,6 +42,14 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
 
   const playerClubId = manager?.clubId;
   const playerPosition = sortedTable.findIndex((r) => r.clubId === playerClubId) + 1;
+  const wonLeague = playerPosition === 1;
+
+  useEffect(() => {
+    if (wonLeague) {
+      const t = setTimeout(() => setShowConfetti(true), 400);
+      return () => clearTimeout(t);
+    }
+  }, [wonLeague]);
   const playerRow = sortedTable.find((r) => r.clubId === playerClubId);
   const playerClub = clubs.find((c) => c.id === playerClubId);
   const playerClubData = clubDataMap.get(playerClubId || '');
@@ -209,6 +219,7 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
 
   return (
     <div className="plm-space-y-4 plm-w-full">
+      {showConfetti && <Confetti count={80} duration={4000} />}
       {/* Final table */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
         <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-mb-1">

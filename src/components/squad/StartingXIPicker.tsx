@@ -20,6 +20,14 @@ import {
 } from '../../data/formations';
 import type { XISwap } from '../../engine/startingXI';
 
+// ─── Helper: find which slot a player occupies in the XI ───
+function findPlayerSlot(xi: Record<string, string>, playerId: string): string | null {
+  for (const [slot, id] of Object.entries(xi)) {
+    if (id === playerId) return slot;
+  }
+  return null;
+}
+
 interface StartingXIPickerProps {
   formation: Formation;
   xiNotifications: XISwap[];
@@ -36,6 +44,8 @@ export function StartingXIPicker({
   const manager = useGameStore((s) => s.manager);
   const clubs = useGameStore((s) => s.clubs);
   const tempFillIns = useGameStore((s) => s.tempFillIns);
+  const captainId = useGameStore((s) => s.captainId);
+  const setCaptain = useGameStore((s) => s.setCaptain);
 
   const [activeSlot, setActiveSlot] = useState<string | null>(null);
 
@@ -116,15 +126,19 @@ export function StartingXIPicker({
         </div>
 
         {/* Player Slots */}
-        {slots.map((slot) => (
-          <PitchSlot
-            key={slot.slot}
-            slot={slot}
-            player={findPlayerForSlot(slot.slot, startingXI, allPlayers)}
-            isActive={activeSlot === slot.slot}
-            onTap={() => setActiveSlot(activeSlot === slot.slot ? null : slot.slot)}
-          />
-        ))}
+        {slots.map((slot) => {
+          const slotPlayer = findPlayerForSlot(slot.slot, startingXI, allPlayers);
+          return (
+            <PitchSlot
+              key={slot.slot}
+              slot={slot}
+              player={slotPlayer}
+              isActive={activeSlot === slot.slot}
+              isCaptain={!!(slotPlayer && captainId === slotPlayer.id)}
+              onTap={() => setActiveSlot(activeSlot === slot.slot ? null : slot.slot)}
+            />
+          );
+        })}
       </div>
 
       {/* Slot Assignment Dropdown (mobile: bottom sheet style, desktop: inline) */}
@@ -132,12 +146,20 @@ export function StartingXIPicker({
         <SlotAssignmentPanel
           slot={slots.find((s) => s.slot === activeSlot)!}
           allPlayers={allPlayers}
-          xiPlayerIds={xiPlayerIds}
+          startingXI={startingXI}
           currentPlayerId={startingXI[activeSlot]}
+          captainId={captainId}
           onAssign={(playerId) => {
+            // If the chosen player is already in another slot, swap them
+            const existingSlot = findPlayerSlot(startingXI, playerId);
+            if (existingSlot && existingSlot !== activeSlot) {
+              const currentInActiveSlot = startingXI[activeSlot];
+              assignToSlot(existingSlot, currentInActiveSlot);
+            }
             assignToSlot(activeSlot, playerId);
             setActiveSlot(null);
           }}
+          onSetCaptain={(playerId) => setCaptain(playerId === captainId ? null : playerId)}
           onClose={() => setActiveSlot(null)}
         />
       )}
@@ -163,11 +185,13 @@ function PitchSlot({
   slot,
   player,
   isActive,
+  isCaptain,
   onTap,
 }: {
   slot: FormationSlotDef;
   player: Player | undefined;
   isActive: boolean;
+  isCaptain: boolean;
   onTap: () => void;
 }) {
   const isInjured = player?.injured;
@@ -199,13 +223,16 @@ function PitchSlot({
           {player ? player.overall : slot.slot}
         </div>
 
-        {/* Player name */}
+        {/* Player name + captain C */}
         <div className={`plm-text-[8px] md:plm-text-[9px] plm-font-medium plm-mt-0.5 plm-truncate plm-max-w-[60px] md:plm-max-w-[80px] plm-text-center ${
           isEmpty ? 'plm-text-white/50' : 'plm-text-white'
         }`}>
           {player
             ? player.name.split(' ').pop()
             : slot.slot}
+          {isCaptain && player && (
+            <span className="plm-ml-0.5 plm-text-[7px] plm-font-black plm-text-amber-300">(C)</span>
+          )}
         </div>
 
         {/* Form badge */}
@@ -248,19 +275,24 @@ function PitchSlot({
 function SlotAssignmentPanel({
   slot,
   allPlayers,
-  xiPlayerIds,
+  startingXI,
   currentPlayerId,
+  captainId,
   onAssign,
+  onSetCaptain,
   onClose,
 }: {
   slot: FormationSlotDef;
   allPlayers: Player[];
-  xiPlayerIds: Set<string>;
+  startingXI: Record<string, string>;
   currentPlayerId: string | undefined;
+  captainId: string | null;
   onAssign: (playerId: string) => void;
+  onSetCaptain: (playerId: string) => void;
   onClose: () => void;
 }) {
   const [showOtherPositions, setShowOtherPositions] = useState(false);
+  const xiPlayerIds = new Set(Object.values(startingXI));
 
   // Separate players into position-compatible and others
   const { compatible, others } = useMemo(() => {
@@ -305,6 +337,23 @@ function SlotAssignmentPanel({
       </div>
 
       <div className="plm-max-h-[240px] plm-overflow-y-auto">
+        {/* Captain button for the current player in this slot */}
+        {currentPlayerId && (
+          <div className="plm-px-3 plm-py-1.5 plm-bg-amber-50 plm-border-b plm-border-amber-100 plm-flex plm-items-center plm-justify-between">
+            <span className="plm-text-[10px] plm-text-amber-700 plm-font-semibold">Captain</span>
+            <button
+              onClick={() => onSetCaptain(currentPlayerId)}
+              className={`plm-text-[10px] plm-font-bold plm-px-2 plm-py-0.5 plm-rounded plm-transition-colors ${
+                captainId === currentPlayerId
+                  ? 'plm-bg-amber-400 plm-text-white'
+                  : 'plm-bg-amber-100 plm-text-amber-700 hover:plm-bg-amber-200'
+              }`}
+            >
+              {captainId === currentPlayerId ? '© Captain' : 'Set Captain'}
+            </button>
+          </div>
+        )}
+
         {/* Position-compatible players */}
         {compatible.map((player) => (
           <PlayerOption
@@ -312,7 +361,8 @@ function SlotAssignmentPanel({
             player={player}
             slotPosition={slot.position}
             isSelected={player.id === currentPlayerId}
-            isInOtherSlot={xiPlayerIds.has(player.id) && player.id !== currentPlayerId}
+            isInXI={xiPlayerIds.has(player.id)}
+            isCaptain={captainId === player.id}
             onSelect={() => onAssign(player.id)}
           />
         ))}
@@ -333,7 +383,8 @@ function SlotAssignmentPanel({
                   player={player}
                   slotPosition={slot.position}
                   isSelected={player.id === currentPlayerId}
-                  isInOtherSlot={xiPlayerIds.has(player.id) && player.id !== currentPlayerId}
+                  isInXI={xiPlayerIds.has(player.id)}
+                  isCaptain={captainId === player.id}
                   onSelect={() => onAssign(player.id)}
                 />
               ))}
@@ -350,26 +401,29 @@ function PlayerOption({
   player,
   slotPosition,
   isSelected,
-  isInOtherSlot,
+  isInXI,
+  isCaptain,
   onSelect,
 }: {
   player: Player;
   slotPosition: Position;
   isSelected: boolean;
-  isInOtherSlot: boolean;
+  isInXI: boolean;
+  isCaptain: boolean;
   onSelect: () => void;
 }) {
   const compat = checkPositionCompatibility(slotPosition, player.position, player.stats);
+  // A player already in XI but not in this slot will be swapped — allow it
+  const isInOtherSlot = isInXI && !isSelected;
 
   return (
     <button
       onClick={onSelect}
-      disabled={isInOtherSlot}
       className={`plm-w-full plm-flex plm-items-center plm-gap-2 plm-px-3 plm-py-2 plm-text-left plm-transition-colors plm-min-h-[44px] plm-border-b plm-border-warm-50 ${
         isSelected
           ? 'plm-bg-emerald-50'
           : isInOtherSlot
-            ? 'plm-opacity-30 plm-cursor-not-allowed'
+            ? 'plm-bg-blue-50/50 hover:plm-bg-blue-50'
             : 'hover:plm-bg-warm-50'
       }`}
     >
@@ -378,6 +432,7 @@ function PlayerOption({
       </span>
       <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
         {player.name}
+        {isCaptain && <span className="plm-ml-1 plm-text-[9px] plm-font-black plm-text-amber-500">(C)</span>}
       </span>
 
       {/* Cross-position warning chip */}
@@ -392,16 +447,23 @@ function PlayerOption({
         </span>
       )}
 
-      {/* Already in XI chip */}
+      {/* Swap chip for players already in XI */}
       {isInOtherSlot && (
-        <span className="plm-text-[8px] plm-bg-warm-200 plm-text-warm-500 plm-px-1.5 plm-py-0.5 plm-rounded plm-font-medium">
-          In XI
+        <span className="plm-text-[8px] plm-bg-blue-100 plm-text-blue-600 plm-px-1.5 plm-py-0.5 plm-rounded plm-font-medium">
+          ⇄ Swap
         </span>
       )}
 
       {isSelected && (
         <span className="plm-text-emerald-600 plm-text-sm plm-font-bold">✓</span>
       )}
+
+      {/* Form badge next to overall */}
+      <span className={`plm-text-[9px] plm-font-bold plm-tabular-nums plm-w-8 plm-text-right ${
+        player.form > 0 ? 'plm-text-emerald-600' : player.form < 0 ? 'plm-text-red-500' : 'plm-text-warm-400'
+      }`}>
+        {player.form > 0 ? `+${player.form}` : player.form}
+      </span>
 
       <span className="plm-text-sm plm-font-bold plm-text-charcoal plm-tabular-nums plm-w-6 plm-text-right">
         {player.overall}

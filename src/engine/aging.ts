@@ -173,6 +173,7 @@ export function annualYouthIntake(
     const regenId = `${club.id}-youth-s${seasonNumber}-${i}`;
     const player = generateRegen(rng, pos, club, regenId);
     player.age = rng.randomInt(17, 19); // Academy graduates skew younger
+    player.homegrown = true;
     newPlayers.push(player);
     club.roster.push(player);
   }

@@ -205,7 +205,7 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
                       <span className="plm-text-sm plm-font-medium plm-text-charcoal">{player.name}</span>
                       {player.injured && (
                         <span className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-rounded plm-font-semibold">
-                          INJ ({player.injuryWeeks}w)
+                          INJ ({player.injuryWeeks}m)
                         </span>
                       )}
                     </div>

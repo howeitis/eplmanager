@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { isRival } from '../../engine/transfers';
 import { RetroPlayerCard } from './RetroPlayerCard';
+import { Confetti } from './Confetti';
 import type { Player, Club } from '../../types/entities';
 
 export interface SigningCelebrationData {
@@ -124,8 +125,11 @@ export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationM
   );
 
   const clubColors = buyerClub?.colors;
+  const isGoldSigning = data.player.overall >= 80;
 
   return (
+    <>
+    {isGoldSigning && <Confetti count={60} duration={3000} />}
     <div
       className="plm-fixed plm-inset-0 plm-z-[60] plm-flex plm-items-end md:plm-items-center plm-justify-center"
       onClick={handleBackdropClick}
@@ -166,16 +170,18 @@ export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationM
             Welcome to {buyerClub?.name || 'the Club'}!
           </h2>
 
-          {/* Player card */}
-          <div className="plm-mt-5 plm-flex plm-justify-center">
-            <RetroPlayerCard
-              player={data.player}
-              clubId={buyerClub?.id}
-              clubName={buyerClub?.name}
-              clubColors={buyerClub?.colors}
-              size="md"
-              animated
-            />
+          {/* Player card — xl for gold signings */}
+          <div className="plm-mt-5 plm-flex plm-justify-center plm-overflow-x-hidden">
+            <div className={isGoldSigning ? 'plm-scale-[0.72] plm-origin-top' : ''}>
+              <RetroPlayerCard
+                player={data.player}
+                clubId={buyerClub?.id}
+                clubName={buyerClub?.name}
+                clubColors={buyerClub?.colors}
+                size={isGoldSigning ? 'xl' : 'md'}
+                animated
+              />
+            </div>
           </div>
 
           {/* Fee */}
@@ -204,5 +210,6 @@ export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationM
         </div>
       </div>
     </div>
+    </>
   );
 }

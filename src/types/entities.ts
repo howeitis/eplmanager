@@ -50,6 +50,10 @@ export interface Player {
   monthlyAssists: number[];
   /** Stats snapshot captured at season start (or signing time) */
   statsSnapshotSeasonStart: PlayerStats;
+  /** True if the player was developed at this club (initial squad youth or academy intake) */
+  homegrown?: boolean;
+  /** Trophies won while at the player's current club */
+  trophiesWon?: { season: number; type: 'league' | 'cup' }[];
 }
 
 export interface ClubColors {

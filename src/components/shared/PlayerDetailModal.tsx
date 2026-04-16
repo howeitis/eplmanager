@@ -225,7 +225,7 @@ export function PlayerDetailModal() {
                 {/* Injury badge */}
                 {player.injured && (
                   <span className="plm-text-[10px] plm-font-bold plm-bg-red-100 plm-text-red-600 plm-px-2 plm-py-0.5 plm-rounded-full">
-                    🏥 INJ ({player.injuryWeeks}w)
+                    🏥 INJ ({player.injuryWeeks}m)
                   </span>
                 )}
                 {/* Temp fill-in badge */}

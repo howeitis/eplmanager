@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
+import { getClubLogoUrl } from '../../data/assets';
 import { LeagueTable } from '../shared/LeagueTable';
 import { ClubLink } from '../shared/ClubLink';
 import type { MatchResult, Fixture, SeasonEvent } from '../../types/entities';
@@ -86,10 +87,19 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
       >
         <div className="plm-flex plm-items-center plm-gap-3 plm-mb-3">
           {playerClubData && (
-            <div
-              className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-border-2"
-              style={{ backgroundColor: accentColor, borderColor: playerClubData.colors.secondary }}
-            />
+            getClubLogoUrl(playerClubData.id) ? (
+              <img
+                src={getClubLogoUrl(playerClubData.id)}
+                alt={playerClubData.name}
+                className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5 plm-border-2"
+                style={{ borderColor: playerClubData.colors.secondary }}
+              />
+            ) : (
+              <div
+                className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-border-2"
+                style={{ backgroundColor: accentColor, borderColor: playerClubData.colors.secondary }}
+              />
+            )
           )}
           <div>
             <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-none">
@@ -326,10 +336,20 @@ function MatchScoreCard({
             showDot={false}
             className={`plm-text-sm plm-truncate plm-text-right plm-justify-end ${result.homeClubId === playerClubId ? 'plm-font-bold' : ''}`}
           />
-          <div
-            className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
-            style={{ backgroundColor: homeClub?.colors.primary }}
-          />
+          {getClubLogoUrl(result.homeClubId) ? (
+            <img
+              src={getClubLogoUrl(result.homeClubId)}
+              alt=""
+              className="plm-w-4 plm-h-4 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5"
+              style={{ border: `1px solid ${homeClub?.colors.secondary || '#ddd'}` }}
+              aria-hidden="true"
+            />
+          ) : (
+            <div
+              className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
+              style={{ backgroundColor: homeClub?.colors.primary }}
+            />
+          )}
         </div>
 
         {/* Score */}
@@ -349,10 +369,20 @@ function MatchScoreCard({
 
         {/* Away team */}
         <div className="plm-flex-1 plm-flex plm-items-center plm-gap-1.5 plm-min-w-0">
-          <div
-            className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
-            style={{ backgroundColor: awayClub?.colors.primary }}
-          />
+          {getClubLogoUrl(result.awayClubId) ? (
+            <img
+              src={getClubLogoUrl(result.awayClubId)}
+              alt=""
+              className="plm-w-4 plm-h-4 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5"
+              style={{ border: `1px solid ${awayClub?.colors.secondary || '#ddd'}` }}
+              aria-hidden="true"
+            />
+          ) : (
+            <div
+              className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
+              style={{ backgroundColor: awayClub?.colors.primary }}
+            />
+          )}
           <ClubLink
             clubId={result.awayClubId}
             short

@@ -229,6 +229,8 @@ export function generatePlayer(
     monthlyGoals: [],
     monthlyAssists: [],
     statsSnapshotSeasonStart: { ...stats },
+    homegrown: false,
+    trophiesWon: [],
   };
 }
 

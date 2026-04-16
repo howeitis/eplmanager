@@ -72,6 +72,18 @@ export default {
           '0%': { opacity: '1', transform: 'scale(1) translate(0, 0)' },
           '100%': { opacity: '0', transform: 'scale(0.3) translate(var(--tx, 50px), var(--ty, -80px))' },
         },
+        'fire-glow': {
+          '0%, 100%': { boxShadow: '0 0 8px 2px #ef4444, 0 0 20px 6px #f97316, 0 0 0 3px #dc2626' },
+          '50%': { boxShadow: '0 0 18px 6px #dc2626, 0 0 40px 14px #ea580c, 0 0 0 3px #b91c1c' },
+        },
+        'confetti-fall': {
+          '0%': { transform: 'translateY(-20px) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(110vh) rotate(720deg)', opacity: '0' },
+        },
+        'sparkle-pulse': {
+          '0%, 100%': { opacity: '0.4', transform: 'scale(0.8)' },
+          '50%': { opacity: '1', transform: 'scale(1.2)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.2s ease-out',
@@ -85,6 +97,9 @@ export default {
         'border-shimmer': 'border-shimmer 2s ease-in-out infinite',
         'screen-shake': 'screen-shake 0.4s ease-out',
         'particle-burst': 'particle-burst 1s ease-out forwards',
+        'fire-glow': 'fire-glow 1.5s ease-in-out infinite',
+        'confetti-fall': 'confetti-fall var(--duration, 3s) ease-in var(--delay, 0s) forwards',
+        'sparkle-pulse': 'sparkle-pulse 1.2s ease-in-out infinite',
       },
       colors: {
         cream: '#FAF8F5',

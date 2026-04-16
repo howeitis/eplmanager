@@ -16,7 +16,11 @@
       "Bash(xargs -I {} basename {})",
       "mcp__Claude_Preview__preview_start",
       "Bash(npm run:*)",
-      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(find 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage' -type f -name *.ts -o -name *.tsx)",
+      "Bash(find 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage\\\\src' -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(find 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage\\\\src\\\\components' -type d -name *progress* -o -name *progression*)",
+      "Bash(grep -r \"PlayerDetailModal\\\\|useModalParams\\\\|openModal\" 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage\\\\src' --include=*.tsx --include=*.ts)"
     ]
   }
 }

@@ -105,39 +105,62 @@ function getSummerTournament(calendarYear: number): 'world_cup' | 'euros' | null
   return null;
 }
 
+/** Fixed hosts for known World Cups and Euros */
+const WORLD_CUP_HOSTS: Record<number, string> = {
+  2026: 'USA, Mexico & Canada',
+  2030: 'Morocco, Portugal & Spain',
+  2034: 'Saudi Arabia',
+};
+
+const EURO_HOSTS: Record<number, string> = {
+  2028: 'the United Kingdom',
+  2032: 'Italy & Turkey',
+};
+
+const RANDOM_WORLD_CUP_HOSTS = [
+  'Australia & New Zealand', 'Japan & South Korea', 'Brazil', 'Argentina',
+  'Egypt & South Africa', 'India & Pakistan', 'Canada', 'China',
+];
+
+const RANDOM_EURO_HOSTS = [
+  'France', 'Germany', 'Spain', 'Netherlands & Belgium',
+  'Poland & Ukraine', 'Scandinavia', 'Greece & Turkey', 'Austria & Switzerland',
+];
+
 /** Generate a July narrative based on tournament year or preseason */
 function generateJulyNarrative(rng: import('./utils/rng').SeededRNG, calendarYear: number): string {
   const tournament = getSummerTournament(calendarYear);
 
   if (tournament === 'world_cup') {
-    const hosts = [
-      `USA, Mexico & Canada (${calendarYear})`,
-      `the ${calendarYear} host nation`,
-    ];
+    const host =
+      WORLD_CUP_HOSTS[calendarYear] ||
+      RANDOM_WORLD_CUP_HOSTS[rng.randomInt(0, RANDOM_WORLD_CUP_HOSTS.length - 1)];
     const winners = [
       'Brazil', 'Argentina', 'France', 'Germany', 'Spain',
       'England', 'Italy', 'Netherlands', 'Portugal', 'Belgium',
     ];
     const winner = winners[rng.randomInt(0, winners.length - 1)];
-    const host = hosts[0];
     const dramas = [
       `${winner} lifted the World Cup trophy in ${host} after a dramatic final.`,
-      `A golden generation delivered as ${winner} won the ${calendarYear} World Cup.`,
+      `A golden generation delivered as ${winner} won the ${calendarYear} World Cup in ${host}.`,
       `${winner} are World Cup champions! The tournament in ${host} will be remembered for years.`,
     ];
     return dramas[rng.randomInt(0, dramas.length - 1)];
   }
 
   if (tournament === 'euros') {
+    const host =
+      EURO_HOSTS[calendarYear] ||
+      RANDOM_EURO_HOSTS[rng.randomInt(0, RANDOM_EURO_HOSTS.length - 1)];
     const winners = [
       'Spain', 'France', 'Germany', 'Italy', 'England',
       'Netherlands', 'Portugal', 'Belgium', 'Denmark', 'Croatia',
     ];
     const winner = winners[rng.randomInt(0, winners.length - 1)];
     const dramas = [
-      `${winner} won the European Championship after a thrilling summer of football.`,
-      `Euro ${calendarYear} is over — ${winner} are the new champions of Europe!`,
-      `${winner} crowned European champions! Their players return to their clubs on a high.`,
+      `${winner} won Euro ${calendarYear} hosted by ${host} after a thrilling summer of football.`,
+      `Euro ${calendarYear} in ${host} is over — ${winner} are the new champions of Europe!`,
+      `${winner} crowned European champions in ${host}! Their players return to their clubs on a high.`,
     ];
     return dramas[rng.randomInt(0, dramas.length - 1)];
   }
@@ -245,6 +268,7 @@ function App() {
           saveMetadata: data.saveMetadata,
           startingXI: data.startingXI || {},
           startingXIHistory: (data.startingXIHistory || []) as typeof state.startingXIHistory,
+          captainId: (data as unknown as Record<string, unknown>).captainId as string | null || null,
           tempFillIns: [],
           transferOffers: [],
           marketListings: [],
@@ -738,6 +762,17 @@ function App() {
         headline: `Won the Premier League with ${clubDataMap.get(playerClubId)?.name}`,
       });
       state.updateCurrentTenure({ leagueTitles: (manager!.tenures?.at(-1)?.leagueTitles || 0) + 1 });
+      // Mark trophy on player roster
+      const championClub = store.getState().clubs.find((c) => c.id === playerClubId);
+      if (championClub) {
+        for (const p of championClub.roster) {
+          if (!p.isTemporary) {
+            state.updatePlayer(playerClubId, p.id, {
+              trophiesWon: [...(p.trophiesWon || []), { season: seasonNumber, type: 'league' }],
+            });
+          }
+        }
+      }
     }
     if (cupResult.winner === playerClubId) {
       state.addAccomplishment({
@@ -748,6 +783,17 @@ function App() {
         headline: `Won the FA Cup with ${clubDataMap.get(playerClubId)?.name}`,
       });
       state.updateCurrentTenure({ faCups: (manager!.tenures?.at(-1)?.faCups || 0) + 1 });
+      // Mark cup trophy on player roster
+      const cupClub = store.getState().clubs.find((c) => c.id === playerClubId);
+      if (cupClub) {
+        for (const p of cupClub.roster) {
+          if (!p.isTemporary) {
+            state.updatePlayer(playerClubId, p.id, {
+              trophiesWon: [...(p.trophiesWon || []), { season: seasonNumber, type: 'cup' }],
+            });
+          }
+        }
+      }
     }
     // Update tenure stats
     const gamesThisSeason = sorted.find((r) => r.clubId === playerClubId)?.played || 0;

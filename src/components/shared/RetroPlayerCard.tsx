@@ -81,23 +81,51 @@ const STAT_EMOJI: Record<string, string> = {
   SKL: '✨',
 };
 
+// ─── Serial number from hash ───
+function getSerialNumber(id: string, overall: number): string {
+  const h = hashPlayerId(id);
+  // Total print run varies by rarity: commons have large print runs, gold smaller
+  const printRun = overall >= 86 ? 1000 : overall >= 80 ? 2500 : overall >= 75 ? 5000 : 8500;
+  const serial = (h % printRun) + 1;
+  return `${String(serial).padStart(4, '0')}/${printRun}`;
+}
+
+// ─── Card tier: future stars ───
+function getFutureStarTier(player: Player): 'wonderkid' | 'star' | null {
+  if (player.age > 21) return null;
+  if (player.overall >= 80) return 'wonderkid';
+  if (player.overall >= 75) return 'star';
+  return null;
+}
+
 // ─── Color helpers ───
 
-function getOverallColor(overall: number): string {
+function getOverallColor(overall: number, age?: number): string {
+  // Future star mixed silver-gold for u21 75-80
+  if (age !== undefined && age <= 21 && overall >= 75 && overall < 80) {
+    return '#D4AF37'; // mixed silver-gold
+  }
   if (overall >= 80) return '#FFD700';
   if (overall >= 75) return '#C0C0C0';
   if (overall >= 65) return '#CD7F32';
   return '#8B7355';
 }
 
-function getCardBorderColor(overall: number): string {
+function getCardBorderColor(overall: number, age?: number): string {
+  if (age !== undefined && age <= 21 && overall >= 75 && overall < 80) {
+    return '#B8980A'; // mixed silver-gold border
+  }
   if (overall >= 80) return '#B8860B';
   if (overall >= 75) return '#808080';
   if (overall >= 65) return '#8B4513';
   return '#6B5B45';
 }
 
-function getCardBgGradient(overall: number): string {
+function getCardBgGradient(overall: number, age?: number): string {
+  // Future star (u21, 75-80): mixed silver-gold gradient
+  if (age !== undefined && age <= 21 && overall >= 75 && overall < 80) {
+    return 'linear-gradient(135deg, #FFF8DC 0%, #C0C0C0 25%, #FFD700 50%, #C0C0C0 75%, #FFF8DC 100%)';
+  }
   if (overall >= 80) return 'linear-gradient(135deg, #FFF8DC 0%, #FFD700 30%, #FFF8DC 50%, #FFD700 70%, #FFF8DC 100%)';
   if (overall >= 75) return 'linear-gradient(135deg, #F5F5F5 0%, #C0C0C0 30%, #F5F5F5 50%, #C0C0C0 70%, #F5F5F5 100%)';
   if (overall >= 65) return 'linear-gradient(135deg, #FFF3E0 0%, #CD7F32 30%, #FFF3E0 50%, #CD7F32 70%, #FFF3E0 100%)';
@@ -136,6 +164,8 @@ export interface RetroPlayerCardProps {
   recentTransfers?: TransferRecord[];
   /** Disable the flip interaction */
   disableFlip?: boolean;
+  /** Whether this player is the team captain */
+  isCaptain?: boolean;
 }
 
 export function RetroPlayerCard({
@@ -148,6 +178,7 @@ export function RetroPlayerCard({
   stamps = [],
   recentTransfers,
   disableFlip = false,
+  isCaptain = false,
 }: RetroPlayerCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [glarePos, setGlarePos] = useState<{ x: number; y: number } | null>(null);
@@ -155,10 +186,14 @@ export function RetroPlayerCard({
 
   const isGold = player.overall >= 80;
   const isShimmerGold = player.overall >= 86;
-  const overallColor = getOverallColor(player.overall);
-  const borderColor = getCardBorderColor(player.overall);
-  const bgGradient = getCardBgGradient(player.overall);
-  const heroStat = isGold ? getHeroStat(player.stats) : null;
+  const futureStar = getFutureStarTier(player);
+  const isOnFire = (player.form ?? 0) >= 5;
+  const overallColor = getOverallColor(player.overall, player.age);
+  const borderColor = getCardBorderColor(player.overall, player.age);
+  const bgGradient = getCardBgGradient(player.overall, player.age);
+  const heroStat = (isGold || futureStar) ? getHeroStat(player.stats) : null;
+  const serialNumber = getSerialNumber(player.id, player.overall);
+  const trophies = player.trophiesWon || [];
 
   const sizeClasses: Record<string, string> = {
     sm: 'plm-w-40 plm-h-56',
@@ -243,6 +278,21 @@ export function RetroPlayerCard({
           >
             Premier League Manager
           </span>
+
+          {/* Trophy stickers on card back */}
+          {trophies.length > 0 && (
+            <div className="plm-flex plm-flex-wrap plm-justify-center plm-gap-1 plm-px-3">
+              {trophies.slice(0, 8).map((t, i) => (
+                <span
+                  key={i}
+                  title={`Season ${t.season} ${t.type === 'league' ? 'Premier League' : 'FA Cup'}`}
+                  className="plm-text-base"
+                >
+                  {t.type === 'league' ? '🏆' : '🏅'}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Subtle pattern */}
@@ -260,7 +310,7 @@ export function RetroPlayerCard({
   return (
     <div
       ref={cardRef}
-      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${isShimmerGold ? 'plm-animate-border-shimmer' : ''}`}
+      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${isShimmerGold ? 'plm-animate-border-shimmer' : ''} ${isOnFire ? 'plm-animate-fire-glow' : ''}`}
       style={{
         background: bgGradient,
         border: `3px solid ${borderColor}`,
@@ -333,8 +383,28 @@ export function RetroPlayerCard({
         </div>
       )}
 
+      {/* ─── Sparkle overlay for wonderkid (u21 80+) ─── */}
+      {futureStar === 'wonderkid' && (
+        <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[3] plm-overflow-hidden">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="plm-absolute plm-animate-sparkle-pulse"
+              style={{
+                left: `${15 + i * 14}%`,
+                top: `${10 + (i % 3) * 20}%`,
+                animationDelay: `${i * 0.2}s`,
+                fontSize: size === 'xl' ? 14 : 9,
+              }}
+            >
+              ✨
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ─── Hero stat emoji sticker — centered top, clear of OVR and flag ─── */}
-      {heroStat && isGold && size !== 'sm' && (
+      {heroStat && (isGold || futureStar) && size !== 'sm' && (
         <div
           className="plm-absolute plm-z-[15] plm-flex plm-items-center plm-justify-center plm-rounded-full plm-shadow-md"
           style={{
@@ -369,6 +439,20 @@ export function RetroPlayerCard({
           >
             {player.position}
           </div>
+          {/* Injury bandage */}
+          {player.injured && (
+            <div className="plm-text-[8px] plm-mt-0.5" title={`Injured: ${player.injuryWeeks}m`}>🩹</div>
+          )}
+          {/* Captain armband C */}
+          {isCaptain && (
+            <div
+              className="plm-text-[8px] plm-font-black plm-mt-0.5 plm-leading-none"
+              style={{ color: '#D97706' }}
+              title="Captain"
+            >
+              (C)
+            </div>
+          )}
         </div>
         <div className="plm-text-right plm-mt-0.5">
           <img
@@ -498,6 +582,69 @@ export function RetroPlayerCard({
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ─── Wonderkid seal (u21 80+) ─── */}
+      {futureStar === 'wonderkid' && size !== 'sm' && (
+        <div
+          className="plm-absolute plm-z-[15]"
+          style={{ top: size === 'xl' ? 6 : 4, right: size === 'xl' ? 6 : 4 }}
+        >
+          <div
+            className="plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-white plm-font-black"
+            style={{
+              width: size === 'xl' ? 30 : size === 'lg' ? 24 : 20,
+              height: size === 'xl' ? 30 : size === 'lg' ? 24 : 20,
+              background: 'radial-gradient(circle at 40% 40%, #FFD700, #FF8C00)',
+              border: '1.5px solid #D97706',
+              boxShadow: '0 0 6px rgba(255,165,0,0.7)',
+              fontSize: size === 'xl' ? 11 : 8,
+            }}
+            title="Wonderkid"
+          >
+            WK
+          </div>
+        </div>
+      )}
+
+      {/* ─── Homegrown wax seal on club crest area ─── */}
+      {player.homegrown && clubId && size !== 'sm' && (
+        <div
+          className="plm-absolute plm-z-[16]"
+          style={{
+            bottom: size === 'xl' ? 52 : size === 'lg' ? 42 : 34,
+            right: size === 'xl' ? 10 : 8,
+          }}
+        >
+          <div
+            className="plm-flex plm-items-center plm-justify-center plm-rounded-full plm-font-black plm-text-white"
+            style={{
+              width: size === 'xl' ? 26 : size === 'lg' ? 22 : 18,
+              height: size === 'xl' ? 26 : size === 'lg' ? 22 : 18,
+              background: 'radial-gradient(circle at 40% 40%, #dc2626, #7f1d1d)',
+              border: '1.5px solid #991b1b',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+              fontSize: size === 'xl' ? 9 : 7,
+            }}
+            title="Homegrown"
+          >
+            HG
+          </div>
+        </div>
+      )}
+
+      {/* ─── Serial number bottom-left ─── */}
+      {size !== 'sm' && (
+        <div
+          className="plm-absolute plm-bottom-1 plm-left-2 plm-z-[5]"
+        >
+          <span
+            className="plm-font-mono plm-opacity-50"
+            style={{ fontSize: size === 'xl' ? 9 : 7, color: borderColor }}
+          >
+            {serialNumber}
+          </span>
         </div>
       )}
 

@@ -9,6 +9,7 @@ export interface TeamSlice {
   tempFillIns: Player[];
   startingXI: StartingXIMap;
   startingXIHistory: MonthlyXIRecord[];
+  captainId: string | null;
 
   initializeClubs: (clubsData: ClubData[], squads: Map<string, Player[]>) => void;
   getClub: (clubId: string) => Club | undefined;
@@ -25,6 +26,7 @@ export interface TeamSlice {
   lockStartingXI: (phase: GamePhase, formation: Formation) => void;
   clearStartingXI: () => void;
   clearStartingXIHistory: () => void;
+  setCaptain: (playerId: string | null) => void;
 }
 
 export const createTeamSlice: StateCreator<GameState, [], [], TeamSlice> = (set, get) => ({
@@ -32,6 +34,7 @@ export const createTeamSlice: StateCreator<GameState, [], [], TeamSlice> = (set,
   tempFillIns: [],
   startingXI: {},
   startingXIHistory: [],
+  captainId: null,
 
   initializeClubs: (clubsData, squads) => {
     const clubs: Club[] = clubsData.map((data) => ({
@@ -140,6 +143,10 @@ export const createTeamSlice: StateCreator<GameState, [], [], TeamSlice> = (set,
 
   clearStartingXIHistory: () => {
     set({ startingXIHistory: [] });
+  },
+
+  setCaptain: (playerId) => {
+    set({ captainId: playerId });
   },
 });
 
