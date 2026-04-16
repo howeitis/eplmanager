@@ -170,7 +170,7 @@ export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationM
           <div className="plm-mt-5 plm-flex plm-justify-center">
             <RetroPlayerCard
               player={data.player}
-              clubName={buyerClub?.shortName || buyerClub?.name}
+              clubName={buyerClub?.name}
               clubColors={buyerClub?.colors}
               size="md"
               animated

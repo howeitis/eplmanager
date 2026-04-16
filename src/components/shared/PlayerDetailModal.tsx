@@ -270,7 +270,7 @@ export function PlayerDetailModal() {
           <div className="plm-px-5 plm-pt-4 plm-pb-2 plm-flex plm-flex-col plm-items-center plm-space-y-4">
             <RetroPlayerCard
               player={player}
-              clubName={targetClub.shortName || targetClub.name}
+              clubName={targetClub.name}
               clubColors={targetClub.colors}
               size="lg"
             />

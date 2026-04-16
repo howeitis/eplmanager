@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import { getChairman } from '../../data/chairmen';
@@ -94,6 +94,10 @@ export function BoardMeeting({ onContinue }: BoardMeetingProps) {
     if (!playerClub || !manager) return null;
     return analyzeSquad(playerClub, clubs, manager.philosophy, seasonNumber);
   }, [playerClub, clubs, manager, seasonNumber]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   if (!manager || !chairman || !playerClub || !clubData) return null;
 
