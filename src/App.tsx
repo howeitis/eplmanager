@@ -12,6 +12,7 @@ import { SeasonEnd } from './components/season/SeasonEnd';
 import { BoardMeeting } from './components/season/BoardMeeting';
 import { SeasonHistoryScreen } from './components/history/SeasonHistory';
 import { ManagerProfileScreen } from './components/manager/ManagerProfileScreen';
+import { TitleScreen } from './components/shared/TitleScreen';
 import { BottomNav, type NavTab } from './components/shared/BottomNav';
 import { DesktopSidebar } from './components/shared/DesktopSidebar';
 import { PlayerDetailModal } from './components/shared/PlayerDetailModal';
@@ -61,7 +62,7 @@ import type {
   SeasonPlayerStats,
 } from './types/entities';
 
-type Screen = 'save_select' | 'club_select' | 'manager_creation' | 'game';
+type Screen = 'title' | 'save_select' | 'club_select' | 'manager_creation' | 'game';
 type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'match_results' | 'season_end' | 'club_squad' | 'board_meeting';
 
 const PHASE_ORDER: GamePhase[] = [
@@ -158,7 +159,7 @@ function generateJulyNarrative(rng: import('./utils/rng').SeededRNG, calendarYea
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
 function App() {
-  const [screen, setScreen] = useState<Screen>('save_select');
+  const [screen, setScreen] = useState<Screen>('title');
   const [gameView, setGameView] = useState<GameView>('hub');
   const [viewingClubId, setViewingClubId] = useState<string | null>(null);
   const [selectedClub, setSelectedClub] = useState<ClubData | null>(null);
@@ -1055,6 +1056,10 @@ function App() {
 
   // ─── Render ───
 
+  if (screen === 'title') {
+    return <TitleScreen onStart={() => setScreen('save_select')} />;
+  }
+
   if (screen === 'save_select') {
     return <SaveSlotSelect onSelectSlot={handleSelectSlot} />;
   }
@@ -1180,6 +1185,7 @@ function App() {
             <PackOpening
               players={packPlayers}
               clubName={playerClub?.name || ''}
+              clubId={playerClub?.id}
               clubColors={playerClub?.colors || { primary: '#1A1A1A', secondary: '#333' }}
               packTitle={packConfig.title}
               packSubtitle={packConfig.subtitle}

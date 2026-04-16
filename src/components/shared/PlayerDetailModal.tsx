@@ -12,6 +12,7 @@ import { SigningCelebrationModal } from './SigningCelebrationModal';
 import type { SigningCelebrationData } from './SigningCelebrationModal';
 import { RetroPlayerCard } from './RetroPlayerCard';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
+import { getClubLogoUrl } from '../../data/assets';
 
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
 
@@ -270,6 +271,7 @@ export function PlayerDetailModal() {
           <div className="plm-px-5 plm-pt-4 plm-pb-2 plm-flex plm-flex-col plm-items-center plm-space-y-4">
             <RetroPlayerCard
               player={player}
+              clubId={targetClub.id}
               clubName={targetClub.name}
               clubColors={targetClub.colors}
               size="lg"
@@ -378,9 +380,10 @@ export function PlayerDetailModal() {
 
             {/* Club info */}
             <div className="plm-flex plm-items-center plm-gap-2 plm-text-xs plm-text-warm-500">
-              <div
-                className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
-                style={{ backgroundColor: targetClub.colors.primary }}
+              <img
+                src={getClubLogoUrl(targetClub.id)}
+                alt=""
+                className="plm-w-5 plm-h-5 plm-flex-shrink-0 plm-object-contain"
               />
               <span>{targetClub.name}</span>
             </div>

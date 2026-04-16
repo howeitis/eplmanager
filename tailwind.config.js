@@ -52,6 +52,22 @@ export default {
           '0%': { left: '-100%' },
           '100%': { left: '200%' },
         },
+        'screen-shake': {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '10%': { transform: 'translate(-3px, -2px)' },
+          '20%': { transform: 'translate(3px, 1px)' },
+          '30%': { transform: 'translate(-2px, 3px)' },
+          '40%': { transform: 'translate(2px, -1px)' },
+          '50%': { transform: 'translate(-1px, 2px)' },
+          '60%': { transform: 'translate(1px, -2px)' },
+          '70%': { transform: 'translate(-1px, 1px)' },
+          '80%': { transform: 'translate(1px, -1px)' },
+          '90%': { transform: 'translate(0, 1px)' },
+        },
+        'particle-burst': {
+          '0%': { opacity: '1', transform: 'scale(1) translate(0, 0)' },
+          '100%': { opacity: '0', transform: 'scale(0.3) translate(var(--tx, 50px), var(--ty, -80px))' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.2s ease-out',
@@ -62,6 +78,8 @@ export default {
         'pack-burst': 'pack-burst 0.4s ease-out forwards',
         'card-enter': 'card-enter 0.5s ease-out forwards',
         'shimmer': 'shimmer 1.5s ease-in-out infinite',
+        'screen-shake': 'screen-shake 0.4s ease-out',
+        'particle-burst': 'particle-burst 1s ease-out forwards',
       },
       colors: {
         cream: '#FAF8F5',

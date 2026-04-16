@@ -1,4 +1,5 @@
 import type { ManagerProfile } from '../../types/entities';
+import { getNationalityFlagUrl, getNationalityLabel } from '../../data/assets';
 
 const PHILOSOPHY_SHORT: Record<string, string> = {
   attacking: 'ATK',
@@ -18,29 +19,6 @@ const BACKGROUND_SHORT: Record<string, string> = {
   'never-played': 'Outsider',
 };
 
-const NATIONALITY_FLAGS: Record<string, string> = {
-  english: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}',
-  french: '\u{1F1EB}\u{1F1F7}',
-  brazilian: '\u{1F1E7}\u{1F1F7}',
-  spanish: '\u{1F1EA}\u{1F1F8}',
-  portuguese: '\u{1F1F5}\u{1F1F9}',
-  dutch: '\u{1F1F3}\u{1F1F1}',
-  german: '\u{1F1E9}\u{1F1EA}',
-  argentinian: '\u{1F1E6}\u{1F1F7}',
-  belgian: '\u{1F1E7}\u{1F1EA}',
-  norwegian: '\u{1F1F3}\u{1F1F4}',
-  danish: '\u{1F1E9}\u{1F1F0}',
-  irish: '\u{1F1EE}\u{1F1EA}',
-  scottish: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}',
-  welsh: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}',
-  italian: '\u{1F1EE}\u{1F1F9}',
-  japanese: '\u{1F1EF}\u{1F1F5}',
-  american: '\u{1F1FA}\u{1F1F8}',
-};
-
-function getFlag(nationality: string): string {
-  return NATIONALITY_FLAGS[nationality.toLowerCase()] || '\u{1F30D}';
-}
 
 function getRepColor(rep: number): string {
   if (rep >= 80) return '#FFD700';
@@ -116,7 +94,11 @@ export function ManagerCard({
           </div>
         </div>
         <div className="plm-text-right plm-mt-0.5">
-          <span className="plm-text-xl">{getFlag(manager.nationality)}</span>
+          <img
+            src={getNationalityFlagUrl(manager.nationality)}
+            alt={getNationalityLabel(manager.nationality)}
+            className="plm-inline-block plm-w-6 plm-h-4 plm-rounded-sm plm-object-cover"
+          />
         </div>
       </div>
 

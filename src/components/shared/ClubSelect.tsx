@@ -1,4 +1,5 @@
 import { CLUBS } from '../../data/clubs';
+import { getClubLogoUrl } from '../../data/assets';
 import type { ClubData } from '../../types/entities';
 
 interface ClubSelectProps {
@@ -51,9 +52,10 @@ export function ClubSelect({ onSelectClub, onBack }: ClubSelectProps) {
                   aria-label={`Select ${club.name}, Tier ${tier} ${label}, Budget £${club.budget}M`}
                   className="plm-w-full plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-gray-200 plm-p-3 plm-text-left hover:plm-border-gray-400 plm-transition-colors plm-flex plm-items-center plm-gap-3 plm-min-h-[44px]"
                 >
-                  <div
-                    className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0"
-                    style={{ backgroundColor: club.colors.primary }}
+                  <img
+                    src={getClubLogoUrl(club.id)}
+                    alt={club.shortName}
+                    className="plm-w-8 plm-h-8 plm-flex-shrink-0 plm-object-contain"
                   />
                   <div className="plm-flex-1">
                     <div className="plm-font-semibold plm-text-gray-900 plm-text-sm">

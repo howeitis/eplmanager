@@ -5,6 +5,7 @@ import type { Player } from '../../types/entities';
 interface PackOpeningProps {
   players: Player[];
   clubName: string;
+  clubId?: string;
   clubColors: { primary: string; secondary: string };
   packTitle: string;
   packSubtitle?: string;
@@ -13,9 +14,39 @@ interface PackOpeningProps {
 
 type PackState = 'intro' | 'shaking' | 'opening' | 'cards';
 
+// Particle for "pack pull" entrance
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  duration: number;
+  delay: number;
+}
+
+function generateParticles(count: number, isGold: boolean): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      id: i,
+      x: 20 + Math.random() * 60,
+      y: 20 + Math.random() * 60,
+      size: 2 + Math.random() * 4,
+      color: isGold
+        ? ['#FFD700', '#FFA500', '#FFEC8B', '#FFE4B5'][i % 4]
+        : ['#C0C0C0', '#E8E8E8', '#A9A9A9', '#D3D3D3'][i % 4],
+      duration: 0.6 + Math.random() * 0.8,
+      delay: Math.random() * 0.3,
+    });
+  }
+  return particles;
+}
+
 export function PackOpening({
   players,
   clubName,
+  clubId,
   clubColors,
   packTitle,
   packSubtitle,
@@ -24,9 +55,29 @@ export function PackOpening({
   const [packState, setPackState] = useState<PackState>('intro');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [revealedCards, setRevealedCards] = useState<Set<number>>(new Set());
+  const [showImpact, setShowImpact] = useState(false);
+  const [particles, setParticles] = useState<Particle[]>([]);
   const touchStartRef = useRef<number | null>(null);
 
   const isLight = isLightColor(clubColors.primary);
+  const currentPlayer = players[currentCardIndex];
+  const isHighRated = currentPlayer?.overall >= 85;
+
+  // Trigger impact effect when revealing a high-rated card
+  useEffect(() => {
+    if (packState !== 'cards') return;
+    if (!revealedCards.has(currentCardIndex)) return;
+
+    if (isHighRated) {
+      setShowImpact(true);
+      setParticles(generateParticles(20, true));
+      const timer = setTimeout(() => {
+        setShowImpact(false);
+        setParticles([]);
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [packState, currentCardIndex, isHighRated, revealedCards]);
 
   // Transition through pack states
   const handlePackTap = useCallback(() => {
@@ -105,7 +156,11 @@ export function PackOpening({
   }, []);
 
   return (
-    <div className="plm-fixed plm-inset-0 plm-z-[70] plm-flex plm-flex-col plm-items-center plm-justify-center plm-bg-charcoal/95 plm-animate-fade-in">
+    <div
+      className={`plm-fixed plm-inset-0 plm-z-[70] plm-flex plm-flex-col plm-items-center plm-justify-center plm-bg-charcoal/95 plm-animate-fade-in ${
+        showImpact ? 'plm-animate-screen-shake' : ''
+      }`}
+    >
       {/* Pack intro + shaking + opening states */}
       {packState !== 'cards' && (
         <div
@@ -146,9 +201,7 @@ export function PackOpening({
             )}
 
             {/* Card count badge */}
-            <div
-              className="plm-absolute plm-bottom-4 plm-bg-black/30 plm-rounded-full plm-px-3 plm-py-1"
-            >
+            <div className="plm-absolute plm-bottom-4 plm-bg-black/30 plm-rounded-full plm-px-3 plm-py-1">
               <span className="plm-text-xs plm-font-bold plm-text-white plm-tabular-nums">
                 {players.length} cards
               </span>
@@ -167,10 +220,32 @@ export function PackOpening({
       {/* Cards carousel */}
       {packState === 'cards' && players.length > 0 && (
         <div
-          className="plm-flex plm-flex-col plm-items-center plm-gap-2 plm-w-full plm-max-w-lg plm-px-4 plm-overflow-y-auto plm-max-h-screen plm-py-4"
+          className="plm-flex plm-flex-col plm-items-center plm-gap-2 plm-w-full plm-max-w-lg plm-px-4 plm-overflow-y-auto plm-max-h-screen plm-py-4 plm-relative"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
+          {/* Particle effects for high-rated card reveals */}
+          {particles.length > 0 && (
+            <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-30 plm-overflow-hidden">
+              {particles.map((p) => (
+                <div
+                  key={p.id}
+                  className="plm-absolute plm-rounded-full"
+                  style={{
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
+                    width: p.size,
+                    height: p.size,
+                    backgroundColor: p.color,
+                    boxShadow: `0 0 ${p.size * 2}px ${p.color}`,
+                    animation: `plm-particle-burst ${p.duration}s ease-out ${p.delay}s forwards`,
+                    opacity: 0,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Card counter */}
           <div className="plm-text-warm-400 plm-text-xs plm-font-body plm-uppercase plm-tracking-wider">
             {currentCardIndex + 1} / {players.length}
@@ -180,10 +255,12 @@ export function PackOpening({
           <div className="plm-flex plm-justify-center" key={currentCardIndex}>
             <RetroPlayerCard
               player={players[currentCardIndex]}
+              clubId={clubId}
               clubName={clubName}
               clubColors={clubColors}
               size="xl"
               animated={revealedCards.has(currentCardIndex)}
+              disableFlip
             />
           </div>
 

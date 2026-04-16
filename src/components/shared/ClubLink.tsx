@@ -1,6 +1,7 @@
 import { useGameStore } from '../../store/gameStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { CLUBS } from '../../data/clubs';
+import { getClubLogoUrl } from '../../data/assets';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
@@ -45,9 +46,10 @@ export function ClubLink({ clubId, short, showDot = true, className, children }:
       title={isPlayerClub ? 'View your squad' : `Browse ${club.name}'s squad`}
     >
       {showDot && (
-        <span
-          className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
-          style={{ backgroundColor: club.colors.primary }}
+        <img
+          src={getClubLogoUrl(clubId)}
+          alt=""
+          className="plm-w-4 plm-h-4 plm-flex-shrink-0 plm-object-contain"
           aria-hidden="true"
         />
       )}
