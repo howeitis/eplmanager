@@ -1,4 +1,5 @@
 import { useGameStore } from '../../store/gameStore';
+import { getClubLogoUrl } from '../../data/assets';
 import type { NavTab } from './BottomNav';
 
 interface DesktopSidebarProps {
@@ -32,13 +33,22 @@ export function DesktopSidebar({ activeTab, onNavigate, onBack }: DesktopSidebar
       <div className="plm-p-4 plm-border-b plm-border-warm-200">
         <div className="plm-flex plm-items-center plm-gap-2.5">
           {playerClub && (
-            <div
-              className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-border-2"
-              style={{
-                backgroundColor: playerClub.colors.primary,
-                borderColor: playerClub.colors.secondary,
-              }}
-            />
+            getClubLogoUrl(playerClub.id) ? (
+              <img
+                src={getClubLogoUrl(playerClub.id)}
+                alt={playerClub.name}
+                className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5 plm-border-2"
+                style={{ borderColor: playerClub.colors.secondary }}
+              />
+            ) : (
+              <div
+                className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-border-2"
+                style={{
+                  backgroundColor: playerClub.colors.primary,
+                  borderColor: playerClub.colors.secondary,
+                }}
+              />
+            )
           )}
           <div className="plm-min-w-0">
             <div className="plm-font-display plm-font-bold plm-text-sm plm-text-charcoal plm-truncate">

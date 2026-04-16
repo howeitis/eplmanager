@@ -9,19 +9,19 @@ const PLAYER_EMOJIS: string[] = [
   // Standard man — 5 skin tones
   '\u{1F468}\u{1F3FB}', '\u{1F468}\u{1F3FC}', '\u{1F468}\u{1F3FD}',
   '\u{1F468}\u{1F3FE}', '\u{1F468}\u{1F3FF}',
-  // Curly hair — 5 skin tones
+  // Man curly hair — 5 skin tones
   '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B1}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B1}',
   '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B1}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B1}',
   '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B1}',
-  // Bald — 5 skin tones
+  // Man bald — 5 skin tones
   '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B2}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B2}',
   '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B2}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B2}',
   '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B2}',
-  // Red hair — 5 skin tones
+  // Man red hair — 5 skin tones
   '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B0}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B0}',
   '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B0}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B0}',
   '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B0}',
-  // White/grey hair — 5 skin tones
+  // Man white/grey hair — 5 skin tones
   '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B3}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B3}',
   '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B3}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B3}',
   '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B3}',
@@ -32,6 +32,29 @@ const PLAYER_EMOJIS: string[] = [
   '\u{1F471}\u{1F3FB}\u{200D}\u{2642}\u{FE0F}', '\u{1F471}\u{1F3FC}\u{200D}\u{2642}\u{FE0F}',
   '\u{1F471}\u{1F3FD}\u{200D}\u{2642}\u{FE0F}', '\u{1F471}\u{1F3FE}\u{200D}\u{2642}\u{FE0F}',
   '\u{1F471}\u{1F3FF}\u{200D}\u{2642}\u{FE0F}',
+  // Standard woman — 5 skin tones
+  '\u{1F469}\u{1F3FB}', '\u{1F469}\u{1F3FC}', '\u{1F469}\u{1F3FD}',
+  '\u{1F469}\u{1F3FE}', '\u{1F469}\u{1F3FF}',
+  // Woman curly hair — 5 skin tones
+  '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B1}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B1}',
+  '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B1}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B1}',
+  '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B1}',
+  // Woman red hair — 5 skin tones
+  '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B0}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B0}',
+  '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B0}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B0}',
+  '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B0}',
+  // Woman white/grey hair — 5 skin tones
+  '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B3}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B3}',
+  '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B3}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B3}',
+  '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B3}',
+  // Woman bald — 5 skin tones
+  '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B2}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B2}',
+  '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B2}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B2}',
+  '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B2}',
+  // Blond woman (👱‍♀️) — 5 skin tones
+  '\u{1F471}\u{1F3FB}\u{200D}\u{2640}\u{FE0F}', '\u{1F471}\u{1F3FC}\u{200D}\u{2640}\u{FE0F}',
+  '\u{1F471}\u{1F3FD}\u{200D}\u{2640}\u{FE0F}', '\u{1F471}\u{1F3FE}\u{200D}\u{2640}\u{FE0F}',
+  '\u{1F471}\u{1F3FF}\u{200D}\u{2640}\u{FE0F}',
 ];
 
 function hashPlayerId(id: string): number {

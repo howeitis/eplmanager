@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
+import { getClubLogoUrl } from '../../data/assets';
 import { getChairman } from '../../data/chairmen';
 import { analyzeSquad } from '../../engine/squadAnalysis';
 import {
@@ -109,13 +110,22 @@ export function BoardMeeting({ onContinue }: BoardMeetingProps) {
       <div className="plm-max-w-2xl plm-mx-auto plm-px-4 plm-py-8 md:plm-px-8 md:plm-py-12">
         {/* Header */}
         <div className="plm-text-center plm-mb-8">
-          <div
-            className="plm-inline-flex plm-items-center plm-justify-center plm-w-16 plm-h-16 plm-rounded-full plm-mb-4 plm-border-2"
-            style={{
-              backgroundColor: accentColor,
-              borderColor: clubData.colors.secondary,
-            }}
-          />
+          {getClubLogoUrl(playerClub.id) ? (
+            <img
+              src={getClubLogoUrl(playerClub.id)}
+              alt={playerClub.name}
+              className="plm-w-16 plm-h-16 plm-rounded-full plm-mb-4 plm-object-contain plm-bg-white plm-p-1 plm-border-2"
+              style={{ borderColor: clubData.colors.secondary }}
+            />
+          ) : (
+            <div
+              className="plm-inline-flex plm-items-center plm-justify-center plm-w-16 plm-h-16 plm-rounded-full plm-mb-4 plm-border-2"
+              style={{
+                backgroundColor: accentColor,
+                borderColor: clubData.colors.secondary,
+              }}
+            />
+          )}
           <h1 className="plm-font-display plm-text-2xl md:plm-text-3xl plm-font-bold plm-text-charcoal plm-mb-1">
             Board Meeting
           </h1>

@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { useNavigation } from '../../hooks/useNavigation';
 import { useModalParams } from '../../hooks/useModalParams';
 import { CLUBS } from '../../data/clubs';
+import { getClubLogoUrl } from '../../data/assets';
 import type { Player, Position } from '../../types/entities';
 import { ShortlistStar } from '../shared/ShortlistStar';
 
@@ -90,13 +91,22 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
       {/* Club header */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
         <div className="plm-flex plm-items-center plm-gap-3 plm-mb-3">
-          <div
-            className="plm-w-12 plm-h-12 plm-rounded-full plm-flex-shrink-0 plm-border-2"
-            style={{
-              backgroundColor: clubData.colors.primary,
-              borderColor: clubData.colors.secondary,
-            }}
-          />
+          {getClubLogoUrl(clubData.id) ? (
+            <img
+              src={getClubLogoUrl(clubData.id)}
+              alt={clubData.name}
+              className="plm-w-12 plm-h-12 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-1 plm-border-2"
+              style={{ borderColor: clubData.colors.secondary }}
+            />
+          ) : (
+            <div
+              className="plm-w-12 plm-h-12 plm-rounded-full plm-flex-shrink-0 plm-border-2"
+              style={{
+                backgroundColor: clubData.colors.primary,
+                borderColor: clubData.colors.secondary,
+              }}
+            />
+          )}
           <div className="plm-min-w-0 plm-flex-1">
             <h1 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-truncate">
               {clubData.name}
