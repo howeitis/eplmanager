@@ -6,16 +6,32 @@ import { generateScoutSummary } from '../../engine/scoutSummary';
 // ─── Emoji pool ───
 
 const PLAYER_EMOJIS: string[] = [
+  // Standard man — 5 skin tones
   '\u{1F468}\u{1F3FB}', '\u{1F468}\u{1F3FC}', '\u{1F468}\u{1F3FD}',
   '\u{1F468}\u{1F3FE}', '\u{1F468}\u{1F3FF}',
+  // Curly hair — 5 skin tones
   '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B1}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B1}',
   '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B1}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B1}',
   '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B1}',
-  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B2}', '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B2}',
-  '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B2}', '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B2}',
+  // Bald — 5 skin tones
+  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B2}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B2}',
+  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B2}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B2}',
+  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B2}',
+  // Red hair — 5 skin tones
   '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B0}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B0}',
-  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B3}', '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B3}',
-  '\u{1F9D4}\u{1F3FB}', '\u{1F9D4}\u{1F3FD}', '\u{1F9D4}\u{1F3FE}', '\u{1F9D4}\u{1F3FF}',
+  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B0}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B0}',
+  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B0}',
+  // White/grey hair — 5 skin tones
+  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B3}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B3}',
+  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B3}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B3}',
+  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B3}',
+  // Beard (🧔) — 5 skin tones
+  '\u{1F9D4}\u{1F3FB}', '\u{1F9D4}\u{1F3FC}', '\u{1F9D4}\u{1F3FD}',
+  '\u{1F9D4}\u{1F3FE}', '\u{1F9D4}\u{1F3FF}',
+  // Blond man (👱‍♂️) — 5 skin tones
+  '\u{1F471}\u{1F3FB}\u{200D}\u{2642}\u{FE0F}', '\u{1F471}\u{1F3FC}\u{200D}\u{2642}\u{FE0F}',
+  '\u{1F471}\u{1F3FD}\u{200D}\u{2642}\u{FE0F}', '\u{1F471}\u{1F3FE}\u{200D}\u{2642}\u{FE0F}',
+  '\u{1F471}\u{1F3FF}\u{200D}\u{2642}\u{FE0F}',
 ];
 
 function hashPlayerId(id: string): number {
@@ -294,16 +310,17 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {/* ─── Hero stat emoji sticker (90+ stat on gold cards) ─── */}
+      {/* ─── Hero stat emoji sticker — centered top, clear of OVR and flag ─── */}
       {heroStat && isGold && size !== 'sm' && (
         <div
           className="plm-absolute plm-z-[15] plm-flex plm-items-center plm-justify-center plm-rounded-full plm-shadow-md"
           style={{
             top: size === 'xl' ? 10 : 8,
-            right: size === 'xl' ? 10 : 8,
+            left: '50%',
+            transform: 'translateX(-50%)',
             width: size === 'xl' ? 32 : size === 'lg' ? 26 : 22,
             height: size === 'xl' ? 32 : size === 'lg' ? 26 : 22,
-            background: 'rgba(255,255,255,0.9)',
+            background: 'rgba(255,255,255,0.92)',
             border: `1.5px solid ${borderColor}`,
             boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
           }}
@@ -417,12 +434,17 @@ export function RetroPlayerCard({
         })}
       </div>
 
-      {/* Scout summary bio (lg/xl gold cards, shown below stats) */}
-      {isGold && (size === 'lg' || size === 'xl') && (
-        <div className="plm-mx-2.5 plm-mt-1.5 plm-relative plm-z-[5]">
+      {/* Scout summary bio — all card tiers, md+ sizes, fills remaining space */}
+      {size !== 'sm' && (
+        <div
+          className="plm-absolute plm-left-3 plm-right-3 plm-z-[5]"
+          style={{ bottom: size === 'xl' ? 20 : 16 }}
+        >
           <p
-            className={`${size === 'xl' ? 'plm-text-[10px]' : 'plm-text-[8px]'} plm-italic plm-leading-tight plm-text-center`}
-            style={{ color: borderColor + 'CC' }}
+            className={`${
+              size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
+            } plm-italic plm-leading-snug plm-text-center`}
+            style={{ color: borderColor + 'DD' }}
           >
             {generateScoutSummary(player, { recentTransfers })}
           </p>
