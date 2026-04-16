@@ -58,7 +58,6 @@ export function StartingXIPicker({
   }, [playerClub, tempFillIns]);
 
   const slots = getFormationSlots(formation);
-  const xiPlayerIds = new Set(Object.values(startingXI));
 
   // Count filled slots
   const filledCount = Object.values(startingXI).filter(Boolean).length;
