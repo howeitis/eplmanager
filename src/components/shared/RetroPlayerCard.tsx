@@ -1,5 +1,45 @@
 import type { Player, PlayerStats } from '../../types/entities';
 
+// Diverse player emoji pool — all 5 Fitzpatrick skin tones × multiple hair styles.
+// Skin tone modifiers: 🏻light 🏼med-light 🏽med 🏾med-dark 🏿dark
+// Hair ZWJ: 🦰red 🦱curly 🦲bald 🦳white
+const PLAYER_EMOJIS: string[] = [
+  '\u{1F468}\u{1F3FB}',                           // man · light
+  '\u{1F468}\u{1F3FC}',                           // man · med-light
+  '\u{1F468}\u{1F3FD}',                           // man · medium
+  '\u{1F468}\u{1F3FE}',                           // man · med-dark
+  '\u{1F468}\u{1F3FF}',                           // man · dark
+  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B1}',          // man · light · curly
+  '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B1}',          // man · med-light · curly
+  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B1}',          // man · medium · curly
+  '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B1}',          // man · med-dark · curly
+  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B1}',          // man · dark · curly
+  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B2}',          // man · light · bald
+  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B2}',          // man · medium · bald
+  '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B2}',          // man · med-dark · bald
+  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B2}',          // man · dark · bald
+  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B0}',          // man · light · red hair
+  '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B0}',          // man · med-light · red hair
+  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B3}',          // man · medium · white hair
+  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B3}',          // man · dark · white hair
+  '\u{1F9D4}\u{1F3FB}',                           // bearded · light
+  '\u{1F9D4}\u{1F3FD}',                           // bearded · medium
+  '\u{1F9D4}\u{1F3FE}',                           // bearded · med-dark
+  '\u{1F9D4}\u{1F3FF}',                           // bearded · dark
+];
+
+function hashPlayerId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function getPlayerEmoji(id: string): string {
+  return PLAYER_EMOJIS[hashPlayerId(id) % PLAYER_EMOJIS.length];
+}
+
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
 
 const NATIONALITY_FLAGS: Record<string, string> = {
@@ -71,7 +111,7 @@ interface RetroPlayerCardProps {
   player: Player;
   clubName?: string;
   clubColors?: { primary: string; secondary: string };
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   animated?: boolean;
 }
 
@@ -90,12 +130,14 @@ export function RetroPlayerCard({
     sm: 'plm-w-40 plm-h-56',
     md: 'plm-w-52 plm-h-72',
     lg: 'plm-w-64 plm-h-[22rem]',
+    xl: 'plm-w-[21rem] plm-h-[31rem]',
   };
 
   const fontSizes = {
     sm: { ovr: 'plm-text-2xl', name: 'plm-text-xs', stat: 'plm-text-[9px]', pos: 'plm-text-[8px]', emoji: 'plm-text-3xl' },
     md: { ovr: 'plm-text-3xl', name: 'plm-text-sm', stat: 'plm-text-[10px]', pos: 'plm-text-[9px]', emoji: 'plm-text-4xl' },
     lg: { ovr: 'plm-text-4xl', name: 'plm-text-base', stat: 'plm-text-xs', pos: 'plm-text-[10px]', emoji: 'plm-text-5xl' },
+    xl: { ovr: 'plm-text-5xl', name: 'plm-text-xl', stat: 'plm-text-sm', pos: 'plm-text-xs', emoji: 'plm-text-7xl' },
   };
 
   const fs = fontSizes[size];
@@ -138,7 +180,7 @@ export function RetroPlayerCard({
           </div>
         </div>
         <div className="plm-text-right plm-mt-0.5">
-          <span className={size === 'sm' ? 'plm-text-lg' : 'plm-text-xl'}>{getFlag(player.nationality)}</span>
+          <span className={size === 'sm' ? 'plm-text-lg' : size === 'xl' ? 'plm-text-2xl' : 'plm-text-xl'}>{getFlag(player.nationality)}</span>
         </div>
       </div>
 
@@ -148,7 +190,7 @@ export function RetroPlayerCard({
           className={`${fs.emoji} plm-leading-none`}
           style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
         >
-          {'\u{1F468}'}
+          {getPlayerEmoji(player.id)}
         </div>
       </div>
 
@@ -168,20 +210,28 @@ export function RetroPlayerCard({
         </div>
       </div>
 
-      {/* Nationality + Club */}
+      {/* Nationality + Age */}
       <div className="plm-flex plm-justify-center plm-items-center plm-gap-1 plm-mt-1">
         <span className={`${fs.pos} plm-uppercase plm-tracking-wider plm-font-semibold`} style={{ color: borderColor }}>
           {getNationalityLabel(player.nationality)}
         </span>
-        {clubName && (
-          <>
-            <span style={{ color: borderColor }}>&middot;</span>
-            <span className={`${fs.pos} plm-uppercase plm-tracking-wider plm-font-semibold plm-truncate plm-max-w-20`} style={{ color: borderColor }}>
-              {clubName}
-            </span>
-          </>
-        )}
+        <span style={{ color: borderColor }}>&middot;</span>
+        <span className={`${fs.pos} plm-uppercase plm-tracking-wider plm-font-semibold`} style={{ color: borderColor }}>
+          Age {player.age}
+        </span>
       </div>
+
+      {/* Full club name */}
+      {clubName && (
+        <div className="plm-flex plm-justify-center plm-px-2 plm-mt-0.5">
+          <span
+            className={`${fs.pos} plm-uppercase plm-tracking-wider plm-font-semibold plm-text-center plm-leading-tight`}
+            style={{ color: borderColor }}
+          >
+            {clubName}
+          </span>
+        </div>
+      )}
 
       {/* Stats grid */}
       <div className="plm-mx-2.5 plm-mt-1.5 plm-grid plm-grid-cols-3 plm-gap-x-1 plm-gap-y-0.5">
