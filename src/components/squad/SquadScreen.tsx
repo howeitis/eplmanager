@@ -21,6 +21,8 @@ interface SquadScreenProps {
   onMentalityChange: (m: Mentality) => void;
   xiNotifications?: XISwap[];
   onDismissNotifications?: () => void;
+  onAdvance?: () => void;
+  advanceLabel?: string;
 }
 
 export function SquadScreen({
@@ -30,9 +32,12 @@ export function SquadScreen({
   onMentalityChange,
   xiNotifications = [],
   onDismissNotifications = () => {},
+  onAdvance,
+  advanceLabel,
 }: SquadScreenProps) {
   const manager = useGameStore((s) => s.manager);
   const clubs = useGameStore((s) => s.clubs);
+  const currentPhase = useGameStore((s) => s.currentPhase);
   const tempFillIns = useGameStore((s) => s.tempFillIns);
   const startingXI = useGameStore((s) => s.startingXI);
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
@@ -81,8 +86,33 @@ export function SquadScreen({
     return allPlayers.some((p) => xiPlayerIds.includes(p.id) && p.injured);
   }, [allPlayers, startingXI]);
 
+  const isJanuaryWindow = currentPhase === 'january_window' || currentPhase === 'january' || currentPhase === 'january_deadline';
+
   return (
     <div className="plm-space-y-4 plm-w-full">
+
+      {/* Advance to next month banner */}
+      {onAdvance && advanceLabel && (
+        <div className="plm-bg-charcoal plm-rounded-lg plm-px-4 plm-py-3 plm-flex plm-items-center plm-justify-between plm-gap-3">
+          <div className="plm-min-w-0">
+            <p className="plm-text-sm plm-font-semibold plm-text-white plm-truncate">
+              {advanceLabel}
+            </p>
+            {isJanuaryWindow && (
+              <p className="plm-text-xs plm-text-amber-400 plm-mt-0.5">
+                Transfer window is open — sign before the deadline!
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onAdvance}
+            className="plm-flex-shrink-0 plm-px-4 plm-py-2 plm-bg-white plm-text-charcoal plm-rounded-lg plm-text-xs plm-font-bold plm-uppercase plm-tracking-wide hover:plm-bg-warm-200 plm-transition-colors plm-min-h-[44px] plm-min-w-[80px]"
+          >
+            Advance
+          </button>
+        </div>
+      )}
+
       {/* Injured starter banner */}
       {hasInjuredStarter && (
         <div className="plm-bg-red-50 plm-border plm-border-red-200 plm-rounded-lg plm-px-4 plm-py-3 plm-flex plm-items-center plm-gap-2">

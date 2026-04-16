@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
+import { getClubLogoUrl } from '../../data/assets';
 import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { SquadMiniView } from './SquadMiniView';
@@ -128,13 +129,19 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
           <div className="plm-flex plm-items-center plm-gap-3 plm-mb-3">
             {playerClub && (
-              <div
-                className="plm-w-10 plm-h-10 plm-rounded-full plm-flex-shrink-0 plm-border-2"
-                style={{
-                  backgroundColor: playerClub.colors.primary,
-                  borderColor: playerClub.colors.secondary,
-                }}
-              />
+              getClubLogoUrl(playerClub.id) ? (
+                <img
+                  src={getClubLogoUrl(playerClub.id)}
+                  alt={playerClub.name}
+                  className="plm-w-10 plm-h-10 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5 plm-border-2"
+                  style={{ borderColor: playerClub.colors.secondary }}
+                />
+              ) : (
+                <div
+                  className="plm-w-10 plm-h-10 plm-rounded-full plm-flex-shrink-0 plm-border-2"
+                  style={{ backgroundColor: playerClub.colors.primary, borderColor: playerClub.colors.secondary }}
+                />
+              )
             )}
             <div className="plm-min-w-0">
               <h1 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-truncate">

@@ -52,6 +52,10 @@ export default {
           '0%': { left: '-100%' },
           '100%': { left: '200%' },
         },
+        'border-shimmer': {
+          '0%, 100%': { boxShadow: '0 0 6px rgba(255,215,0,0.4), 0 0 0 3px rgba(255,215,0,0.5), inset 0 0 6px rgba(255,215,0,0.1)' },
+          '50%': { boxShadow: '0 0 20px rgba(255,200,0,0.9), 0 0 0 3px rgba(255,230,50,0.95), inset 0 0 12px rgba(255,215,0,0.3)' },
+        },
         'screen-shake': {
           '0%, 100%': { transform: 'translate(0, 0)' },
           '10%': { transform: 'translate(-3px, -2px)' },
@@ -78,6 +82,7 @@ export default {
         'pack-burst': 'pack-burst 0.4s ease-out forwards',
         'card-enter': 'card-enter 0.5s ease-out forwards',
         'shimmer': 'shimmer 1.5s ease-in-out infinite',
+        'border-shimmer': 'border-shimmer 2s ease-in-out infinite',
         'screen-shake': 'screen-shake 0.4s ease-out',
         'particle-burst': 'particle-burst 1s ease-out forwards',
       },

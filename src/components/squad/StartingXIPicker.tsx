@@ -208,6 +208,19 @@ function PitchSlot({
             : slot.slot}
         </div>
 
+        {/* Form badge */}
+        {player && !player.injured && (
+          <div className={`plm-text-[7px] plm-font-bold plm-px-1 plm-rounded plm-mt-0.5 ${
+            player.form > 0
+              ? 'plm-bg-emerald-500/80 plm-text-white'
+              : player.form < 0
+              ? 'plm-bg-red-500/80 plm-text-white'
+              : 'plm-bg-white/20 plm-text-white/70'
+          }`}>
+            {player.form > 0 ? `+${player.form}` : player.form === 0 ? '0' : `${player.form}`}
+          </div>
+        )}
+
         {/* Injury badge */}
         {isInjured && (
           <span className="plm-text-[7px] plm-bg-red-600 plm-text-white plm-px-1 plm-rounded plm-font-bold plm-mt-0.5">

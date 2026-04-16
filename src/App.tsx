@@ -253,6 +253,10 @@ function App() {
           shortlistNotifications: [],
           boardMeetingPending: (data as unknown as Record<string, unknown>).boardMeetingPending as boolean || false,
         });
+        // Restore formation from manager's preferred formation
+        if (migratedManager?.preferredFormation) {
+          setFormation(migratedManager.preferredFormation as Formation);
+        }
         setScreen('game');
         const isBoardMeetingPending = (data as unknown as Record<string, unknown>).boardMeetingPending as boolean || false;
         setGameView(isBoardMeetingPending ? 'board_meeting' : 'hub');
@@ -365,6 +369,9 @@ function App() {
     store.getState().setBoardMeetingPending(true);
 
     await saveGame(slot, store.getState());
+
+    // Default formation to manager's preferred formation
+    setFormation(data.preferredFormation as Formation);
 
     setScreen('game');
     setGameView('board_meeting');
@@ -1036,8 +1043,9 @@ function App() {
       managerAvatar: state.manager?.avatar,
     });
 
-    // Navigate to squad page so the user can adjust tactics before next month
-    setGameView('squad');
+    // In final month (before season_end), go back to hub; otherwise squad for tactics
+    const nextPhase = store.getState().currentPhase;
+    setGameView(nextPhase === 'season_end' ? 'hub' : 'squad');
     window.scrollTo(0, 0);
   }, [store]);
 
@@ -1123,6 +1131,8 @@ function App() {
                 onMentalityChange={setMentality}
                 xiNotifications={xiNotifications}
                 onDismissNotifications={() => setXiNotifications([])}
+                onAdvance={handleAdvance}
+                advanceLabel={advanceLabel}
               />
             )}
             {gameView === 'club_squad' && viewingClubId && (

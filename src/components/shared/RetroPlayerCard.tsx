@@ -32,24 +32,34 @@ function getPlayerEmoji(id: string): string {
 
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
 
+// Emoji stickers that match each stat
+const STAT_EMOJI: Record<string, string> = {
+  ATK: '⚡',
+  DEF: '🛡️',
+  MOV: '💨',
+  PWR: '💪',
+  MEN: '🧠',
+  SKL: '✨',
+};
+
 // ─── Color helpers ───
 
 function getOverallColor(overall: number): string {
-  if (overall >= 85) return '#FFD700';
+  if (overall >= 80) return '#FFD700';
   if (overall >= 75) return '#C0C0C0';
   if (overall >= 65) return '#CD7F32';
   return '#8B7355';
 }
 
 function getCardBorderColor(overall: number): string {
-  if (overall >= 85) return '#B8860B';
+  if (overall >= 80) return '#B8860B';
   if (overall >= 75) return '#808080';
   if (overall >= 65) return '#8B4513';
   return '#6B5B45';
 }
 
 function getCardBgGradient(overall: number): string {
-  if (overall >= 85) return 'linear-gradient(135deg, #FFF8DC 0%, #FFD700 30%, #FFF8DC 50%, #FFD700 70%, #FFF8DC 100%)';
+  if (overall >= 80) return 'linear-gradient(135deg, #FFF8DC 0%, #FFD700 30%, #FFF8DC 50%, #FFD700 70%, #FFF8DC 100%)';
   if (overall >= 75) return 'linear-gradient(135deg, #F5F5F5 0%, #C0C0C0 30%, #F5F5F5 50%, #C0C0C0 70%, #F5F5F5 100%)';
   if (overall >= 65) return 'linear-gradient(135deg, #FFF3E0 0%, #CD7F32 30%, #FFF3E0 50%, #CD7F32 70%, #FFF3E0 100%)';
   return 'linear-gradient(135deg, #FAF0E6 0%, #D2B48C 30%, #FAF0E6 50%, #D2B48C 70%, #FAF0E6 100%)';
@@ -70,33 +80,6 @@ function getHeroStat(stats: PlayerStats): { key: string; value: number } | null 
     }
   }
   return best && best.value >= 90 ? best : null;
-}
-
-// ─── Signature generator ───
-
-function generateSignaturePath(name: string): string {
-  // Deterministic "cursive" SVG path based on name hash
-  let h = 0;
-  for (let i = 0; i < name.length; i++) {
-    h = (Math.imul(h, 31) + name.charCodeAt(i)) | 0;
-  }
-  h = Math.abs(h);
-
-  const segments: string[] = [];
-  let x = 10;
-  const y = 25;
-  segments.push(`M ${x} ${y}`);
-
-  for (let i = 0; i < 8; i++) {
-    const dx = 18 + ((h >> (i * 3)) & 7) * 2;
-    const dy = -12 + ((h >> (i * 2 + 1)) & 7) * 4;
-    const cx = x + dx * 0.4;
-    const cy = y + dy;
-    x += dx;
-    segments.push(`Q ${cx} ${cy} ${x} ${y + ((h >> (i + 5)) & 3) - 1}`);
-  }
-
-  return segments.join(' ');
 }
 
 // ─── Props ───
@@ -131,7 +114,8 @@ export function RetroPlayerCard({
   const [glarePos, setGlarePos] = useState<{ x: number; y: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const isGold = player.overall >= 85;
+  const isGold = player.overall >= 80;
+  const isShimmerGold = player.overall >= 86;
   const overallColor = getOverallColor(player.overall);
   const borderColor = getCardBorderColor(player.overall);
   const bgGradient = getCardBgGradient(player.overall);
@@ -180,7 +164,7 @@ export function RetroPlayerCard({
     setIsFlipped((prev) => !prev);
   }, [disableFlip]);
 
-  // ─── Card back ───
+  // ─── Card back (just the clean game logo) ───
   if (isFlipped) {
     return (
       <div
@@ -205,13 +189,13 @@ export function RetroPlayerCard({
           style={{ borderColor: borderColor + '40' }}
         />
 
-        {/* EPL Manager logo */}
+        {/* EPL Manager logo — clean, centered */}
         <div className="plm-flex plm-flex-col plm-items-center plm-justify-center plm-h-full plm-gap-3">
           <img
             src="/epl_manager_logo.webp"
             alt="EPL Manager"
-            className={`plm-object-contain plm-opacity-80 ${
-              size === 'sm' ? 'plm-w-16 plm-h-16' : size === 'xl' ? 'plm-w-32 plm-h-32' : 'plm-w-24 plm-h-24'
+            className={`plm-object-contain plm-opacity-90 ${
+              size === 'sm' ? 'plm-w-16 plm-h-16' : size === 'xl' ? 'plm-w-36 plm-h-36' : 'plm-w-24 plm-h-24'
             }`}
           />
           <span
@@ -221,17 +205,6 @@ export function RetroPlayerCard({
             Premier League Manager
           </span>
         </div>
-
-        {/* Scout Summary (on back of lg/xl cards) */}
-        {(size === 'lg' || size === 'xl') && (
-          <div className="plm-absolute plm-bottom-4 plm-left-4 plm-right-4">
-            <p
-              className={`${size === 'xl' ? 'plm-text-xs' : 'plm-text-[10px]'} plm-text-warm-400 plm-italic plm-leading-relaxed plm-text-center`}
-            >
-              {generateScoutSummary(player, { recentTransfers })}
-            </p>
-          </div>
-        )}
 
         {/* Subtle pattern */}
         <div
@@ -248,7 +221,7 @@ export function RetroPlayerCard({
   return (
     <div
       ref={cardRef}
-      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none`}
+      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${isShimmerGold ? 'plm-animate-border-shimmer' : ''}`}
       style={{
         background: bgGradient,
         border: `3px solid ${borderColor}`,
@@ -263,42 +236,40 @@ export function RetroPlayerCard({
       onKeyDown={disableFlip ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFlip(); } }}
       aria-label={disableFlip ? undefined : `${player.name} card — tap to flip`}
     >
-      {/* ─── Dynamic watermarks (gold cards) ─── */}
+      {/* ─── Club crest watermark (ALL card tiers when clubId provided) ─── */}
+      {clubId && (
+        <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
+          <img
+            src={getClubLogoUrl(clubId)}
+            alt=""
+            className="plm-absolute plm-opacity-[0.08]"
+            style={{
+              width: '50%',
+              height: 'auto',
+              bottom: '15%',
+              right: '-5%',
+            }}
+            aria-hidden="true"
+          />
+        </div>
+      )}
+
+      {/* ─── National flag watermark (gold cards only) ─── */}
       {isGold && (
-        <>
-          {/* National flag watermark */}
-          <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
-            <img
-              src={getNationalityFlagUrl(player.nationality)}
-              alt=""
-              className="plm-absolute plm-opacity-[0.06] plm-blur-[1px]"
-              style={{
-                width: '80%',
-                height: 'auto',
-                top: '10%',
-                left: '10%',
-              }}
-              aria-hidden="true"
-            />
-          </div>
-          {/* Club crest watermark */}
-          {clubId && (
-            <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
-              <img
-                src={getClubLogoUrl(clubId)}
-                alt=""
-                className="plm-absolute plm-opacity-[0.08]"
-                style={{
-                  width: '50%',
-                  height: 'auto',
-                  bottom: '15%',
-                  right: '-5%',
-                }}
-                aria-hidden="true"
-              />
-            </div>
-          )}
-        </>
+        <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
+          <img
+            src={getNationalityFlagUrl(player.nationality)}
+            alt=""
+            className="plm-absolute plm-opacity-[0.06] plm-blur-[1px]"
+            style={{
+              width: '80%',
+              height: 'auto',
+              top: '10%',
+              left: '10%',
+            }}
+            aria-hidden="true"
+          />
+        </div>
       )}
 
       {/* ─── Foil glare overlay (gold cards) ─── */}
@@ -311,7 +282,7 @@ export function RetroPlayerCard({
         />
       )}
 
-      {/* Shimmer overlay for high-rated cards */}
+      {/* Shimmer sweep overlay for 80+ cards */}
       {player.overall >= 80 && (
         <div className="plm-absolute plm-inset-0 plm-overflow-hidden plm-pointer-events-none plm-z-10">
           <div
@@ -320,6 +291,26 @@ export function RetroPlayerCard({
               background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
             }}
           />
+        </div>
+      )}
+
+      {/* ─── Hero stat emoji sticker (90+ stat on gold cards) ─── */}
+      {heroStat && isGold && size !== 'sm' && (
+        <div
+          className="plm-absolute plm-z-[15] plm-flex plm-items-center plm-justify-center plm-rounded-full plm-shadow-md"
+          style={{
+            top: size === 'xl' ? 10 : 8,
+            right: size === 'xl' ? 10 : 8,
+            width: size === 'xl' ? 32 : size === 'lg' ? 26 : 22,
+            height: size === 'xl' ? 32 : size === 'lg' ? 26 : 22,
+            background: 'rgba(255,255,255,0.9)',
+            border: `1.5px solid ${borderColor}`,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+          }}
+        >
+          <span style={{ fontSize: size === 'xl' ? 16 : size === 'lg' ? 13 : 11 }}>
+            {STAT_EMOJI[heroStat.key] || '⭐'}
+          </span>
         </div>
       )}
 
@@ -359,27 +350,6 @@ export function RetroPlayerCard({
           {getPlayerEmoji(player.id)}
         </div>
       </div>
-
-      {/* ─── Hero stat badge (90+ stat on gold cards) ─── */}
-      {heroStat && isGold && (size === 'lg' || size === 'xl' || size === 'md') && (
-        <div
-          className="plm-absolute plm-z-[15] plm-flex plm-items-center plm-gap-0.5 plm-rounded-full plm-px-1.5 plm-py-0.5 plm-shadow-md"
-          style={{
-            top: size === 'xl' ? '38%' : '36%',
-            right: size === 'xl' ? '8%' : '6%',
-            background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-            border: '1.5px solid #B8860B',
-            boxShadow: '0 0 8px rgba(255,215,0,0.5)',
-          }}
-        >
-          <span className={`${fs.stat} plm-font-black plm-text-white`} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-            {heroStat.key}
-          </span>
-          <span className={`${fs.stat} plm-font-black plm-text-white`} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-            {heroStat.value}
-          </span>
-        </div>
-      )}
 
       {/* Name plate */}
       <div
@@ -429,15 +399,15 @@ export function RetroPlayerCard({
             <div key={stat} className="plm-flex plm-items-center plm-justify-between plm-px-1">
               <span
                 className={`${fs.stat} plm-font-bold plm-uppercase`}
-                style={{ color: isHero ? '#FFD700' : borderColor }}
+                style={{ color: isHero ? '#DC2626' : borderColor }}
               >
                 {stat}
               </span>
               <span
                 className={`${fs.stat} plm-font-black plm-tabular-nums`}
                 style={{
-                  color: isHero ? '#FFD700' : '#1A1A1A',
-                  textShadow: isHero ? '0 0 6px rgba(255,215,0,0.6)' : undefined,
+                  color: isHero ? '#DC2626' : '#1A1A1A',
+                  textShadow: isHero ? '0 0 6px rgba(220,38,38,0.4)' : undefined,
                 }}
               >
                 {value}
@@ -447,33 +417,15 @@ export function RetroPlayerCard({
         })}
       </div>
 
-      {/* Trait badge */}
-      <div className="plm-flex plm-justify-center plm-mt-1.5 plm-relative plm-z-[5]">
-        <span
-          className={`${fs.pos} plm-font-bold plm-uppercase plm-tracking-wider plm-px-2 plm-py-0.5 plm-rounded-full`}
-          style={{
-            backgroundColor: borderColor + '30',
-            color: borderColor,
-            border: `1px solid ${borderColor}50`,
-          }}
-        >
-          {player.trait}
-        </span>
-      </div>
-
-      {/* ─── Procedural signature (gold cards, md+ sizes) ─── */}
-      {isGold && size !== 'sm' && (
-        <div className="plm-absolute plm-bottom-2 plm-left-2 plm-right-2 plm-z-[5] plm-pointer-events-none">
-          <svg
-            viewBox="0 0 160 40"
-            className="plm-w-full plm-opacity-15"
-            fill="none"
-            stroke={borderColor}
-            strokeWidth="1.5"
-            strokeLinecap="round"
+      {/* Scout summary bio (lg/xl gold cards, shown below stats) */}
+      {isGold && (size === 'lg' || size === 'xl') && (
+        <div className="plm-mx-2.5 plm-mt-1.5 plm-relative plm-z-[5]">
+          <p
+            className={`${size === 'xl' ? 'plm-text-[10px]' : 'plm-text-[8px]'} plm-italic plm-leading-tight plm-text-center`}
+            style={{ color: borderColor + 'CC' }}
           >
-            <path d={generateSignaturePath(player.name)} />
-          </svg>
+            {generateScoutSummary(player, { recentTransfers })}
+          </p>
         </div>
       )}
 

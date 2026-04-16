@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import { LeagueTable } from '../shared/LeagueTable';
@@ -18,6 +18,9 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
   const manager = useGameStore((s) => s.manager);
   const clubs = useGameStore((s) => s.clubs);
   const playerClubId = manager?.clubId;
+  const playerClubData = clubDataMap.get(playerClubId || '');
+
+  const [showAllResults, setShowAllResults] = useState(false);
 
   // Sort fixtures by gameweek
   const sortedFixtures = useMemo(
@@ -25,8 +28,37 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
     [fixtures],
   );
 
-  // Interleave events between result groups by gameweek
-  const gameweeks = useMemo(() => {
+  // Split user's fixtures from others
+  const userFixtures = useMemo(
+    () => sortedFixtures.filter((f) => f.homeClubId === playerClubId || f.awayClubId === playerClubId),
+    [sortedFixtures, playerClubId],
+  );
+
+  const otherFixtures = useMemo(
+    () => sortedFixtures.filter((f) => f.homeClubId !== playerClubId && f.awayClubId !== playerClubId),
+    [sortedFixtures, playerClubId],
+  );
+
+  // Compute user's monthly stats
+  const monthStats = useMemo(() => {
+    let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
+    for (const f of userFixtures) {
+      const r = f.result!;
+      const isHome = f.homeClubId === playerClubId;
+      const myGoals = isHome ? r.homeGoals : r.awayGoals;
+      const theirGoals = isHome ? r.awayGoals : r.homeGoals;
+      goalsFor += myGoals;
+      goalsAgainst += theirGoals;
+      if (myGoals > theirGoals) wins++;
+      else if (myGoals === theirGoals) draws++;
+      else losses++;
+    }
+    const points = wins * 3 + draws;
+    return { wins, draws, losses, goalsFor, goalsAgainst, points };
+  }, [userFixtures, playerClubId]);
+
+  // Interleave events
+  const allGameweeks = useMemo(() => {
     const gwMap = new Map<number, Fixture[]>();
     for (const f of sortedFixtures) {
       const arr = gwMap.get(f.gameweek) || [];
@@ -36,49 +68,141 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
     return Array.from(gwMap.entries()).sort((a, b) => a[0] - b[0]);
   }, [sortedFixtures]);
 
+  const userGameweeks = useMemo(() => {
+    const gwMap = new Map<number, Fixture[]>();
+    for (const f of userFixtures) {
+      const arr = gwMap.get(f.gameweek) || [];
+      arr.push(f);
+      gwMap.set(f.gameweek, arr);
+    }
+    return Array.from(gwMap.entries()).sort((a, b) => a[0] - b[0]);
+  }, [userFixtures]);
+
+  const accentColor = playerClubData?.colors.primary || '#1A1A1A';
+  const accentLight = accentColor + '20';
+
   return (
     <div className="plm-space-y-4 plm-w-full">
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-mb-1">
-          {monthLabel} Results
-        </h2>
-        <p className="plm-text-xs plm-text-warm-500 plm-mb-4">
-          {sortedFixtures.length} matches played
-        </p>
 
-        {/* Events banner */}
-        {events.length > 0 && (
-          <div className="plm-space-y-1.5 plm-mb-4">
+      {/* ─── Key stats header ─── */}
+      <div
+        className="plm-rounded-lg plm-p-4 plm-border"
+        style={{ backgroundColor: accentLight, borderColor: accentColor + '40' }}
+      >
+        <div className="plm-flex plm-items-center plm-gap-3 plm-mb-3">
+          {playerClubData && (
+            <div
+              className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-border-2"
+              style={{ backgroundColor: accentColor, borderColor: playerClubData.colors.secondary }}
+            />
+          )}
+          <div>
+            <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-none">
+              {monthLabel}
+            </h2>
+            <p className="plm-text-xs plm-text-warm-500 plm-mt-0.5">
+              {userFixtures.length} match{userFixtures.length !== 1 ? 'es' : ''} played
+            </p>
+          </div>
+        </div>
+
+        {/* Point stats row */}
+        {userFixtures.length > 0 ? (
+          <div className="plm-grid plm-grid-cols-4 plm-gap-2">
+            <KeyStatBox label="Points" value={`+${monthStats.points}`} accent accentColor={accentColor} />
+            <KeyStatBox label="W-D-L" value={`${monthStats.wins}-${monthStats.draws}-${monthStats.losses}`} />
+            <KeyStatBox label="Scored" value={monthStats.goalsFor} />
+            <KeyStatBox label="Conceded" value={monthStats.goalsAgainst} />
+          </div>
+        ) : (
+          <p className="plm-text-sm plm-text-warm-500 plm-italic">No matches this period.</p>
+        )}
+      </div>
+
+      {/* ─── Events banner ─── */}
+      {events.length > 0 && (
+        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+          <div className="plm-space-y-1.5">
             {events.map((event) => (
               <EventBanner key={event.id} event={event} />
             ))}
           </div>
-        )}
-
-        {/* Match results by gameweek */}
-        <div className="plm-space-y-4">
-          {gameweeks.map(([gw, gwFixtures]) => (
-            <div key={gw}>
-              <div className="plm-text-[10px] plm-font-semibold plm-text-warm-400 plm-uppercase plm-tracking-wider plm-mb-1.5">
-                Matchday {gw}
-              </div>
-              <div className="plm-space-y-1.5">
-                {gwFixtures.map((fixture) => (
-                  <MatchScoreCard
-                    key={fixture.id}
-                    fixture={fixture}
-                    result={fixture.result!}
-                    playerClubId={playerClubId}
-                    clubs={clubs}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
+      )}
+
+      {/* ─── Your club's results ─── */}
+      {userFixtures.length > 0 && (
+        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+          <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
+            {playerClubData?.name || 'Your'} Results
+          </h3>
+          <div className="plm-space-y-2">
+            {userGameweeks.map(([gw, gwFixtures]) => (
+              <div key={gw}>
+                <div className="plm-text-[10px] plm-font-semibold plm-text-warm-400 plm-uppercase plm-tracking-wider plm-mb-1.5">
+                  Matchday {gw}
+                </div>
+                <div className="plm-space-y-1.5">
+                  {gwFixtures.map((fixture) => (
+                    <MatchScoreCard
+                      key={fixture.id}
+                      fixture={fixture}
+                      result={fixture.result!}
+                      playerClubId={playerClubId}
+                      clubs={clubs}
+                      playerClubData={playerClubData}
+                      isUserSection
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── All results (collapsible) ─── */}
+      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-overflow-hidden">
+        <button
+          onClick={() => setShowAllResults((v) => !v)}
+          className="plm-w-full plm-flex plm-items-center plm-justify-between plm-p-4 plm-text-left plm-min-h-[44px] hover:plm-bg-warm-50 plm-transition-colors"
+        >
+          <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal">
+            All Results ({sortedFixtures.length} matches)
+          </h3>
+          <span className="plm-text-warm-400 plm-text-sm plm-font-bold">
+            {showAllResults ? '▲' : '▼'}
+          </span>
+        </button>
+
+        {showAllResults && (
+          <div className="plm-px-4 plm-pb-4 plm-space-y-4 plm-border-t plm-border-warm-100">
+            <div className="plm-pt-3 plm-space-y-4">
+              {allGameweeks.map(([gw, gwFixtures]) => (
+                <div key={gw}>
+                  <div className="plm-text-[10px] plm-font-semibold plm-text-warm-400 plm-uppercase plm-tracking-wider plm-mb-1.5">
+                    Matchday {gw}
+                  </div>
+                  <div className="plm-space-y-1.5">
+                    {gwFixtures.map((fixture) => (
+                      <MatchScoreCard
+                        key={fixture.id}
+                        fixture={fixture}
+                        result={fixture.result!}
+                        playerClubId={playerClubId}
+                        clubs={clubs}
+                        playerClubData={playerClubData}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* League table */}
+      {/* ─── Standings ─── */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
         <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
           Standings
@@ -97,15 +221,47 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
   );
 }
 
+// ─── Key stat box ───
+
+function KeyStatBox({
+  label,
+  value,
+  accent,
+  accentColor,
+}: {
+  label: string;
+  value: string | number;
+  accent?: boolean;
+  accentColor?: string;
+}) {
+  return (
+    <div className="plm-bg-white/60 plm-rounded plm-p-2 plm-text-center">
+      <div className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-wider plm-font-medium">{label}</div>
+      <div
+        className="plm-text-base plm-font-bold plm-tabular-nums"
+        style={{ color: accent && accentColor ? accentColor : '#1A1A1A' }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// ─── Match score card ───
+
 function MatchScoreCard({
   result,
   playerClubId,
   clubs,
+  playerClubData,
+  isUserSection = false,
 }: {
   fixture: Fixture;
   result: MatchResult;
   playerClubId: string | undefined;
   clubs: { id: string; roster: { id: string; name: string }[] }[];
+  playerClubData?: ReturnType<typeof clubDataMap.get>;
+  isUserSection?: boolean;
 }) {
   const homeClub = clubDataMap.get(result.homeClubId);
   const awayClub = clubDataMap.get(result.awayClubId);
@@ -124,21 +280,48 @@ function MatchScoreCard({
     .filter((s) => !s.isHome)
     .map((s) => findPlayerName(s.playerId, result.awayClubId));
 
+  // User match highlight style
+  const userAccent = playerClubData?.colors.primary;
+  const userAccentBg = userAccent ? userAccent + '15' : undefined;
+  const userAccentBorder = userAccent ? userAccent + '60' : undefined;
+
   return (
     <div
       role="article"
       aria-label={`${homeClub?.shortName} ${result.homeGoals} - ${result.awayGoals} ${awayClub?.shortName}`}
       className={`plm-rounded plm-border plm-transition-all ${
-        isPlayerMatch
-          ? 'plm-border-warm-300 plm-bg-warm-50 plm-shadow-sm'
+        isPlayerMatch && !isUserSection
+          ? ''
+          : isPlayerMatch
+          ? 'plm-shadow-sm'
           : 'plm-border-warm-100 plm-bg-white'
       } ${result.isDerby ? 'plm-ring-1 plm-ring-amber-200' : ''}`}
+      style={
+        isPlayerMatch
+          ? { backgroundColor: userAccentBg || '#FAF8F5', borderColor: userAccentBorder || '#E0DCD5' }
+          : undefined
+      }
     >
+      {/* User match header tag */}
+      {isPlayerMatch && !isUserSection && (
+        <div
+          className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider plm-text-center plm-py-0.5 plm-rounded-t plm-border-b"
+          style={{
+            backgroundColor: userAccent ? userAccent + '25' : '#F0EDE8',
+            color: userAccent || '#6B6760',
+            borderColor: userAccent ? userAccent + '40' : '#E0DCD5',
+          }}
+        >
+          {playerClubData?.shortName || 'Your Club'}
+        </div>
+      )}
+
       {result.isDerby && (
         <div className="plm-text-[9px] plm-font-bold plm-text-amber-600 plm-uppercase plm-tracking-wider plm-text-center plm-py-0.5 plm-bg-amber-50 plm-rounded-t plm-border-b plm-border-amber-100">
           Derby
         </div>
       )}
+
       <div className="plm-flex plm-items-center plm-py-2.5 plm-px-3">
         {/* Home team */}
         <div className="plm-flex-1 plm-flex plm-items-center plm-gap-1.5 plm-justify-end plm-min-w-0">
