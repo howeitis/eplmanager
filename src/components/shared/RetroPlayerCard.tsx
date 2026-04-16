@@ -111,7 +111,7 @@ interface RetroPlayerCardProps {
   player: Player;
   clubName?: string;
   clubColors?: { primary: string; secondary: string };
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   animated?: boolean;
 }
 
@@ -130,12 +130,14 @@ export function RetroPlayerCard({
     sm: 'plm-w-40 plm-h-56',
     md: 'plm-w-52 plm-h-72',
     lg: 'plm-w-64 plm-h-[22rem]',
+    xl: 'plm-w-[21rem] plm-h-[31rem]',
   };
 
   const fontSizes = {
     sm: { ovr: 'plm-text-2xl', name: 'plm-text-xs', stat: 'plm-text-[9px]', pos: 'plm-text-[8px]', emoji: 'plm-text-3xl' },
     md: { ovr: 'plm-text-3xl', name: 'plm-text-sm', stat: 'plm-text-[10px]', pos: 'plm-text-[9px]', emoji: 'plm-text-4xl' },
     lg: { ovr: 'plm-text-4xl', name: 'plm-text-base', stat: 'plm-text-xs', pos: 'plm-text-[10px]', emoji: 'plm-text-5xl' },
+    xl: { ovr: 'plm-text-5xl', name: 'plm-text-xl', stat: 'plm-text-sm', pos: 'plm-text-xs', emoji: 'plm-text-7xl' },
   };
 
   const fs = fontSizes[size];
@@ -178,7 +180,7 @@ export function RetroPlayerCard({
           </div>
         </div>
         <div className="plm-text-right plm-mt-0.5">
-          <span className={size === 'sm' ? 'plm-text-lg' : 'plm-text-xl'}>{getFlag(player.nationality)}</span>
+          <span className={size === 'sm' ? 'plm-text-lg' : size === 'xl' ? 'plm-text-2xl' : 'plm-text-xl'}>{getFlag(player.nationality)}</span>
         </div>
       </div>
 

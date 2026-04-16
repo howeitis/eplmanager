@@ -167,7 +167,7 @@ export function PackOpening({
       {/* Cards carousel */}
       {packState === 'cards' && players.length > 0 && (
         <div
-          className="plm-flex plm-flex-col plm-items-center plm-gap-4 plm-w-full plm-max-w-md plm-px-4"
+          className="plm-flex plm-flex-col plm-items-center plm-gap-2 plm-w-full plm-max-w-lg plm-px-4 plm-overflow-y-auto plm-max-h-screen plm-py-4"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -182,13 +182,13 @@ export function PackOpening({
               player={players[currentCardIndex]}
               clubName={clubName}
               clubColors={clubColors}
-              size="lg"
+              size="xl"
               animated={revealedCards.has(currentCardIndex)}
             />
           </div>
 
           {/* Navigation dots */}
-          <div className="plm-flex plm-gap-1.5 plm-mt-2">
+          <div className="plm-flex plm-gap-1.5 plm-mt-1">
             {players.map((_, idx) => (
               <button
                 key={idx}
@@ -209,7 +209,7 @@ export function PackOpening({
           </div>
 
           {/* Navigation buttons */}
-          <div className="plm-flex plm-gap-3 plm-mt-2">
+          <div className="plm-flex plm-gap-3 plm-mt-1">
             <button
               onClick={handlePrevCard}
               disabled={currentCardIndex === 0}
