@@ -34,11 +34,6 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
     [sortedFixtures, playerClubId],
   );
 
-  const otherFixtures = useMemo(
-    () => sortedFixtures.filter((f) => f.homeClubId !== playerClubId && f.awayClubId !== playerClubId),
-    [sortedFixtures, playerClubId],
-  );
-
   // Compute user's monthly stats
   const monthStats = useMemo(() => {
     let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
