@@ -49,17 +49,23 @@ export function GoalScorersWidget({ variant = 'hub' }: { variant?: 'hub' | 'squa
     if (!playerClub || !hasMatchesPlayed(currentPhase)) return [];
 
     const rows: ScorerRow[] = playerClub.roster
-      .filter((p) => !p.isTemporary && (p.goals > 0 || p.assists > 0))
+      .filter((p) => {
+        const g = Number.isFinite(p.goals) ? p.goals : 0;
+        const a = Number.isFinite(p.assists) ? p.assists : 0;
+        return !p.isTemporary && (g > 0 || a > 0);
+      })
       .map((p) => {
-        const formEntries = p.formHistory.length;
-        const avgForm = formEntries > 0
-          ? Math.round((p.formHistory.reduce((sum, f) => sum + f, 0) / formEntries) * 10) / 10
+        const goals = Number.isFinite(p.goals) ? p.goals : 0;
+        const assists = Number.isFinite(p.assists) ? p.assists : 0;
+        const history = Array.isArray(p.formHistory) ? p.formHistory.filter((f) => Number.isFinite(f)) : [];
+        const avgForm = history.length > 0
+          ? Math.round((history.reduce((sum, f) => sum + f, 0) / history.length) * 10) / 10
           : 0;
         return {
           player: p,
-          goals: p.goals,
-          assists: p.assists,
-          gPlusA: p.goals + p.assists,
+          goals,
+          assists,
+          gPlusA: goals + assists,
           avgForm,
         };
       });
@@ -78,8 +84,9 @@ export function GoalScorersWidget({ variant = 'hub' }: { variant?: 'hub' | 'squa
     for (const club of clubs) {
       for (const player of club.roster) {
         if (player.isTemporary) continue;
-        if (player.goals > bestGoals) {
-          bestGoals = player.goals;
+        const goals = Number.isFinite(player.goals) ? player.goals : 0;
+        if (goals > bestGoals) {
+          bestGoals = goals;
           bestName = player.name;
         }
       }

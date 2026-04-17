@@ -151,7 +151,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
     const featuredRng = new SeededRNG(featuredSeed);
     // Need to get current listings after AI transfers removed some
     const currentListings = useGameStore.getState().marketListings;
-    const slots = generateFeaturedSlots(featuredRng, currentListings, useGameStore.getState().clubs);
+    const slots = generateFeaturedSlots(featuredRng, currentListings, useGameStore.getState().clubs, playerClubId);
     setFeaturedSlots(slots);
     setFeaturedRefillIndex(0);
 
@@ -205,6 +205,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
           currentSlots,
           marketListings,
           clubs,
+          playerClubId,
         );
 
         if (replacement) {
@@ -540,180 +541,86 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         </div>
       </div>
 
-      {/* Desktop quick links */}
-      <div className="plm-hidden md:plm-block plm-bg-white plm-border-b plm-border-gray-100 plm-px-4 plm-py-2">
-        <div className="plm-max-w-6xl plm-mx-auto plm-flex plm-items-center plm-gap-3">
-          <span className="plm-text-xs plm-text-gray-400 plm-font-medium plm-uppercase plm-tracking-wider">Quick jump:</span>
-          <button
-            onClick={() => setActiveTab('shortlist')}
-            className={`plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-1.5 plm-rounded-full plm-text-xs plm-font-semibold plm-transition-colors plm-min-h-[36px] ${
-              activeTab === 'shortlist'
-                ? 'plm-bg-amber-100 plm-text-amber-800 plm-border plm-border-amber-300'
-                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200 plm-border plm-border-gray-200'
-            }`}
-          >
-            ⭐ Shortlist
-            {shortlist.length > 0 && (
-              <span className="plm-bg-amber-500 plm-text-white plm-text-[10px] plm-rounded-full plm-px-1.5 plm-min-w-[18px] plm-text-center">
-                {shortlist.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('squad')}
-            className={`plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-1.5 plm-rounded-full plm-text-xs plm-font-semibold plm-transition-colors plm-min-h-[36px] ${
-              activeTab === 'squad'
-                ? 'plm-bg-blue-100 plm-text-blue-800 plm-border plm-border-blue-300'
-                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200 plm-border plm-border-gray-200'
-            }`}
-          >
-            👥 My Squad
-          </button>
-          <button
-            onClick={() => setActiveTab('incoming')}
-            className={`plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-1.5 plm-rounded-full plm-text-xs plm-font-semibold plm-transition-colors plm-min-h-[36px] ${
-              activeTab === 'incoming'
-                ? 'plm-bg-green-100 plm-text-green-800 plm-border plm-border-green-300'
-                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200 plm-border plm-border-gray-200'
-            }`}
-          >
-            📥 Incoming
-            {incomingOffers.length > 0 && (
-              <span className="plm-bg-red-500 plm-text-white plm-text-[10px] plm-rounded-full plm-px-1.5 plm-min-w-[18px] plm-text-center">
-                {incomingOffers.length}
-              </span>
-            )}
-          </button>
+      {/* Tab nav (all breakpoints) */}
+      <div className="plm-bg-white plm-border-b plm-border-gray-200 plm-sticky plm-top-0 plm-z-20">
+        <div className="plm-max-w-6xl plm-mx-auto plm-px-2 plm-overflow-x-auto">
+          <div className="plm-flex plm-gap-1 plm-min-w-max" role="tablist" aria-label="Transfer sections">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                role="tab"
+                aria-selected={activeTab === tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`plm-px-3 md:plm-px-4 plm-py-3 plm-text-sm plm-font-medium plm-whitespace-nowrap plm-border-b-2 plm-transition-colors plm-min-h-[44px] ${
+                  activeTab === tab.key
+                    ? 'plm-border-gray-900 plm-text-gray-900'
+                    : 'plm-border-transparent plm-text-gray-500 hover:plm-text-gray-700'
+                }`}
+              >
+                {tab.label}
+                {tab.badge && (
+                  <span className="plm-ml-1 plm-bg-red-500 plm-text-white plm-text-xs plm-rounded-full plm-px-1.5 plm-py-0.5" aria-label={`${tab.badge} pending`}>
+                    {tab.badge}
+                  </span>
+                )}
+                {tab.pill && (
+                  <span className="plm-ml-1 plm-bg-blue-100 plm-text-blue-700 plm-text-[10px] plm-font-medium plm-rounded-full plm-px-1.5 plm-py-0.5">
+                    {tab.pill}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Mobile tabs */}
-      <div className="lg:plm-hidden plm-bg-white plm-border-b plm-border-gray-200 plm-px-2 plm-overflow-x-auto">
-        <div className="plm-flex plm-gap-1 plm-min-w-max" role="tablist" aria-label="Transfer sections">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              role="tab"
-              aria-selected={activeTab === tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`plm-px-3 plm-py-3 plm-text-sm plm-font-medium plm-whitespace-nowrap plm-border-b-2 plm-transition-colors plm-min-h-[44px] ${
-                activeTab === tab.key
-                  ? 'plm-border-gray-900 plm-text-gray-900'
-                  : 'plm-border-transparent plm-text-gray-500 hover:plm-text-gray-700'
-              }`}
-            >
-              {tab.label}
-              {tab.badge && (
-                <span className="plm-ml-1 plm-bg-red-500 plm-text-white plm-text-xs plm-rounded-full plm-px-1.5 plm-py-0.5" aria-label={`${tab.badge} pending`}>
-                  {tab.badge}
-                </span>
-              )}
-              {tab.pill && (
-                <span className="plm-ml-1 plm-bg-blue-100 plm-text-blue-700 plm-text-[10px] plm-font-medium plm-rounded-full plm-px-1.5 plm-py-0.5">
-                  {tab.pill}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="plm-max-w-6xl plm-mx-auto plm-px-4 plm-py-4">
-        {/* Desktop: side-by-side layout */}
-        <div className="plm-hidden lg:plm-grid lg:plm-grid-cols-3 lg:plm-gap-4">
-          {/* Left panel: Market Board */}
-          <div className="plm-col-span-2">
-            <MarketBoard
-              listings={marketPlayersWithListings}
-              budget={playerBudget}
-              onMakeOffer={handleMakeOffer}
-              playerClubId={playerClubId}
-              clubs={clubs}
-            />
-          </div>
-
-          {/* Right panel: Squad + Offers + Ticker */}
-          <div className="plm-space-y-4">
-            <SquadPanel
-              club={playerClub!}
-              onSellToContinent={handleSellToContinent}
-            />
-            {incomingOffers.length > 0 && (
-              <IncomingOffers
-                offers={incomingOffers}
-                clubs={clubs}
-                onRespond={handleRespondToOffer}
-              />
-            )}
-            {outgoingOffers.length > 0 && (
-              <OutgoingOffers
-                offers={outgoingOffers}
-                clubs={clubs}
-                budget={playerBudget}
-                onAcceptCounter={handleAcceptCounter}
-              />
-            )}
-            <ShortlistPanel
-              clubs={clubs}
-              playerClubId={playerClubId}
-              isTransferWindow
-              onMakeOffer={handleMakeOffer}
-              budget={playerBudget}
-            />
-            <TransferLedger clubs={clubs} />
-            <TransferTicker messages={tickerMessages} />
-          </div>
-        </div>
-
-        {/* Mobile: tab content */}
-        <div className="lg:plm-hidden">
-          {activeTab === 'market' && (
-            <MarketBoard
-              listings={marketPlayersWithListings}
-              budget={playerBudget}
-              onMakeOffer={handleMakeOffer}
-              playerClubId={playerClubId}
-              clubs={clubs}
-            />
-          )}
-          {activeTab === 'squad' && playerClub && (
-            <SquadPanel
-              club={playerClub}
-              onSellToContinent={handleSellToContinent}
-            />
-          )}
-          {activeTab === 'incoming' && (
-            <IncomingOffers
-              offers={incomingOffers}
-              clubs={clubs}
-              onRespond={handleRespondToOffer}
-            />
-          )}
-          {activeTab === 'outgoing' && (
-            <OutgoingOffers
-              offers={outgoingOffers}
-              clubs={clubs}
-              budget={playerBudget}
-              onAcceptCounter={handleAcceptCounter}
-            />
-          )}
-          {activeTab === 'shortlist' && (
-            <ShortlistPanel
-              clubs={clubs}
-              playerClubId={playerClubId}
-              isTransferWindow
-              onMakeOffer={handleMakeOffer}
-              budget={playerBudget}
-            />
-          )}
-          {activeTab === 'ledger' && (
-            <TransferLedger clubs={clubs} />
-          )}
-          {activeTab === 'ticker' && (
-            <TransferTicker messages={tickerMessages} />
-          )}
-        </div>
+      {/* Content — single active module on all breakpoints */}
+      <div className="plm-max-w-4xl plm-mx-auto plm-px-4 plm-py-4">
+        {activeTab === 'market' && (
+          <MarketBoard
+            listings={marketPlayersWithListings}
+            budget={playerBudget}
+            onMakeOffer={handleMakeOffer}
+            playerClubId={playerClubId}
+            clubs={clubs}
+          />
+        )}
+        {activeTab === 'squad' && playerClub && (
+          <SquadPanel
+            club={playerClub}
+            onSellToContinent={handleSellToContinent}
+          />
+        )}
+        {activeTab === 'incoming' && (
+          <IncomingOffers
+            offers={incomingOffers}
+            clubs={clubs}
+            onRespond={handleRespondToOffer}
+          />
+        )}
+        {activeTab === 'outgoing' && (
+          <OutgoingOffers
+            offers={outgoingOffers}
+            clubs={clubs}
+            budget={playerBudget}
+            onAcceptCounter={handleAcceptCounter}
+          />
+        )}
+        {activeTab === 'shortlist' && (
+          <ShortlistPanel
+            clubs={clubs}
+            playerClubId={playerClubId}
+            isTransferWindow
+            onMakeOffer={handleMakeOffer}
+            budget={playerBudget}
+          />
+        )}
+        {activeTab === 'ledger' && (
+          <TransferLedger clubs={clubs} />
+        )}
+        {activeTab === 'ticker' && (
+          <TransferTicker messages={tickerMessages} />
+        )}
       </div>
     </div>
   );

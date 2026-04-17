@@ -127,8 +127,13 @@ const RANDOM_EURO_HOSTS = [
   'Poland & Ukraine', 'Scandinavia', 'Greece & Turkey', 'Austria & Switzerland',
 ];
 
+interface JulyNarrativeResult {
+  text: string;
+  englandWonTournament: 'world_cup' | 'euros' | null;
+}
+
 /** Generate a July narrative based on tournament year or preseason */
-function generateJulyNarrative(rng: import('./utils/rng').SeededRNG, calendarYear: number): string {
+function generateJulyNarrative(rng: import('./utils/rng').SeededRNG, calendarYear: number): JulyNarrativeResult {
   const tournament = getSummerTournament(calendarYear);
 
   if (tournament === 'world_cup') {
@@ -140,12 +145,16 @@ function generateJulyNarrative(rng: import('./utils/rng').SeededRNG, calendarYea
       'England', 'Italy', 'Netherlands', 'Portugal', 'Belgium',
     ];
     const winner = winners[rng.randomInt(0, winners.length - 1)];
+    if (winner === 'England') {
+      const line = `IT'S COMING HOME! England are World Cup champions after lifting the trophy in ${host}. Pubs are packed, the nation rejoices — and the board has unlocked a £15M commercial windfall on the back of the celebrations.`;
+      return { text: line, englandWonTournament: 'world_cup' };
+    }
     const dramas = [
       `${winner} lifted the World Cup trophy in ${host} after a dramatic final.`,
       `A golden generation delivered as ${winner} won the ${calendarYear} World Cup in ${host}.`,
       `${winner} are World Cup champions! The tournament in ${host} will be remembered for years.`,
     ];
-    return dramas[rng.randomInt(0, dramas.length - 1)];
+    return { text: dramas[rng.randomInt(0, dramas.length - 1)], englandWonTournament: null };
   }
 
   if (tournament === 'euros') {
@@ -157,15 +166,22 @@ function generateJulyNarrative(rng: import('./utils/rng').SeededRNG, calendarYea
       'Netherlands', 'Portugal', 'Belgium', 'Denmark', 'Croatia',
     ];
     const winner = winners[rng.randomInt(0, winners.length - 1)];
+    if (winner === 'England') {
+      const line = `FOOTBALL'S COMING HOME! England are Kings of Europe after winning Euro ${calendarYear} in ${host}. A generation-defining summer — and the board has unlocked a £15M commercial windfall on the back of the celebrations.`;
+      return { text: line, englandWonTournament: 'euros' };
+    }
     const dramas = [
       `${winner} won Euro ${calendarYear} hosted by ${host} after a thrilling summer of football.`,
       `Euro ${calendarYear} in ${host} is over — ${winner} are the new champions of Europe!`,
       `${winner} crowned European champions in ${host}! Their players return to their clubs on a high.`,
     ];
-    return dramas[rng.randomInt(0, dramas.length - 1)];
+    return { text: dramas[rng.randomInt(0, dramas.length - 1)], englandWonTournament: null };
   }
 
-  // No major tournament — fun preseason stories
+  return { text: pickPreseasonStory(rng), englandWonTournament: null };
+}
+
+function pickPreseasonStory(rng: import('./utils/rng').SeededRNG): string {
   const stories = [
     'Pre-season is in full swing. Managers are putting their squads through gruelling fitness regimes under the summer sun.',
     'The pre-season friendlies are done. Time to finalise the squad before the window closes.',
@@ -214,6 +230,9 @@ function App() {
           roster: club.roster.map((p) => ({
             ...p,
             nationality: p.nationality ?? 'English',
+            goals: typeof p.goals === 'number' && !isNaN(p.goals) ? p.goals : 0,
+            assists: typeof p.assists === 'number' && !isNaN(p.assists) ? p.assists : 0,
+            cleanSheets: typeof p.cleanSheets === 'number' && !isNaN(p.cleanSheets) ? p.cleanSheets : 0,
             formHistory: p.formHistory ?? [],
             monthlyGoals: p.monthlyGoals ?? [],
             monthlyAssists: p.monthlyAssists ?? [],
@@ -530,7 +549,13 @@ function App() {
       // Generate July narrative
       const calendarYear = getCalendarYear(seasonNumber);
       const julyRng = new SeededRNG(`${sSeed}-july-narrative`);
-      setJulyNarrative(generateJulyNarrative(julyRng, calendarYear));
+      const julyResult = generateJulyNarrative(julyRng, calendarYear);
+      setJulyNarrative(julyResult.text);
+      if (julyResult.englandWonTournament) {
+        state.adjustBudget(playerClubId, 15);
+        const trophyName = julyResult.englandWonTournament === 'world_cup' ? 'World Cup' : 'European Championship';
+        state.addTickerMessage(`England win the ${trophyName} — board hands you a £15M celebration budget boost.`);
+      }
 
       state.setPhase('july_advance');
       await saveGame(state.saveSlot!, store.getState());
@@ -674,28 +699,32 @@ function App() {
         const club = scorer.isHome ? homeClub : awayClub;
         const player = club.roster.find((p) => p.id === scorer.playerId);
         if (player) {
-          state.updatePlayer(club.id, player.id, { goals: player.goals + 1 });
+          const prev = Number.isFinite(player.goals) ? player.goals : 0;
+          state.updatePlayer(club.id, player.id, { goals: prev + 1 });
         }
       }
       for (const assister of result.assisters) {
         const club = assister.isHome ? homeClub : awayClub;
         const player = club.roster.find((p) => p.id === assister.playerId);
         if (player) {
-          state.updatePlayer(club.id, player.id, { assists: player.assists + 1 });
+          const prev = Number.isFinite(player.assists) ? player.assists : 0;
+          state.updatePlayer(club.id, player.id, { assists: prev + 1 });
         }
       }
       // Clean sheets
       if (result.awayGoals === 0) {
         for (const p of homeClub.roster) {
           if (['GK', 'CB', 'FB'].includes(p.position) && !p.injured) {
-            state.updatePlayer(homeClub.id, p.id, { cleanSheets: p.cleanSheets + 1 });
+            const prev = Number.isFinite(p.cleanSheets) ? p.cleanSheets : 0;
+            state.updatePlayer(homeClub.id, p.id, { cleanSheets: prev + 1 });
           }
         }
       }
       if (result.homeGoals === 0) {
         for (const p of awayClub.roster) {
           if (['GK', 'CB', 'FB'].includes(p.position) && !p.injured) {
-            state.updatePlayer(awayClub.id, p.id, { cleanSheets: p.cleanSheets + 1 });
+            const prev = Number.isFinite(p.cleanSheets) ? p.cleanSheets : 0;
+            state.updatePlayer(awayClub.id, p.id, { cleanSheets: prev + 1 });
           }
         }
       }
@@ -760,12 +789,17 @@ function App() {
         if (player.isTemporary) continue;
         const preGoals = preMonthGoals.get(club.id)?.get(player.id) ?? 0;
         const preAssists = preMonthAssists.get(club.id)?.get(player.id) ?? 0;
-        const monthGoals = player.goals - preGoals;
-        const monthAssists = player.assists - preAssists;
+        const curGoals = Number.isFinite(player.goals) ? player.goals : 0;
+        const curAssists = Number.isFinite(player.assists) ? player.assists : 0;
+        const monthGoals = curGoals - preGoals;
+        const monthAssists = curAssists - preAssists;
+        const formHist = Array.isArray(player.formHistory) ? player.formHistory : [];
+        const mGoals = Array.isArray(player.monthlyGoals) ? player.monthlyGoals : [];
+        const mAssists = Array.isArray(player.monthlyAssists) ? player.monthlyAssists : [];
         state.updatePlayer(club.id, player.id, {
-          formHistory: [...player.formHistory.slice(0, 9), player.form],
-          monthlyGoals: [...player.monthlyGoals.slice(0, 9), monthGoals],
-          monthlyAssists: [...player.monthlyAssists.slice(0, 9), monthAssists],
+          formHistory: [...formHist.slice(0, 9), player.form],
+          monthlyGoals: [...mGoals.slice(0, 9), monthGoals],
+          monthlyAssists: [...mAssists.slice(0, 9), monthAssists],
         });
       }
     }

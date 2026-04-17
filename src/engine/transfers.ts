@@ -198,6 +198,27 @@ export function executeContinentSale(
 
 // --- Generate market listings (available players across the league) ---
 
+/** Average overall of a club's non-temporary, non-injured senior players */
+export function clubAverageOverall(club: Club): number {
+  const pool = club.roster.filter((p) => !p.isTemporary);
+  if (pool.length === 0) return 65;
+  const sum = pool.reduce((s, p) => s + p.overall, 0);
+  return sum / pool.length;
+}
+
+/**
+ * Score how attractive a player is to the user at `targetOverall`.
+ * Peaks at players ±4 of target, with a slight bias toward players 1-4 points
+ * above target (aspirational signings). Players >12 below target score near 0.
+ */
+function marketRelevanceScore(playerOverall: number, targetOverall: number): number {
+  const delta = playerOverall - targetOverall;
+  // Gaussian-like falloff, shifted so +2 is the peak
+  const shifted = delta - 2;
+  const score = Math.exp(-(shifted * shifted) / 60);
+  return score;
+}
+
 export function generateMarketListings(
   rng: SeededRNG,
   clubs: Club[],
@@ -205,21 +226,36 @@ export function generateMarketListings(
 ): MarketListing[] {
   const listings: MarketListing[] = [];
 
+  const playerClub = clubs.find((c) => c.id === playerClubId);
+  const targetOverall = playerClub ? clubAverageOverall(playerClub) : 65;
+
   for (const club of clubs) {
     if (club.id === playerClubId) continue; // Player's own club not in the market
 
-    // Each AI club lists 1–3 players based on squad composition
-    const numToList = rng.randomInt(1, 3);
-    const eligible = club.roster
-      .filter((p) => !p.isTemporary && !p.injured)
-      .sort((a, b) => a.overall - b.overall); // worst players more likely to be listed
+    // Each AI club lists 2–3 players, biased toward overalls near the user's average.
+    const numToList = rng.randomInt(2, 3);
+    const eligible = club.roster.filter((p) => !p.isTemporary && !p.injured);
+    if (eligible.length === 0) continue;
 
-    const toList = eligible.slice(0, Math.min(numToList, eligible.length));
-    for (const player of toList) {
+    // Weight each eligible player by relevance to user, boosted slightly for
+    // the club's weaker end so AI clubs still shed dead weight.
+    const weighted = eligible.map((p) => {
+      const relevance = marketRelevanceScore(p.overall, targetOverall);
+      const surplusPenalty = p.overall > targetOverall + 10 ? 0.35 : 1;
+      const weight = Math.max(0.05, relevance * surplusPenalty);
+      return { player: p, weight };
+    });
+
+    const picked = new Set<string>();
+    for (let i = 0; i < numToList; i++) {
+      const pool = weighted.filter((w) => !picked.has(w.player.id));
+      if (pool.length === 0) break;
+      const chosen = rng.weightedPick(pool, pool.map((w) => w.weight));
+      picked.add(chosen.player.id);
       listings.push({
-        playerId: player.id,
+        playerId: chosen.player.id,
         clubId: club.id,
-        askingPrice: Math.round(refreshPlayerValue(player) * 1.1 * 10) / 10, // 10% markup
+        askingPrice: Math.round(refreshPlayerValue(chosen.player) * 1.1 * 10) / 10,
         listedByPlayer: false,
       });
     }
@@ -535,23 +571,33 @@ function pickByArchetype(
   candidates: FeaturedCandidate[],
   archetype: 'star' | 'prospect' | 'bargain',
   usedIds: Set<string>,
+  targetOverall: number,
 ): FeaturedCandidate | null {
   const available = candidates.filter((c) => !usedIds.has(c.playerId));
   if (available.length === 0) return null;
 
   if (archetype === 'star') {
-    const stars = available.filter((c) => c.overall >= 78);
+    // "Star" relative to user's club: aspirational, 3-10 above target, cap-fallback to best available.
+    const starMin = Math.max(70, Math.round(targetOverall + 3));
+    const starMax = Math.round(targetOverall + 10);
+    const stars = available.filter((c) => c.overall >= starMin && c.overall <= starMax);
     if (stars.length > 0) return stars.sort((a, b) => b.overall - a.overall)[0];
-    // Fallback: highest rated
+    const aboveTarget = available.filter((c) => c.overall >= starMin);
+    if (aboveTarget.length > 0) return aboveTarget.sort((a, b) => a.overall - b.overall)[0];
     return available.sort((a, b) => b.overall - a.overall)[0];
   }
   if (archetype === 'prospect') {
-    const prospects = available.filter((c) => c.age <= 21 && c.overall >= 65);
+    // Young player who could grow into a first-team piece at this tier.
+    const minRating = Math.max(60, Math.round(targetOverall - 6));
+    const prospects = available.filter((c) => c.age <= 21 && c.overall >= minRating);
     if (prospects.length > 0) return prospects.sort((a, b) => b.overall - a.overall)[0];
     return null;
   }
   if (archetype === 'bargain') {
-    const bargains = available.filter((c) => c.overall >= 70 && c.price <= 15);
+    // Decent first-team contributor at a discount.
+    const minRating = Math.max(62, Math.round(targetOverall - 3));
+    const maxPrice = Math.max(8, Math.round(targetOverall * 0.25));
+    const bargains = available.filter((c) => c.overall >= minRating && c.price <= maxPrice);
     if (bargains.length > 0) return bargains.sort((a, b) => b.overall - a.overall)[0];
     return null;
   }
@@ -562,10 +608,12 @@ function pickWeightedRandom(
   rng: SeededRNG,
   candidates: FeaturedCandidate[],
   usedIds: Set<string>,
+  targetOverall: number,
 ): FeaturedCandidate | null {
   const available = candidates.filter((c) => !usedIds.has(c.playerId));
   if (available.length === 0) return null;
-  const weights = available.map((c) => c.overall);
+  // Bias toward players near the user's club average overall.
+  const weights = available.map((c) => Math.max(0.05, marketRelevanceScore(c.overall, targetOverall)));
   return rng.weightedPick(available, weights);
 }
 
@@ -573,28 +621,32 @@ export function generateFeaturedSlots(
   rng: SeededRNG,
   listings: MarketListing[],
   clubs: Club[],
+  playerClubId?: string,
 ): FeaturedSlot[] {
   const candidates = buildFeaturedCandidatePool(listings, clubs, new Set());
   if (candidates.length === 0) return [];
+
+  const userClub = playerClubId ? clubs.find((c) => c.id === playerClubId) : undefined;
+  const targetOverall = userClub ? clubAverageOverall(userClub) : 72;
 
   const slots: FeaturedSlot[] = [];
   const usedIds = new Set<string>();
 
   // Slot 1: Star
-  const star = pickByArchetype(rng, candidates, 'star', usedIds);
+  const star = pickByArchetype(rng, candidates, 'star', usedIds, targetOverall);
   if (star) { slots.push({ playerId: star.playerId, archetype: 'star' }); usedIds.add(star.playerId); }
 
   // Slot 2: Young Prospect
-  const prospect = pickByArchetype(rng, candidates, 'prospect', usedIds);
+  const prospect = pickByArchetype(rng, candidates, 'prospect', usedIds, targetOverall);
   if (prospect) { slots.push({ playerId: prospect.playerId, archetype: 'prospect' }); usedIds.add(prospect.playerId); }
 
   // Slot 3: Bargain
-  const bargain = pickByArchetype(rng, candidates, 'bargain', usedIds);
+  const bargain = pickByArchetype(rng, candidates, 'bargain', usedIds, targetOverall);
   if (bargain) { slots.push({ playerId: bargain.playerId, archetype: 'bargain' }); usedIds.add(bargain.playerId); }
 
-  // Slots 4-6: Weighted random
+  // Slots 4-6: Weighted random biased toward user club's overall
   for (let i = 0; i < 3; i++) {
-    const pick = pickWeightedRandom(rng, candidates, usedIds);
+    const pick = pickWeightedRandom(rng, candidates, usedIds, targetOverall);
     if (pick) { slots.push({ playerId: pick.playerId, archetype: 'trending' }); usedIds.add(pick.playerId); }
   }
 
@@ -607,21 +659,23 @@ export function refillFeaturedSlot(
   currentSlots: FeaturedSlot[],
   listings: MarketListing[],
   clubs: Club[],
+  playerClubId?: string,
 ): FeaturedSlot | null {
   const usedIds = new Set(currentSlots.filter((_, i) => i !== slotIndex).map((s) => s.playerId));
   const candidates = buildFeaturedCandidatePool(listings, clubs, new Set());
   if (candidates.length === 0) return null;
 
+  const userClub = playerClubId ? clubs.find((c) => c.id === playerClubId) : undefined;
+  const targetOverall = userClub ? clubAverageOverall(userClub) : 72;
+
   const originalArchetype = currentSlots[slotIndex]?.archetype || 'trending';
 
-  // Try original archetype first
   if (originalArchetype === 'star' || originalArchetype === 'prospect' || originalArchetype === 'bargain') {
-    const pick = pickByArchetype(rng, candidates, originalArchetype, usedIds);
+    const pick = pickByArchetype(rng, candidates, originalArchetype, usedIds, targetOverall);
     if (pick) return { playerId: pick.playerId, archetype: originalArchetype };
   }
 
-  // Fallback to weighted random
-  const pick = pickWeightedRandom(rng, candidates, usedIds);
+  const pick = pickWeightedRandom(rng, candidates, usedIds, targetOverall);
   if (pick) return { playerId: pick.playerId, archetype: 'trending' };
 
   return null;
