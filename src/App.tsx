@@ -17,6 +17,7 @@ import { BottomNav, type NavTab } from './components/shared/BottomNav';
 import { DesktopSidebar } from './components/shared/DesktopSidebar';
 import { PlayerDetailModal } from './components/shared/PlayerDetailModal';
 import { PackOpening } from './components/shared/PackOpening';
+import { TutorialModal } from './components/shared/TutorialModal';
 import { NavigationContext } from './hooks/useNavigation';
 import { useGameStore } from './store/gameStore';
 import { CLUBS } from './data/clubs';
@@ -215,6 +216,7 @@ function App() {
   const [packPlayers, setPackPlayers] = useState<import('./types/entities').Player[]>([]);
   const [packConfig, setPackConfig] = useState<{ title: string; subtitle?: string; onComplete?: () => void } | null>(null);
   const [youthIntakePlayers, setYouthIntakePlayers] = useState<import('./types/entities').Player[]>([]);
+  const [showTutorial, setShowTutorial] = useState(false);
   const store = useGameStore;
   const managerClubId = useGameStore((s) => s.manager?.clubId);
 
@@ -480,6 +482,7 @@ function App() {
 
     setScreen('game');
     setGameView('board_meeting');
+    setShowTutorial(true);
   }, [store, selectedClub]);
 
   // ─── Game advance logic ───
@@ -1400,6 +1403,7 @@ function App() {
           );
         })()}
       </div>
+      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
     </NavigationContext.Provider>
   );
 }
