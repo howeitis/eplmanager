@@ -323,7 +323,10 @@ function DesktopPlayerRow({ player, isInXI, captainId, onOpenModal }: { player: 
           {isInXI && (
             <span className="plm-w-1.5 plm-h-1.5 plm-rounded-full plm-bg-emerald-500 plm-flex-shrink-0" title="Starting XI" />
           )}
-          <span className="plm-text-sm plm-font-medium plm-text-charcoal">{player.name}</span>
+          <span className="plm-text-sm plm-font-medium plm-text-charcoal">
+            {player.name}
+            <span className="plm-text-warm-400 plm-font-normal plm-ml-1">· {player.age}</span>
+          </span>
           {player.id === captainId && (
             <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-rounded plm-border plm-border-amber-200" title="Captain">C</span>
           )}
@@ -383,6 +386,7 @@ function MobilePlayerCard({
         </span>
         <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
           {player.name}
+          <span className="plm-text-warm-400 plm-font-normal plm-ml-1">· {player.age}</span>
         </span>
         {player.id === captainId && (
           <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-py-0.5 plm-rounded" title="Captain">C</span>
