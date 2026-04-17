@@ -214,27 +214,30 @@ export function generateScoutSummary(
 ): string {
   const parts: string[] = [];
 
-  // 1. Age + OVR preamble
+  // Preamble + trait always anchor the summary.
   parts.push(getAgePreamble(player.age, player.overall));
-
-  // 2. Trait phrase (appended to preamble with a space)
   parts.push(getTraitPhrase(player.trait, player.overall));
 
-  // 3. Hero stat callout
+  // Hero stat is punchy — keep when it fires.
   const heroStat = getHeroStatSentence(player.stats);
   if (heroStat) parts.push(heroStat);
 
-  // 4. Form sentence
-  parts.push(getFormSentence(player.form));
-
-  // 5. Transfer context
-  if (context?.recentTransfers) {
-    const transferLine = getTransferSentence(player, context.recentTransfers);
-    if (transferLine) parts.push(transferLine);
+  // Only keep form when it's notable (hot or cold), otherwise it's filler.
+  const form = player.form ?? 0;
+  if (form >= 2 || form <= -2) {
+    parts.push(getFormSentence(form));
   }
 
-  // 6. Youth academy background
-  parts.push(getYouthAcademySentence(player));
+  // Transfer context wins over the academy line — if we have a transfer, skip academy.
+  const transferLine = context?.recentTransfers
+    ? getTransferSentence(player, context.recentTransfers)
+    : null;
+  if (transferLine) {
+    parts.push(transferLine);
+  } else if (player.age <= 22) {
+    // Only surface the academy tidbit for young players where it carries real meaning.
+    parts.push(getYouthAcademySentence(player));
+  }
 
   return parts.join(' ');
 }

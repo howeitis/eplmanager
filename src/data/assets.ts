@@ -50,6 +50,7 @@ export const NATIONALITY_FLAG_CODES: Record<string, string> = {
   dutch: 'nl',
   german: 'de',
   argentinian: 'ar',
+  argentine: 'ar',
   belgian: 'be',
   norwegian: 'no',
   danish: 'dk',
@@ -85,10 +86,16 @@ export const NATIONALITY_FLAG_CODES: Record<string, string> = {
   zambian: 'zm',
   finnish: 'fi',
   greek: 'gr',
+  australian: 'au',
+  canadian: 'ca',
+  chilean: 'cl',
+  'south-african': 'za',
 };
 
 export function getNationalityFlagUrl(nationality: string): string {
-  const code = NATIONALITY_FLAG_CODES[nationality.toLowerCase()];
+  // Normalize: lowercase and replace whitespace with hyphens so "South Korean" matches "south-korean".
+  const key = nationality.toLowerCase().trim().replace(/\s+/g, '-');
+  const code = NATIONALITY_FLAG_CODES[key];
   if (!code) return '';
   return `/national flags/${code}.webp`;
 }

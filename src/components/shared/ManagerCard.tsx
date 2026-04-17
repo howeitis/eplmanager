@@ -221,12 +221,76 @@ export function ManagerCard({
         </div>
       )}
 
-      {/* Star decoration */}
-      <div className="plm-absolute plm-bottom-1 plm-left-2 plm-opacity-20 plm-z-[5]">
-        <svg width={18} height={18} viewBox="0 0 24 24" fill={tierColor}>
+      {/* Reputation shape + trophy overlay (bottom-left) */}
+      <div className="plm-absolute plm-bottom-1 plm-left-2 plm-z-[5] plm-flex plm-items-center plm-gap-1">
+        <ManagerRepShape
+          reputation={manager.reputation}
+          tierColor={tierColor}
+          borderColor={borderColor}
+        />
+        {totalTrophies >= 10 ? (
+          <span
+            className="plm-font-display plm-font-black plm-uppercase plm-tracking-wider"
+            style={{
+              fontSize: 9,
+              color: '#DC2626',
+              textShadow: '0 0 3px rgba(0,0,0,0.6)',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Legend
+          </span>
+        ) : totalTrophies >= 5 ? (
+          <span
+            className="plm-font-display plm-font-black plm-uppercase plm-tracking-wider"
+            style={{
+              fontSize: 9,
+              color: '#DC2626',
+              textShadow: '0 0 3px rgba(0,0,0,0.6)',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Icon
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ManagerRepShape({
+  reputation,
+  tierColor,
+  borderColor,
+}: {
+  reputation: number;
+  tierColor: string;
+  borderColor: string;
+}) {
+  const size = 18;
+  if (reputation > 85) {
+    return (
+      <div className="plm-opacity-60">
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={tierColor}>
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       </div>
+    );
+  }
+  if (reputation >= 70) {
+    return (
+      <div className="plm-opacity-50">
+        <svg width={size} height={size} viewBox="0 0 24 24">
+          <path d="M12 2 L22 12 L12 22 L2 12 Z" fill={borderColor} />
+        </svg>
+      </div>
+    );
+  }
+  return (
+    <div className="plm-opacity-40">
+      <svg width={size} height={size} viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill={borderColor} />
+      </svg>
     </div>
   );
 }

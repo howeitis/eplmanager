@@ -77,11 +77,14 @@ const STAT_EMOJI: Record<string, string> = {
 };
 
 // ─── Serial number from hash ───
-function getSerialNumber(id: string, overall: number): string {
+// Print run is derived from the player id alone (not the current overall) so
+// the denominator stays stable for a player across saves and season-to-season
+// progression. Serial uses a different hash slice to decorrelate from the run bucket.
+const SERIAL_PRINT_RUNS = [1000, 2500, 5000, 8500];
+function getSerialNumber(id: string): string {
   const h = hashPlayerId(id);
-  // Total print run varies by rarity: commons have large print runs, gold smaller
-  const printRun = overall >= 86 ? 1000 : overall >= 80 ? 2500 : overall >= 75 ? 5000 : 8500;
-  const serial = (h % printRun) + 1;
+  const printRun = SERIAL_PRINT_RUNS[h % SERIAL_PRINT_RUNS.length];
+  const serial = ((h >>> 5) % printRun) + 1;
   return `${String(serial).padStart(4, '0')}/${printRun}`;
 }
 
@@ -187,8 +190,29 @@ export function RetroPlayerCard({
   const borderColor = getCardBorderColor(player.overall, player.age);
   const bgGradient = getCardBgGradient(player.overall, player.age);
   const heroStat = (isGold || futureStar) ? getHeroStat(player.stats) : null;
-  const serialNumber = getSerialNumber(player.id, player.overall);
+  const heroStatElite = heroStat !== null && heroStat.value >= 95;
+  const serialNumber = getSerialNumber(player.id);
   const trophies = player.trophiesWon || [];
+
+  // ─── Bottom-right corner shape ───
+  // Wonderkid → twinkling star, gold (80+) → star, silver (65+) → diamond, else → circle.
+  // Plus overlay text: 8+ trophies → LEGEND, 90+ overall → ICON, wonderkid → FUTURE STAR.
+  const cornerShape: 'circle' | 'diamond' | 'star' | 'twinkling-star' =
+    futureStar === 'wonderkid'
+      ? 'twinkling-star'
+      : player.overall >= 80
+      ? 'star'
+      : player.overall >= 65
+      ? 'diamond'
+      : 'circle';
+  const cornerOverlay =
+    trophies.length >= 8
+      ? 'LEGEND'
+      : player.overall >= 90
+      ? 'ICON'
+      : futureStar === 'wonderkid'
+      ? 'FUTURE STAR'
+      : null;
 
   const sizeClasses: Record<string, string> = {
     sm: 'plm-w-40 plm-h-56',
@@ -412,7 +436,7 @@ export function RetroPlayerCard({
       {/* ─── Hero stat emoji sticker — centered top, clear of OVR and flag ─── */}
       {heroStat && (isGold || futureStar) && size !== 'sm' && (
         <div
-          className="plm-absolute plm-z-[15] plm-flex plm-items-center plm-justify-center plm-rounded-full plm-shadow-md"
+          className={`plm-absolute plm-z-[15] plm-flex plm-items-center plm-justify-center plm-rounded-full plm-shadow-md ${heroStatElite ? 'plm-animate-stat-glow' : ''}`}
           style={{
             top: size === 'xl' ? 10 : 8,
             left: '50%',
@@ -420,8 +444,8 @@ export function RetroPlayerCard({
             width: size === 'xl' ? 32 : size === 'lg' ? 26 : 22,
             height: size === 'xl' ? 32 : size === 'lg' ? 26 : 22,
             background: 'rgba(255,255,255,0.92)',
-            border: `1.5px solid ${borderColor}`,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+            border: `1.5px solid ${heroStatElite ? '#DC2626' : borderColor}`,
+            boxShadow: heroStatElite ? undefined : '0 2px 6px rgba(0,0,0,0.2)',
           }}
         >
           <span style={{ fontSize: size === 'xl' ? 16 : size === 'lg' ? 13 : 11 }}>
@@ -434,7 +458,8 @@ export function RetroPlayerCard({
       <div className="plm-flex plm-justify-between plm-items-start plm-px-2.5 plm-pt-2 plm-relative plm-z-[5]">
         <div className="plm-text-center">
           <div
-            className={`${fs.ovr} plm-font-display plm-font-black plm-leading-none`}
+            key={`ovr-${player.overall}`}
+            className={`${fs.ovr} plm-font-display plm-font-black plm-leading-none ${player.overall >= 85 ? 'plm-animate-stamp-in' : ''}`}
             style={{ color: overallColor, textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
           >
             {player.overall}
@@ -509,7 +534,8 @@ export function RetroPlayerCard({
         }}
       >
         <div
-          className={`${fs.name} plm-font-display plm-font-bold plm-uppercase plm-tracking-wide plm-truncate plm-px-1`}
+          key={`name-${player.id}`}
+          className={`${fs.name} plm-font-display plm-font-bold plm-uppercase plm-tracking-wide plm-truncate plm-px-1 plm-animate-name-write`}
           style={{ color: isLightColor(clubColors?.primary || borderColor) ? '#1A1A1A' : '#FFFFFF' }}
         >
           {player.name}{isCaptain ? ' ©' : ''}
@@ -640,23 +666,88 @@ export function RetroPlayerCard({
       {/* ─── Serial number bottom-left ─── */}
       {size !== 'sm' && (
         <div
-          className="plm-absolute plm-bottom-1 plm-left-2 plm-z-[5]"
+          key={`serial-${player.id}`}
+          className="plm-absolute plm-bottom-1 plm-left-2 plm-z-[5] plm-animate-stamp-in"
         >
           <span
-            className="plm-font-mono plm-opacity-50"
-            style={{ fontSize: size === 'xl' ? 9 : 7, color: borderColor }}
+            className="plm-font-mono plm-font-bold"
+            style={{ fontSize: size === 'xl' ? 9 : 7, color: '#DC2626' }}
           >
             {serialNumber}
           </span>
         </div>
       )}
 
-      {/* Corner star decoration */}
-      <div className="plm-absolute plm-bottom-1 plm-right-1.5 plm-opacity-20 plm-z-[5]">
-        <svg width={size === 'sm' ? 16 : 20} height={size === 'sm' ? 16 : 20} viewBox="0 0 24 24" fill={borderColor}>
+      {/* ─── Corner shape + achievement text (bottom-right) ─── */}
+      <div className="plm-absolute plm-bottom-1 plm-right-1.5 plm-z-[5] plm-flex plm-items-center plm-gap-1">
+        {cornerOverlay && (
+          <span
+            className="plm-font-display plm-font-black plm-uppercase plm-tracking-wider"
+            style={{
+              fontSize: size === 'xl' ? 10 : size === 'lg' ? 9 : 8,
+              color: '#DC2626',
+              textShadow: '0 0 3px rgba(255,255,255,0.6)',
+              letterSpacing: '0.08em',
+            }}
+          >
+            {cornerOverlay}
+          </span>
+        )}
+        <CornerShape
+          shape={cornerShape}
+          color={overallColor}
+          borderColor={borderColor}
+          size={size === 'sm' ? 16 : 20}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CornerShape({
+  shape,
+  color,
+  borderColor,
+  size,
+}: {
+  shape: 'circle' | 'diamond' | 'star' | 'twinkling-star';
+  color: string;
+  borderColor: string;
+  size: number;
+}) {
+  if (shape === 'circle') {
+    return (
+      <div className="plm-opacity-30">
+        <svg width={size} height={size} viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" fill={borderColor} />
+        </svg>
+      </div>
+    );
+  }
+  if (shape === 'diamond') {
+    return (
+      <div className="plm-opacity-40">
+        <svg width={size} height={size} viewBox="0 0 24 24">
+          <path d="M12 2 L22 12 L12 22 L2 12 Z" fill={borderColor} />
+        </svg>
+      </div>
+    );
+  }
+  if (shape === 'twinkling-star') {
+    return (
+      <div className="plm-animate-twinkle-star">
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       </div>
+    );
+  }
+  // gold star
+  return (
+    <div className="plm-opacity-60">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
     </div>
   );
 }

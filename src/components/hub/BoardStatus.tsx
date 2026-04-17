@@ -35,16 +35,16 @@ export function BoardStatus() {
   }
 
   return (
-    <div role="status" aria-label={`Board expectation: ${boardExpectation.description}. Status: ${statusLabel}`} className="plm-flex plm-items-center plm-justify-between plm-gap-3">
-      <div className="plm-min-w-0">
+    <div role="status" aria-label={`Board expectation: ${boardExpectation.description}. Status: ${statusLabel}`} className="plm-flex plm-items-start plm-justify-between plm-gap-3">
+      <div className="plm-min-w-0 plm-flex-1">
         <p className="plm-text-xs plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-wider">
           Board Expectation
         </p>
-        <p className="plm-text-sm plm-text-charcoal plm-mt-0.5 plm-truncate">
+        <p className="plm-text-sm plm-text-charcoal plm-mt-0.5 plm-break-words">
           {boardExpectation.description}
         </p>
       </div>
-      <span className={`plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-px-2 plm-py-1 plm-rounded plm-whitespace-nowrap ${statusColor}`}>
+      <span className={`plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-px-2 plm-py-1 plm-rounded plm-whitespace-nowrap plm-flex-shrink-0 ${statusColor}`}>
         {statusLabel}
       </span>
     </div>
