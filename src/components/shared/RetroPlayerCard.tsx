@@ -337,7 +337,7 @@ export function RetroPlayerCard({
           <img
             src={getClubLogoUrl(clubId)}
             alt=""
-            className="plm-absolute plm-opacity-[0.08]"
+            className="plm-absolute plm-opacity-[0.16]"
             style={{
               width: '50%',
               height: 'auto',
@@ -355,7 +355,7 @@ export function RetroPlayerCard({
           <img
             src={getNationalityFlagUrl(player.nationality)}
             alt=""
-            className="plm-absolute plm-opacity-[0.06] plm-blur-[1px]"
+            className="plm-absolute plm-opacity-[0.14]"
             style={{
               width: '80%',
               height: 'auto',
@@ -389,18 +389,18 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {/* ─── Sparkle overlay for wonderkid (u21 80+) ─── */}
-      {futureStar === 'wonderkid' && (
+      {/* ─── Sparkle overlay for wonderkid (u21 80+) or elite (90+) ─── */}
+      {(futureStar === 'wonderkid' || player.overall >= 90) && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[3] plm-overflow-hidden">
-          {[...Array(6)].map((_, i) => (
+          {[...Array(player.overall >= 90 ? 9 : 6)].map((_, i) => (
             <div
               key={i}
               className="plm-absolute plm-animate-sparkle-pulse"
               style={{
-                left: `${15 + i * 14}%`,
-                top: `${10 + (i % 3) * 20}%`,
-                animationDelay: `${i * 0.2}s`,
-                fontSize: size === 'xl' ? 14 : 9,
+                left: `${10 + i * 10}%`,
+                top: `${8 + (i % 4) * 22}%`,
+                animationDelay: `${i * 0.18}s`,
+                fontSize: size === 'xl' ? (player.overall >= 90 ? 16 : 14) : (player.overall >= 90 ? 11 : 9),
               }}
             >
               ✨

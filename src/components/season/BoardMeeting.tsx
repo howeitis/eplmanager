@@ -114,12 +114,12 @@ export function BoardMeeting({ onContinue }: BoardMeetingProps) {
             <img
               src={getClubLogoUrl(playerClub.id)}
               alt={playerClub.name}
-              className="plm-w-16 plm-h-16 plm-rounded-full plm-mb-4 plm-object-contain plm-bg-white plm-p-1 plm-border-2"
+              className="plm-w-16 plm-h-16 plm-rounded-full plm-mb-4 plm-object-contain plm-bg-white plm-p-1 plm-border-2 plm-mx-auto"
               style={{ borderColor: clubData.colors.secondary }}
             />
           ) : (
             <div
-              className="plm-inline-flex plm-items-center plm-justify-center plm-w-16 plm-h-16 plm-rounded-full plm-mb-4 plm-border-2"
+              className="plm-inline-flex plm-items-center plm-justify-center plm-w-16 plm-h-16 plm-rounded-full plm-mb-4 plm-border-2 plm-mx-auto"
               style={{
                 backgroundColor: accentColor,
                 borderColor: clubData.colors.secondary,

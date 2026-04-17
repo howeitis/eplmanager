@@ -159,16 +159,39 @@ export function AgingReport({ agingResults }: AgingReportProps) {
               Retirements
             </h4>
             <div className="plm-space-y-2">
-              {retirements.map(({ player, replacement }) => (
-                <div key={player.id} className="plm-rounded-lg plm-border plm-border-warm-200 plm-p-3">
-                  <p className="plm-text-sm plm-text-warm-600 plm-leading-relaxed">
-                    <span className="plm-font-semibold plm-text-charcoal">{player.name}</span>, age {player.age}, {player.seasonsAtClub} season{player.seasonsAtClub !== 1 ? 's' : ''} at the club. {player.goals > 0 ? `${player.goals} goals` : ''}{player.goals > 0 && player.assists > 0 ? ', ' : ''}{player.assists > 0 ? `${player.assists} assists` : ''}{(player.goals > 0 || player.assists > 0) ? ' in their time here.' : ''}
-                  </p>
-                  <p className="plm-text-xs plm-text-warm-500 plm-mt-1">
-                    Their departure opens a spot for <span className="plm-font-semibold plm-text-charcoal">{replacement.name}</span>, {replacement.age}, joining from the academy.
-                  </p>
-                </div>
-              ))}
+              {retirements.map(({ player, replacement }) => {
+                const trophies = player.trophiesWon || [];
+                const leagueCount = trophies.filter((t) => t.type === 'league').length;
+                const cupCount = trophies.filter((t) => t.type === 'cup').length;
+                const parts: string[] = [];
+                if (leagueCount > 0) parts.push(`${leagueCount} Premier League title${leagueCount !== 1 ? 's' : ''}`);
+                if (cupCount > 0) parts.push(`${cupCount} FA Cup${cupCount !== 1 ? 's' : ''}`);
+                const trophyText = parts.length > 0 ? parts.join(' and ') : null;
+                return (
+                  <div key={player.id} className="plm-rounded-lg plm-border plm-border-warm-200 plm-p-3">
+                    <p className="plm-text-sm plm-text-warm-600 plm-leading-relaxed">
+                      <span className="plm-font-semibold plm-text-charcoal">{player.name}</span>, age {player.age}, {player.seasonsAtClub} season{player.seasonsAtClub !== 1 ? 's' : ''} at the club.
+                      {trophyText ? ` Won ${trophyText} in their time here.` : ' No silverware in their time here.'}
+                    </p>
+                    {trophies.length > 0 && (
+                      <div className="plm-flex plm-flex-wrap plm-gap-1 plm-mt-1.5" aria-label="Trophies won">
+                        {trophies.map((t, i) => (
+                          <span
+                            key={i}
+                            className="plm-text-base"
+                            title={`Season ${t.season} ${t.type === 'league' ? 'Premier League' : 'FA Cup'}`}
+                          >
+                            {t.type === 'league' ? '🏆' : '🏅'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="plm-text-xs plm-text-warm-500 plm-mt-1">
+                      Their departure opens a spot for <span className="plm-font-semibold plm-text-charcoal">{replacement.name}</span>, {replacement.age}, joining from the academy.
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
