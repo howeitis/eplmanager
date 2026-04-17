@@ -466,6 +466,9 @@ function OwnClubActions({
             >
               Sell to Continent
             </button>
+            <p className="plm-text-[11px] plm-text-warm-500 plm-text-center plm-mt-1 plm-leading-snug">
+              Immediate sale at below market value (roughly 70%).
+            </p>
             {!canSellAbroad && (
               <div className="plm-absolute plm-bottom-full plm-left-1/2 plm-transform plm--translate-x-1/2 plm-mb-2 plm-px-3 plm-py-2 plm-bg-charcoal plm-text-white plm-text-xs plm-rounded-lg plm-whitespace-nowrap plm-opacity-0 group-hover:plm-opacity-100 plm-transition-opacity plm-pointer-events-none plm-z-20">
                 Recently signed — cannot sell abroad this window.

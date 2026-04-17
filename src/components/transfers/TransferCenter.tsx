@@ -451,6 +451,19 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         adjustBudget(offer.toClubId, -offer.fee);
         updateTransferOffer(offer.id, 'accepted');
 
+        // Sale is done — auto-reject any other pending incoming offers for the
+        // same player so they don't linger on the Incoming tab.
+        for (const other of transferOffers) {
+          if (
+            other.id !== offer.id &&
+            other.direction === 'incoming' &&
+            other.status === 'pending' &&
+            other.playerId === offer.playerId
+          ) {
+            updateTransferOffer(other.id, 'rejected');
+          }
+        }
+
         const buyerClub = clubs.find((c) => c.id === offer.toClubId);
         const record: TransferRecord = {
           playerId: offer.playerId,
@@ -472,7 +485,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         updateTransferOffer(offer.id, 'rejected');
       }
     },
-    [clubs, playerClubId, playerClub, seasonNumber, windowType,
+    [clubs, playerClubId, playerClub, seasonNumber, windowType, transferOffers,
       removePlayerFromClub, addPlayerToClub, adjustBudget,
       updateTransferOffer, recordTransfer, addTickerMessage],
   );

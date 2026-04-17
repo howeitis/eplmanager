@@ -77,15 +77,14 @@ const STAT_EMOJI: Record<string, string> = {
 };
 
 // ─── Serial number from hash ───
-// Print run is derived from the player id alone (not the current overall) so
-// the denominator stays stable for a player across saves and season-to-season
-// progression. Serial uses a different hash slice to decorrelate from the run bucket.
-const SERIAL_PRINT_RUNS = [1000, 2500, 5000, 8500];
+// Denominator is fixed at 8500 for every player so it stays constant across
+// saves and season-to-season progression. The numerator is derived from the
+// player id hash.
+const SERIAL_PRINT_RUN = 8500;
 function getSerialNumber(id: string): string {
   const h = hashPlayerId(id);
-  const printRun = SERIAL_PRINT_RUNS[h % SERIAL_PRINT_RUNS.length];
-  const serial = ((h >>> 5) % printRun) + 1;
-  return `${String(serial).padStart(4, '0')}/${printRun}`;
+  const serial = (h % SERIAL_PRINT_RUN) + 1;
+  return `${String(serial).padStart(4, '0')}/${SERIAL_PRINT_RUN}`;
 }
 
 // ─── Card tier: future stars ───

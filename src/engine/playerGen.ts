@@ -329,7 +329,36 @@ export function generateSquad(
     }
   }
 
+  // Age caps at save start: no more than 2 over 33, no more than 4 over 30.
+  applyAgeCaps(rng, players);
+
   return players;
+}
+
+/**
+ * Re-balance ages so the squad reads like a real-world top-flight team at
+ * generation time — weighted toward players in their 20s.
+ *   - At most 2 players over 33
+ *   - At most 4 players over 30 (inclusive of the over-33 bucket)
+ * Excess veterans are shifted down into realistic ranges; we don't make
+ * everyone 25, just trim the deep-veteran tail.
+ */
+function applyAgeCaps(rng: SeededRNG, players: Player[]): void {
+  const MAX_OVER_33 = 2;
+  const MAX_OVER_30 = 4;
+
+  // Trim over-33s first. Keep the oldest MAX_OVER_33 and shift the rest into 28–33.
+  const over33 = players.filter((p) => p.age > 33).sort((a, b) => b.age - a.age);
+  for (let i = MAX_OVER_33; i < over33.length; i++) {
+    over33[i].age = rng.randomInt(28, 33);
+  }
+
+  // Now cap over-30s on the updated ages. Keep the oldest MAX_OVER_30 and
+  // shift the rest into 24–30.
+  const over30 = players.filter((p) => p.age > 30).sort((a, b) => b.age - a.age);
+  for (let i = MAX_OVER_30; i < over30.length; i++) {
+    over30[i].age = rng.randomInt(24, 30);
+  }
 }
 
 const ALL_OUTFIELD_POSITIONS: Position[] = ['CB', 'FB', 'MF', 'WG', 'ST'];
@@ -383,6 +412,13 @@ export function generatePhilosophyBonusPlayer(
   if (forceYoung && player.age >= 20) {
     player.age = rng.randomInt(17, 19);
     // Re-evaluate trait for young age
+    player.trait = assignTrait(rng, player.age);
+  }
+
+  // Keep the bonus player young enough that it can't push the squad past the
+  // starting age caps (≤2 over 33, ≤4 over 30).
+  if (player.age > 30) {
+    player.age = rng.randomInt(22, 29);
     player.trait = assignTrait(rng, player.age);
   }
 

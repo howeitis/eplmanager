@@ -239,8 +239,50 @@ function App() {
             monthlyGoals: p.monthlyGoals ?? [],
             monthlyAssists: p.monthlyAssists ?? [],
             statsSnapshotSeasonStart: p.statsSnapshotSeasonStart ?? { ...p.stats },
+            trophiesWon: p.trophiesWon ?? [],
           })),
         }));
+
+        // Retroactively backfill player trophies from manager accomplishments.
+        // Older saves (pre–trophy tracking) left every player with an empty
+        // trophiesWon array. For each league/cup accomplishment on the user's
+        // current club, award a trophy to current roster players who were at
+        // the club that season (inferred from seasonsAtClub).
+        const rawManagerForTrophies = data.manager as import('./types/entities').ManagerProfile | null;
+        const currentSeasonForTrophies = data.seasonNumber;
+        const currentClubIdForTrophies = rawManagerForTrophies?.clubId;
+        if (rawManagerForTrophies?.accomplishments && currentClubIdForTrophies) {
+          const relevant = rawManagerForTrophies.accomplishments.filter(
+            (a) =>
+              a.clubId === currentClubIdForTrophies &&
+              (a.type === 'league-title' || a.type === 'fa-cup'),
+          );
+          if (relevant.length > 0) {
+            const club = migratedClubs.find((c) => c.id === currentClubIdForTrophies);
+            if (club) {
+              for (const player of club.roster) {
+                const existing = player.trophiesWon || [];
+                const existingKeys = new Set(existing.map((t) => `${t.season}-${t.type}`));
+                const seasonsAtClub = player.seasonsAtClub ?? 0;
+                // The player has been at the club for seasonsAtClub complete seasons.
+                // They were present for any season S where currentSeason - S <= seasonsAtClub.
+                const earliestPresent = currentSeasonForTrophies - seasonsAtClub;
+                const extras: { season: number; type: 'league' | 'cup' }[] = [];
+                for (const a of relevant) {
+                  if (a.season < earliestPresent) continue;
+                  const trophyType: 'league' | 'cup' = a.type === 'league-title' ? 'league' : 'cup';
+                  const key = `${a.season}-${trophyType}`;
+                  if (existingKeys.has(key)) continue;
+                  extras.push({ season: a.season, type: trophyType });
+                  existingKeys.add(key);
+                }
+                if (extras.length > 0) {
+                  player.trophiesWon = [...existing, ...extras];
+                }
+              }
+            }
+          }
+        }
         // Migrate old manager profiles: backfill new fields
         const rawManager = data.manager as Record<string, unknown> | null;
         let migratedManager = data.manager as import('./types/entities').ManagerProfile | null;
