@@ -23,6 +23,7 @@ interface SquadScreenProps {
   onDismissNotifications?: () => void;
   onAdvance?: () => void;
   advanceLabel?: string;
+  onGoToTransfers?: () => void;
 }
 
 export function SquadScreen({
@@ -34,12 +35,14 @@ export function SquadScreen({
   onDismissNotifications = () => {},
   onAdvance,
   advanceLabel,
+  onGoToTransfers,
 }: SquadScreenProps) {
   const manager = useGameStore((s) => s.manager);
   const clubs = useGameStore((s) => s.clubs);
   const currentPhase = useGameStore((s) => s.currentPhase);
   const tempFillIns = useGameStore((s) => s.tempFillIns);
   const startingXI = useGameStore((s) => s.startingXI);
+  const captainId = useGameStore((s) => s.captainId);
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
@@ -110,6 +113,41 @@ export function SquadScreen({
           >
             Advance
           </button>
+        </div>
+      )}
+
+      {/* August deadline warning */}
+      {currentPhase === 'august_deadline' && (
+        <div className="plm-bg-amber-50 plm-border-2 plm-border-amber-400 plm-rounded-lg plm-px-4 plm-py-4">
+          <div className="plm-flex plm-items-start plm-gap-3">
+            <span className="plm-text-2xl plm-flex-shrink-0" aria-hidden="true">⏰</span>
+            <div className="plm-flex-1 plm-min-w-0">
+              <p className="plm-text-sm plm-font-bold plm-text-amber-900">
+                Transfer Deadline Day — Last Chance to Sign!
+              </p>
+              <p className="plm-text-xs plm-text-amber-700 plm-mt-0.5">
+                The window closes when you advance. Any unsigned targets will be gone until January.
+              </p>
+              <div className="plm-flex plm-gap-2 plm-mt-3">
+                {onAdvance && (
+                  <button
+                    onClick={onAdvance}
+                    className="plm-flex-1 plm-px-3 plm-py-2 plm-bg-charcoal plm-text-white plm-rounded-lg plm-text-xs plm-font-bold plm-min-h-[44px] hover:plm-bg-warm-700 plm-transition-colors"
+                  >
+                    Advance to September
+                  </button>
+                )}
+                {onGoToTransfers && (
+                  <button
+                    onClick={onGoToTransfers}
+                    className="plm-flex-1 plm-px-3 plm-py-2 plm-bg-amber-500 plm-text-white plm-rounded-lg plm-text-xs plm-font-bold plm-min-h-[44px] hover:plm-bg-amber-600 plm-transition-colors"
+                  >
+                    🛒 Go to Transfer Market
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -243,7 +281,7 @@ export function SquadScreen({
               {filteredPlayers.map((player) => {
                 const isInXI = Object.values(startingXI).includes(player.id);
                 return (
-                  <DesktopPlayerRow key={player.id} player={player} isInXI={isInXI} onOpenModal={() => openModal(player.id, playerClub!.id)} />
+                  <DesktopPlayerRow key={player.id} player={player} isInXI={isInXI} captainId={captainId} onOpenModal={() => openModal(player.id, playerClub!.id)} />
                 );
               })}
             </tbody>
@@ -256,6 +294,7 @@ export function SquadScreen({
             <MobilePlayerCard
               key={player.id}
               player={player}
+              captainId={captainId}
               expanded={expandedPlayerId === player.id}
               onToggle={() =>
                 setExpandedPlayerId(expandedPlayerId === player.id ? null : player.id)
@@ -269,7 +308,7 @@ export function SquadScreen({
   );
 }
 
-function DesktopPlayerRow({ player, isInXI, onOpenModal }: { player: Player; isInXI: boolean; onOpenModal: () => void }) {
+function DesktopPlayerRow({ player, isInXI, captainId, onOpenModal }: { player: Player; isInXI: boolean; captainId?: string | null; onOpenModal: () => void }) {
   return (
     <tr
       onClick={onOpenModal}
@@ -284,6 +323,9 @@ function DesktopPlayerRow({ player, isInXI, onOpenModal }: { player: Player; isI
             <span className="plm-w-1.5 plm-h-1.5 plm-rounded-full plm-bg-emerald-500 plm-flex-shrink-0" title="Starting XI" />
           )}
           <span className="plm-text-sm plm-font-medium plm-text-charcoal">{player.name}</span>
+          {player.id === captainId && (
+            <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-rounded plm-border plm-border-amber-200" title="Captain">C</span>
+          )}
           {player.isTemporary && (
             <span className="plm-text-[9px] plm-bg-warm-200 plm-text-warm-500 plm-px-1 plm-rounded plm-uppercase">Fill-in</span>
           )}
@@ -312,11 +354,13 @@ function DesktopPlayerRow({ player, isInXI, onOpenModal }: { player: Player; isI
 
 function MobilePlayerCard({
   player,
+  captainId,
   expanded,
   onToggle,
   onOpenModal,
 }: {
   player: Player;
+  captainId?: string | null;
   expanded: boolean;
   onToggle: () => void;
   onOpenModal: () => void;
@@ -339,6 +383,9 @@ function MobilePlayerCard({
         <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
           {player.name}
         </span>
+        {player.id === captainId && (
+          <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-py-0.5 plm-rounded" title="Captain">C</span>
+        )}
         {player.injured && (
           <span className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-py-0.5 plm-rounded plm-font-semibold">
             INJ

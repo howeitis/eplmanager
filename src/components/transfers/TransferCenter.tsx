@@ -54,6 +54,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
 
   const shortlist = useGameStore((s) => s.shortlist);
   const addShortlistNotification = useGameStore((s) => s.addShortlistNotification);
+  const removeFromShortlist = useGameStore((s) => s.removeFromShortlist);
 
   const addTransferOffer = useGameStore((s) => s.addTransferOffer);
   const updateTransferOffer = useGameStore((s) => s.updateTransferOffer);
@@ -236,6 +237,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
       if (offerFee > playerBudget) return;
 
       const rng = new SeededRNG(`offer-${playerId}-${Date.now()}`);
+      const isListedPlayer = marketListings.some((l) => l.playerId === playerId);
       const evaluation = evaluateOffer(
         rng,
         offerFee,
@@ -244,6 +246,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         playerClubId,
         playerClub?.tier || 3,
         clubs,
+        isListedPlayer,
       );
 
       const offerId = `offer-${rng.randomInt(10000, 99999)}`;
@@ -275,6 +278,11 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         adjustBudget(playerClubId, -offerFee);
         adjustBudget(sellerClubId, offerFee);
         removeMarketListing(playerId);
+
+        // Auto-remove from shortlist when signed
+        if (shortlist.includes(playerId)) {
+          removeFromShortlist(playerId);
+        }
 
         const record: TransferRecord = {
           playerId,
@@ -365,6 +373,12 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
       adjustBudget(playerClubId, -offer.counterFee);
       adjustBudget(offer.fromClubId, offer.counterFee);
       removeMarketListing(offer.playerId);
+
+      // Auto-remove from shortlist when signed
+      if (shortlist.includes(offer.playerId)) {
+        removeFromShortlist(offer.playerId);
+      }
+
       updateTransferOffer(offer.id, 'accepted');
 
       const record: TransferRecord = {
@@ -523,6 +537,53 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
               &pound;{playerBudget.toFixed(1)}M
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Desktop quick links */}
+      <div className="plm-hidden md:plm-block plm-bg-white plm-border-b plm-border-gray-100 plm-px-4 plm-py-2">
+        <div className="plm-max-w-6xl plm-mx-auto plm-flex plm-items-center plm-gap-3">
+          <span className="plm-text-xs plm-text-gray-400 plm-font-medium plm-uppercase plm-tracking-wider">Quick jump:</span>
+          <button
+            onClick={() => setActiveTab('shortlist')}
+            className={`plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-1.5 plm-rounded-full plm-text-xs plm-font-semibold plm-transition-colors plm-min-h-[36px] ${
+              activeTab === 'shortlist'
+                ? 'plm-bg-amber-100 plm-text-amber-800 plm-border plm-border-amber-300'
+                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200 plm-border plm-border-gray-200'
+            }`}
+          >
+            ⭐ Shortlist
+            {shortlist.length > 0 && (
+              <span className="plm-bg-amber-500 plm-text-white plm-text-[10px] plm-rounded-full plm-px-1.5 plm-min-w-[18px] plm-text-center">
+                {shortlist.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('squad')}
+            className={`plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-1.5 plm-rounded-full plm-text-xs plm-font-semibold plm-transition-colors plm-min-h-[36px] ${
+              activeTab === 'squad'
+                ? 'plm-bg-blue-100 plm-text-blue-800 plm-border plm-border-blue-300'
+                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200 plm-border plm-border-gray-200'
+            }`}
+          >
+            👥 My Squad
+          </button>
+          <button
+            onClick={() => setActiveTab('incoming')}
+            className={`plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-1.5 plm-rounded-full plm-text-xs plm-font-semibold plm-transition-colors plm-min-h-[36px] ${
+              activeTab === 'incoming'
+                ? 'plm-bg-green-100 plm-text-green-800 plm-border plm-border-green-300'
+                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200 plm-border plm-border-gray-200'
+            }`}
+          >
+            📥 Incoming
+            {incomingOffers.length > 0 && (
+              <span className="plm-bg-red-500 plm-text-white plm-text-[10px] plm-rounded-full plm-px-1.5 plm-min-w-[18px] plm-text-center">
+                {incomingOffers.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 

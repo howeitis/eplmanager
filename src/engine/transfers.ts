@@ -124,6 +124,7 @@ export function evaluateOffer(
   buyerClubId: string,
   buyerTier: number,
   clubs: Club[],
+  isListed?: boolean,
 ): OfferEvaluation {
   const marketValue = refreshPlayerValue(player);
   const rival = isRival(sellerClub.id, buyerClubId, clubs);
@@ -140,13 +141,17 @@ export function evaluateOffer(
     player.age,
   );
 
-  if (willingness > rng.random() * 100) {
-    return { accepted: true, counterFee: null, willingness };
+  // Listed players are easier to sign: seller is motivated
+  const listedBoost = isListed ? 15 : 0;
+  const effectiveWillingness = Math.min(95, willingness + listedBoost);
+
+  if (effectiveWillingness > rng.random() * 100) {
+    return { accepted: true, counterFee: null, willingness: effectiveWillingness };
   }
 
-  // Reject outright if willingness < 20%
-  if (willingness < 20) {
-    return { accepted: false, counterFee: null, willingness };
+  // Reject outright if effectiveWillingness < 20%
+  if (effectiveWillingness < 20) {
+    return { accepted: false, counterFee: null, willingness: effectiveWillingness };
   }
 
   // Counter at marketValue * 1.3

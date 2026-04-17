@@ -24,11 +24,11 @@ const POSITION_STAT_BIAS: Record<Position, Partial<Record<keyof PlayerStats, num
 
 // Tier rating ranges: [avgMin, avgMax] for the squad overall
 const TIER_RATING_RANGES: Record<number, [number, number]> = {
-  1: [76, 80],
-  2: [69, 74],
-  3: [66, 71],
-  4: [63, 68],
-  5: [60, 66],
+  1: [77, 82],
+  2: [72, 77],
+  3: [69, 74],
+  4: [66, 71],
+  5: [63, 68],
 };
 
 // Squad composition: position -> count
@@ -249,6 +249,20 @@ export function resetProgressionForTransfer(player: Player): Player {
   };
 }
 
+/** Boost a player's stats until their overall reaches the target (in-place). */
+function boostPlayerOverall(player: Player, targetOverall: number): void {
+  const keys: (keyof Player['stats'])[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
+  const weights = POSITION_WEIGHTS[player.position];
+  let iterations = 0;
+  while (player.overall < targetOverall && iterations < 50) {
+    // Boost the highest-weight stat for this position
+    const topKey = keys.reduce((best, k) => weights[k] > weights[best] ? k : best, keys[0]);
+    player.stats[topKey] = Math.min(99, player.stats[topKey] + 1);
+    player.overall = calculateOverall(player.stats, player.position);
+    iterations++;
+  }
+}
+
 export function generateSquad(
   rng: SeededRNG,
   club: ClubData,
@@ -273,6 +287,42 @@ export function generateSquad(
       const playerId = `${club.id}-p${playerIndex}`;
       players.push(generatePlayer(rng, position, target, club.namePool, playerId));
       playerIndex++;
+    }
+  }
+
+  // ─── Quality guarantees ───
+  // Ensure each tier has the minimum number of high-rated and young talent
+  const outfield = players.filter((p) => p.position !== 'GK');
+  const sortedDesc = [...outfield].sort((a, b) => b.overall - a.overall);
+
+  if (club.tier <= 3) {
+    // Tier 1–3: guarantee at least 2 outfield players rated 80+
+    const minGold = club.tier === 1 ? 3 : 2;
+    for (let i = 0; i < Math.min(minGold, sortedDesc.length); i++) {
+      if (sortedDesc[i].overall < 80) {
+        boostPlayerOverall(sortedDesc[i], 80);
+      }
+    }
+  } else {
+    // Tier 4–5: guarantee at least 1 outfield player rated 80+
+    if (sortedDesc.length > 0 && sortedDesc[0].overall < 80) {
+      boostPlayerOverall(sortedDesc[0], 80);
+    }
+  }
+
+  // Wonderkid guarantee: ensure at least 1 young (≤21) talented player
+  const wonderkidThreshold = club.tier <= 3 ? 80 : 75;
+  const hasWonderkid = outfield.some((p) => p.age <= 21 && p.overall >= wonderkidThreshold);
+  if (!hasWonderkid) {
+    // Find the youngest outfield player and give them a boost
+    const sorted = [...outfield].sort((a, b) => a.age - b.age);
+    const youngest = sorted[0];
+    if (youngest) {
+      if (youngest.age > 21) youngest.age = rng.randomInt(17, 20);
+      if (youngest.overall < wonderkidThreshold) {
+        boostPlayerOverall(youngest, wonderkidThreshold);
+      }
+      youngest.highPotential = true;
     }
   }
 

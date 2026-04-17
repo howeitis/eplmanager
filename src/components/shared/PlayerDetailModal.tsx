@@ -73,7 +73,7 @@ export function PlayerDetailModal() {
   // Celebration modal state
   const [celebrationData, setCelebrationData] = useState<SigningCelebrationData | null>(null);
   // Card view toggle
-  const [showCardView, setShowCardView] = useState(false);
+  const [showCardView, setShowCardView] = useState(true);
 
   const isOwnClub = clubId === playerClubId;
   const isOnShortlist = playerId ? shortlist.includes(playerId) : false;
@@ -85,7 +85,7 @@ export function PlayerDetailModal() {
       playerSnapshotRef.current = null;
       clubIdSnapshotRef.current = null;
       setCelebrationData(null);
-      setShowCardView(false);
+      setShowCardView(true);
     }
   }, [isOpen]);
 

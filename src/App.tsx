@@ -314,6 +314,17 @@ function App() {
 
     state.initializeClubs(CLUBS, squads);
 
+    // Auto-set initial captain to the best player in the player's squad
+    const initialPlayerSquad = squads.get(club.id);
+    if (initialPlayerSquad && initialPlayerSquad.length > 0) {
+      const bestPlayerInitial = [...initialPlayerSquad]
+        .filter((p) => !p.isTemporary)
+        .sort((a, b) => b.overall - a.overall)[0];
+      if (bestPlayerInitial) {
+        state.setCaptain(bestPlayerInitial.id);
+      }
+    }
+
     const budgets: Record<string, number> = {};
     for (const c of CLUBS) {
       budgets[c.id] = c.budget;
@@ -582,6 +593,7 @@ function App() {
       const homeXI = isPlayerHome ? store.getState().startingXI : undefined;
       const awayXI = isPlayerAway ? store.getState().startingXI : undefined;
 
+      const captainIdForMatch = state.captainId;
       const result = simulateMatch({
         homeClub,
         awayClub,
@@ -598,6 +610,8 @@ function App() {
         awayPreferredFormation: isPlayerAway ? state.manager!.preferredFormation : undefined,
         homeStartingXI: homeXI,
         awayStartingXI: awayXI,
+        homeCaptainId: isPlayerHome ? captainIdForMatch ?? undefined : undefined,
+        awayCaptainId: isPlayerAway ? captainIdForMatch ?? undefined : undefined,
         seasonSeed: sSeed,
       });
 
@@ -944,8 +958,28 @@ function App() {
     );
     state.setBoardExpectation({ minPosition: newExpectation.minPosition, description: newExpectation.description });
 
-    // Save youth intake players for the pack reveal
-    setYouthIntakePlayers(playerYouthIntake);
+    // Collect retirement replacements for player's club (show alongside youth intake)
+    const playerAgingResult = agingResults_.find((r) => r.clubId === playerClubId);
+    const retirementReplacements = playerAgingResult?.retired.map((r) => r.replacement) ?? [];
+
+    // Save youth intake + retirement replacements for the pack reveal
+    setYouthIntakePlayers([...playerYouthIntake, ...retirementReplacements]);
+
+    // Auto-set captain: keep current if still in squad, otherwise pick best player
+    const postAgingPlayerClub = store.getState().clubs.find((c) => c.id === playerClubId);
+    if (postAgingPlayerClub) {
+      const currentCaptainId = store.getState().captainId;
+      const captainStillInSquad = currentCaptainId &&
+        postAgingPlayerClub.roster.some((p) => p.id === currentCaptainId && !p.isTemporary);
+      if (!captainStillInSquad) {
+        const bestPlayer = [...postAgingPlayerClub.roster]
+          .filter((p) => !p.isTemporary)
+          .sort((a, b) => b.overall - a.overall)[0];
+        if (bestPlayer) {
+          state.setCaptain(bestPlayer.id);
+        }
+      }
+    }
 
     // Show season end screen
     setGameView('season_end');
@@ -1013,8 +1047,21 @@ function App() {
     setViewHistory([]);
     setViewingClubId(null);
     setGameView(tab);
+
+    // Auto-populate starting XI when navigating to squad (if not already set)
+    if (tab === 'squad') {
+      const state = store.getState();
+      if (Object.keys(state.startingXI).length === 0 && state.manager) {
+        const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
+        if (playerClub) {
+          const xi = autoSelectXI(formation, playerClub.roster);
+          state.setStartingXI(xi);
+        }
+      }
+    }
+
     window.scrollTo(0, 0);
-  }, []);
+  }, [store, formation]);
 
   const navigateToClub = useCallback((clubId: string) => {
     if (clubId === managerClubId) {
@@ -1177,6 +1224,7 @@ function App() {
                 onMentalityChange={setMentality}
                 xiNotifications={xiNotifications}
                 onDismissNotifications={() => setXiNotifications([])}
+                onGoToTransfers={() => handleNavigate('transfers')}
                 onAdvance={handleAdvance}
                 advanceLabel={advanceLabel}
               />

@@ -32,17 +32,14 @@ const PLAYER_EMOJIS: string[] = [
   '\u{1F471}\u{1F3FB}\u{200D}\u{2642}\u{FE0F}', '\u{1F471}\u{1F3FC}\u{200D}\u{2642}\u{FE0F}',
   '\u{1F471}\u{1F3FD}\u{200D}\u{2642}\u{FE0F}', '\u{1F471}\u{1F3FE}\u{200D}\u{2642}\u{FE0F}',
   '\u{1F471}\u{1F3FF}\u{200D}\u{2642}\u{FE0F}',
-  // Standard woman — 5 skin tones
-  '\u{1F469}\u{1F3FB}', '\u{1F469}\u{1F3FC}', '\u{1F469}\u{1F3FD}',
-  '\u{1F469}\u{1F3FE}', '\u{1F469}\u{1F3FF}',
+  // Standard woman — 2 skin tones
+  '\u{1F469}\u{1F3FB}', '\u{1F469}\u{1F3FF}',
   // Woman curly hair — 5 skin tones
   '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B1}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B1}',
   '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B1}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B1}',
   '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B1}',
-  // Woman red hair — 5 skin tones
-  '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B0}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B0}',
-  '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B0}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B0}',
-  '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B0}',
+  // Woman red hair — 2 skin tones
+  '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B0}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B0}',
   // Woman white/grey hair — 5 skin tones
   '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B3}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B3}',
   '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B3}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B3}',
@@ -51,10 +48,8 @@ const PLAYER_EMOJIS: string[] = [
   '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B2}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B2}',
   '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B2}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B2}',
   '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B2}',
-  // Blond woman (👱‍♀️) — 5 skin tones
-  '\u{1F471}\u{1F3FB}\u{200D}\u{2640}\u{FE0F}', '\u{1F471}\u{1F3FC}\u{200D}\u{2640}\u{FE0F}',
-  '\u{1F471}\u{1F3FD}\u{200D}\u{2640}\u{FE0F}', '\u{1F471}\u{1F3FE}\u{200D}\u{2640}\u{FE0F}',
-  '\u{1F471}\u{1F3FF}\u{200D}\u{2640}\u{FE0F}',
+  // Blond woman (👱‍♀️) — 2 skin tones
+  '\u{1F471}\u{1F3FB}\u{200D}\u{2640}\u{FE0F}', '\u{1F471}\u{1F3FF}\u{200D}\u{2640}\u{FE0F}',
 ];
 
 function hashPlayerId(id: string): number {
@@ -462,11 +457,30 @@ export function RetroPlayerCard({
               size === 'sm' ? 'plm-w-5 plm-h-3.5' : size === 'xl' ? 'plm-w-8 plm-h-6' : 'plm-w-6 plm-h-4'
             }`}
           />
+          {/* WK badge under flag */}
+          {futureStar === 'wonderkid' && size !== 'sm' && (
+            <div className="plm-flex plm-justify-end plm-mt-0.5">
+              <div
+                className="plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-white plm-font-black"
+                style={{
+                  width: size === 'xl' ? 22 : 16,
+                  height: size === 'xl' ? 22 : 16,
+                  background: 'radial-gradient(circle at 40% 40%, #FFD700, #FF8C00)',
+                  border: '1.5px solid #D97706',
+                  boxShadow: '0 0 6px rgba(255,165,0,0.7)',
+                  fontSize: size === 'xl' ? 9 : 7,
+                }}
+                title="Wonderkid"
+              >
+                WK
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Face emoji */}
-      <div className="plm-flex plm-justify-center plm-mt-1 plm-relative plm-z-[5]">
+      <div className="plm-flex plm-justify-center plm-mt-0.5 plm-relative plm-z-[5]">
         <div
           className={`${fs.emoji} plm-leading-none`}
           style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
@@ -477,7 +491,7 @@ export function RetroPlayerCard({
 
       {/* Name plate */}
       <div
-        className="plm-mx-2.5 plm-mt-1.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5]"
+        className="plm-mx-2.5 plm-mt-1 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5]"
         style={{
           backgroundColor: clubColors?.primary || borderColor,
           borderBottom: `2px solid ${clubColors?.secondary || overallColor}`,
@@ -487,7 +501,7 @@ export function RetroPlayerCard({
           className={`${fs.name} plm-font-display plm-font-bold plm-uppercase plm-tracking-wide plm-truncate plm-px-1`}
           style={{ color: isLightColor(clubColors?.primary || borderColor) ? '#1A1A1A' : '#FFFFFF' }}
         >
-          {player.name}
+          {player.name}{isCaptain ? ' ©' : ''}
         </div>
       </div>
 
@@ -515,7 +529,7 @@ export function RetroPlayerCard({
       )}
 
       {/* Stats grid */}
-      <div className="plm-mx-2.5 plm-mt-1.5 plm-grid plm-grid-cols-3 plm-gap-x-1 plm-gap-y-0.5 plm-relative plm-z-[5]">
+      <div className="plm-mx-2.5 plm-mt-1 plm-grid plm-grid-cols-3 plm-gap-x-1 plm-gap-y-0.5 plm-relative plm-z-[5]">
         {STAT_KEYS.map((stat) => {
           const value = player.stats[stat];
           const isHero = heroStat?.key === stat && isGold;
@@ -585,28 +599,6 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {/* ─── Wonderkid seal (u21 80+) ─── */}
-      {futureStar === 'wonderkid' && size !== 'sm' && (
-        <div
-          className="plm-absolute plm-z-[15]"
-          style={{ top: size === 'xl' ? 6 : 4, right: size === 'xl' ? 6 : 4 }}
-        >
-          <div
-            className="plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-white plm-font-black"
-            style={{
-              width: size === 'xl' ? 30 : size === 'lg' ? 24 : 20,
-              height: size === 'xl' ? 30 : size === 'lg' ? 24 : 20,
-              background: 'radial-gradient(circle at 40% 40%, #FFD700, #FF8C00)',
-              border: '1.5px solid #D97706',
-              boxShadow: '0 0 6px rgba(255,165,0,0.7)',
-              fontSize: size === 'xl' ? 11 : 8,
-            }}
-            title="Wonderkid"
-          >
-            WK
-          </div>
-        </div>
-      )}
 
       {/* ─── Homegrown wax seal on club crest area ─── */}
       {player.homegrown && clubId && size !== 'sm' && (
