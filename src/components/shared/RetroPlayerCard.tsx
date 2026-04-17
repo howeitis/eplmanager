@@ -572,23 +572,14 @@ export function RetroPlayerCard({
           className="plm-absolute plm-left-2.5 plm-right-2.5 plm-z-[5]"
           style={{ bottom: size === 'xl' ? 22 : 18 }}
         >
-          <div
-            className="plm-rounded plm-px-1.5 plm-py-1"
-            style={{
-              background: 'rgba(255, 252, 245, 0.85)',
-              border: `1px solid ${borderColor}33`,
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-            }}
+          <p
+            className={`${
+              size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
+            } plm-italic plm-leading-snug plm-text-center`}
+            style={{ color: '#2B2620' }}
           >
-            <p
-              className={`${
-                size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
-              } plm-italic plm-leading-snug plm-text-center`}
-              style={{ color: '#2B2620' }}
-            >
-              {generateScoutSummary(player, { recentTransfers })}
-            </p>
-          </div>
+            {generateScoutSummary(player, { recentTransfers })}
+          </p>
         </div>
       )}
 
