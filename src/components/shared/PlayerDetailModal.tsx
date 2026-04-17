@@ -48,6 +48,7 @@ export function PlayerDetailModal() {
   const currentPhase = useGameStore((s) => s.currentPhase);
   const shortlist = useGameStore((s) => s.shortlist);
   const toggleShortlist = useGameStore((s) => s.toggleShortlist);
+  const removeFromShortlist = useGameStore((s) => s.removeFromShortlist);
   const addMarketListing = useGameStore((s) => s.addMarketListing);
   const marketListings = useGameStore((s) => s.marketListings);
 
@@ -595,6 +596,7 @@ function OtherClubActions({
       adjustBudget(playerClubId, -roundedFee);
       adjustBudget(clubId, roundedFee);
       removeMarketListing(player.id);
+      removeFromShortlist(player.id);
 
       const record: TransferRecord = {
         playerId: player.id,
@@ -710,6 +712,7 @@ function OtherClubActions({
     adjustBudget(playerClubId, -counterFee);
     adjustBudget(clubId, counterFee);
     removeMarketListing(player.id);
+    removeFromShortlist(player.id);
 
     if (outgoing) {
       useGameStore.getState().updateTransferOffer(outgoing.id, 'accepted');

@@ -36,12 +36,17 @@ const ACCOMPLISHMENT_ICONS: Record<string, string> = {
 
 const clubMap = new Map(CLUBS.map((c) => [c.id, c]));
 
-export function ManagerProfileScreen() {
+interface ManagerProfileScreenProps {
+  onResign?: () => void;
+}
+
+export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {}) {
   const manager = useGameStore((s) => s.manager);
   const seasonNumber = useGameStore((s) => s.seasonNumber);
   const saveSlot = useGameStore((s) => s.saveSlot);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [resignStep, setResignStep] = useState<0 | 1 | 2>(0);
 
   const handleSave = useCallback(async () => {
     if (!saveSlot || saving) return;
@@ -268,6 +273,81 @@ export function ManagerProfileScreen() {
       >
         {saving ? 'Saving...' : saved ? 'Game Saved!' : 'Save Game'}
       </button>
+
+      {/* Resign Button */}
+      {onResign && (
+        <button
+          onClick={() => setResignStep(1)}
+          className="plm-w-full plm-py-3 plm-rounded-lg plm-font-body plm-font-semibold plm-text-sm plm-transition-all plm-duration-200 plm-min-h-[44px] plm-border plm-border-red-200 plm-bg-white plm-text-red-700 hover:plm-bg-red-50"
+        >
+          Resign Position
+        </button>
+      )}
+
+      {/* Resign confirmation modals */}
+      {resignStep > 0 && onResign && (
+        <div
+          className="plm-fixed plm-inset-0 plm-z-[100] plm-flex plm-items-center plm-justify-center plm-p-4"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setResignStep(0)}
+        >
+          <div
+            className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-p-5 plm-max-w-sm plm-w-full plm-shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {resignStep === 1 ? (
+              <>
+                <h3 className="plm-font-display plm-font-bold plm-text-lg plm-text-charcoal plm-mb-2">
+                  Resign from {currentClub?.name}?
+                </h3>
+                <p className="plm-text-sm plm-text-warm-600 plm-mb-4">
+                  Your tenure here will end. Trophies and records remain in your career history, but you'll lose your connection with this squad.
+                </p>
+                <div className="plm-flex plm-gap-2">
+                  <button
+                    onClick={() => setResignStep(0)}
+                    className="plm-flex-1 plm-py-2.5 plm-rounded plm-border plm-border-warm-200 plm-text-sm plm-font-semibold plm-text-charcoal hover:plm-bg-warm-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => setResignStep(2)}
+                    className="plm-flex-1 plm-py-2.5 plm-rounded plm-bg-red-600 plm-text-white plm-text-sm plm-font-semibold hover:plm-bg-red-700"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="plm-font-display plm-font-bold plm-text-lg plm-text-charcoal plm-mb-2">
+                  Are you sure?
+                </h3>
+                <p className="plm-text-sm plm-text-warm-600 plm-mb-4">
+                  This cannot be undone. You will step down and be asked to choose a new club.
+                </p>
+                <div className="plm-flex plm-gap-2">
+                  <button
+                    onClick={() => setResignStep(0)}
+                    className="plm-flex-1 plm-py-2.5 plm-rounded plm-border plm-border-warm-200 plm-text-sm plm-font-semibold plm-text-charcoal hover:plm-bg-warm-50"
+                  >
+                    Stay
+                  </button>
+                  <button
+                    onClick={() => {
+                      setResignStep(0);
+                      onResign();
+                    }}
+                    className="plm-flex-1 plm-py-2.5 plm-rounded plm-bg-red-600 plm-text-white plm-text-sm plm-font-semibold hover:plm-bg-red-700"
+                  >
+                    Resign
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

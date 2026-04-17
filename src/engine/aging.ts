@@ -23,7 +23,9 @@ const AGE_BRACKETS: AgeBracket[] = [
   { minAge: 36, maxAge: 99, label: 'Retirement risk', statMin: -10, statMax: -5 },
 ];
 
-const RETIREMENT_CHANCE_36_PLUS = 0.60;
+const RETIREMENT_CHANCE_33_34 = 0.12;
+const RETIREMENT_CHANCE_35 = 0.30;
+const RETIREMENT_CHANCE_36_PLUS = 0.70;
 
 // ─── Stat Change Calculation ───
 
@@ -46,9 +48,17 @@ export function calculateAgingChanges(
   const statKeys: (keyof Player['stats'])[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
   const newStats = { ...player.stats };
 
-  // Check retirement for 36+
+  // Check retirement — escalating chance by age bracket
   if (player.age >= 36) {
     if (rng.random() < RETIREMENT_CHANCE_36_PLUS) {
+      return { stats: newStats, overall: player.overall, retired: true };
+    }
+  } else if (player.age === 35) {
+    if (rng.random() < RETIREMENT_CHANCE_35) {
+      return { stats: newStats, overall: player.overall, retired: true };
+    }
+  } else if (player.age >= 33) {
+    if (rng.random() < RETIREMENT_CHANCE_33_34) {
       return { stats: newStats, overall: player.overall, retired: true };
     }
   }
@@ -227,7 +237,7 @@ export function processClubAging(
       const oldOverall = player.overall;
       player.stats = stats;
       player.overall = overall;
-      player.value = calculateMarketValue(overall, player.age + 1, player.form);
+      player.value = calculateMarketValue(overall, player.age + 1, 0, player.trait);
       player.age++;
       player.seasonsAtClub++;
 

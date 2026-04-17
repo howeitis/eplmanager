@@ -274,18 +274,29 @@ export function RetroPlayerCard({
             Premier League Manager
           </span>
 
-          {/* Trophy stickers on card back */}
+          {/* Trophy stickers on card back — one per trophy won with user's club */}
           {trophies.length > 0 && (
-            <div className="plm-flex plm-flex-wrap plm-justify-center plm-gap-1 plm-px-3">
-              {trophies.slice(0, 8).map((t, i) => (
-                <span
-                  key={i}
-                  title={`Season ${t.season} ${t.type === 'league' ? 'Premier League' : 'FA Cup'}`}
-                  className="plm-text-base"
-                >
-                  {t.type === 'league' ? '🏆' : '🏅'}
-                </span>
-              ))}
+            <div className="plm-flex plm-flex-col plm-items-center plm-gap-2 plm-px-3 plm-mt-2">
+              <span
+                className={`${fs.pos} plm-font-display plm-font-bold plm-uppercase plm-tracking-widest`}
+                style={{ color: overallColor, opacity: 0.8 }}
+              >
+                Honours · {trophies.length}
+              </span>
+              <div className="plm-flex plm-flex-wrap plm-justify-center plm-gap-1.5 plm-max-w-full">
+                {trophies.slice(0, 20).map((t, i) => (
+                  <span
+                    key={i}
+                    title={`Season ${t.season} ${t.type === 'league' ? 'Premier League' : 'FA Cup'}`}
+                    style={{
+                      fontSize: size === 'xl' ? 22 : size === 'lg' ? 18 : size === 'md' ? 16 : 14,
+                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',
+                    }}
+                  >
+                    {t.type === 'league' ? '🏆' : '🏅'}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -480,7 +491,7 @@ export function RetroPlayerCard({
       </div>
 
       {/* Face emoji */}
-      <div className="plm-flex plm-justify-center plm-mt-0.5 plm-relative plm-z-[5]">
+      <div className="plm-flex plm-justify-center plm-relative plm-z-[5]">
         <div
           className={`${fs.emoji} plm-leading-none`}
           style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
@@ -491,7 +502,7 @@ export function RetroPlayerCard({
 
       {/* Name plate */}
       <div
-        className="plm-mx-2.5 plm-mt-1 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5]"
+        className="plm-mx-2.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5]"
         style={{
           backgroundColor: clubColors?.primary || borderColor,
           borderBottom: `2px solid ${clubColors?.secondary || overallColor}`,
@@ -506,7 +517,7 @@ export function RetroPlayerCard({
       </div>
 
       {/* Nationality + Age */}
-      <div className="plm-flex plm-justify-center plm-items-center plm-gap-1 plm-mt-1 plm-relative plm-z-[5]">
+      <div className="plm-flex plm-justify-center plm-items-center plm-gap-1 plm-mt-0.5 plm-relative plm-z-[5]">
         <span className={`${fs.pos} plm-uppercase plm-tracking-wider plm-font-semibold`} style={{ color: borderColor }}>
           {getNationalityLabel(player.nationality)}
         </span>
@@ -529,7 +540,7 @@ export function RetroPlayerCard({
       )}
 
       {/* Stats grid */}
-      <div className="plm-mx-2.5 plm-mt-1 plm-grid plm-grid-cols-3 plm-gap-x-1 plm-gap-y-0.5 plm-relative plm-z-[5]">
+      <div className="plm-mx-2.5 plm-mt-0.5 plm-grid plm-grid-cols-3 plm-gap-x-1 plm-gap-y-0 plm-relative plm-z-[5]">
         {STAT_KEYS.map((stat) => {
           const value = player.stats[stat];
           const isHero = heroStat?.key === stat && isGold;
@@ -558,17 +569,26 @@ export function RetroPlayerCard({
       {/* Scout summary bio — all card tiers, md+ sizes, fills remaining space */}
       {size !== 'sm' && (
         <div
-          className="plm-absolute plm-left-3 plm-right-3 plm-z-[5]"
-          style={{ bottom: size === 'xl' ? 20 : 16 }}
+          className="plm-absolute plm-left-2.5 plm-right-2.5 plm-z-[5]"
+          style={{ bottom: size === 'xl' ? 22 : 18 }}
         >
-          <p
-            className={`${
-              size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
-            } plm-italic plm-leading-snug plm-text-center`}
-            style={{ color: borderColor + 'DD' }}
+          <div
+            className="plm-rounded plm-px-1.5 plm-py-1"
+            style={{
+              background: 'rgba(255, 252, 245, 0.85)',
+              border: `1px solid ${borderColor}33`,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            }}
           >
-            {generateScoutSummary(player, { recentTransfers })}
-          </p>
+            <p
+              className={`${
+                size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
+              } plm-italic plm-leading-snug plm-text-center`}
+              style={{ color: '#2B2620' }}
+            >
+              {generateScoutSummary(player, { recentTransfers })}
+            </p>
+          </div>
         </div>
       )}
 

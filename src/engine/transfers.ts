@@ -30,7 +30,7 @@ const CONTINENT_SALE_DISCOUNT = 0.70;
 export function calculateMarketValue(
   overall: number,
   age: number,
-  form: number,
+  _form: number = 0,
   trait?: string,
 ): number {
   // Normalized cubic curve: creates realistic spread between tiers
@@ -45,15 +45,12 @@ export function calculateMarketValue(
   else if (age >= 29 && age <= 31) ageFactor = 0.65;
   else ageFactor = 0.35; // 32+
 
-  // Form factor: map form (-5 to +5) to 0.85–1.15
-  const formFactor = 0.85 + ((Math.max(-5, Math.min(5, form)) + 5) / 10) * 0.3;
-
   let traitFactor = 1.0;
   if (trait === 'Prospect') traitFactor = 1.4;
   else if (trait === 'Clutch') traitFactor = 1.15;
   else if (trait === 'Fragile') traitFactor = 0.8;
 
-  const raw = base * ageFactor * formFactor * traitFactor;
+  const raw = base * ageFactor * traitFactor;
 
   // Floor at £0.5M, cap at £90M, round to 1 decimal
   return Math.max(0.5, Math.min(90, Math.round(raw * 10) / 10));
@@ -62,7 +59,7 @@ export function calculateMarketValue(
 // --- Recalculate a player's market value ---
 
 export function refreshPlayerValue(player: Player): number {
-  return calculateMarketValue(player.overall, player.age, player.form, player.trait);
+  return calculateMarketValue(player.overall, player.age, 0, player.trait);
 }
 
 // --- Offer willingness formula (Section 6.3) ---
@@ -297,7 +294,7 @@ export function simulateAITransferWindow(
 
   // AI clubs try to fill position needs
   const aiClubs = clubs.filter((c) => c.id !== playerClubId);
-  const maxTransfersPerWindow = windowType === 'summer' ? 3 : 1;
+  const maxTransfersPerWindow = windowType === 'summer' ? 5 : 2;
 
   for (const aiClub of aiClubs) {
     const club = clubMap.get(aiClub.id)!;
@@ -321,7 +318,8 @@ export function simulateAITransferWindow(
         const candidatesAtPos = otherClub.roster.filter(
           (p) => p.position === need.position && !p.isTemporary && !p.acquiredThisWindow,
         );
-        if (candidatesAtPos.length <= 1) continue; // Don't strip them bare
+        // Don't strip AI clubs bare, but always allow scouting the user's club
+        if (otherId !== playerClubId && candidatesAtPos.length <= 1) continue;
 
         for (const candidate of candidatesAtPos) {
           const value = refreshPlayerValue(candidate);
@@ -434,6 +432,66 @@ export function simulateAITransferWindow(
       tickerMessages.push(
         `${playerToSell.name} (${playerToSell.position}, ${playerToSell.overall}) sold to ${sale.destination} for £${sale.fee}M.`,
       );
+    }
+  }
+
+  // --- Speculative incoming offers for the user's squad ---
+  // Independent of AI position-need pursuit: rivals proactively bid on the user's
+  // best players (listed or not). More action = more transfer activity.
+  const userClub = clubMap.get(playerClubId);
+  if (userClub) {
+    const userPlayers = userClub.roster.filter(
+      (p) => !p.isTemporary && !p.acquiredThisWindow && p.overall >= 58,
+    );
+    const targetCount = windowType === 'summer' ? 4 : 2;
+    const existingOfferPlayerIds = new Set(incomingOffers.map((o) => o.playerId));
+
+    // Rank user's players by attractiveness (high rating, young)
+    const rankedTargets = userPlayers
+      .map((p) => ({ player: p, score: p.overall + (p.age <= 24 ? 5 : 0) - (p.age >= 32 ? 8 : 0) }))
+      .sort((a, b) => b.score - a.score);
+
+    let speculativeAdded = 0;
+    for (const { player } of rankedTargets) {
+      if (speculativeAdded >= targetCount) break;
+      if (existingOfferPlayerIds.has(player.id)) continue;
+
+      // 55% chance per eligible player per window
+      if (rng.random() > 0.55) continue;
+
+      // Pick a plausible buyer: AI club with budget and same-tier-or-better
+      const buyers = aiClubs
+        .map((c) => clubMap.get(c.id)!)
+        .filter((c) => (mutableBudgets[c.id] || 0) >= refreshPlayerValue(player) * 0.9)
+        .sort((a, b) => (mutableBudgets[b.id] || 0) - (mutableBudgets[a.id] || 0));
+      if (buyers.length === 0) continue;
+
+      // Prefer clubs needing this position, otherwise pick one of top 5 richest
+      const preferred = buyers.find((b) => {
+        const needs = assessPositionNeeds(b);
+        return needs.some((n) => n.position === player.position);
+      });
+      const buyer = preferred ?? buyers[rng.randomInt(0, Math.min(4, buyers.length - 1))];
+
+      const marketValue = refreshPlayerValue(player);
+      const offerFee = Math.round(marketValue * rng.randomFloat(0.95, 1.35) * 10) / 10;
+      if (offerFee > (mutableBudgets[buyer.id] || 0)) continue;
+
+      incomingOffers.push({
+        id: `offer-spec-${rng.randomInt(10000, 99999)}`,
+        playerId: player.id,
+        playerName: player.name,
+        playerPosition: player.position,
+        playerOverall: player.overall,
+        playerAge: player.age,
+        fromClubId: playerClubId,
+        toClubId: buyer.id,
+        fee: offerFee,
+        status: 'pending',
+        direction: 'incoming',
+      });
+      existingOfferPlayerIds.add(player.id);
+      speculativeAdded++;
     }
   }
 

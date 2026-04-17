@@ -5,6 +5,9 @@ import type { ClubData } from '../../types/entities';
 interface ClubSelectProps {
   onSelectClub: (club: ClubData) => void;
   onBack: () => void;
+  excludeClubId?: string;
+  title?: string;
+  subtitle?: string;
 }
 
 const TIER_LABELS: Record<number, string> = {
@@ -15,11 +18,11 @@ const TIER_LABELS: Record<number, string> = {
   5: 'Survival',
 };
 
-export function ClubSelect({ onSelectClub, onBack }: ClubSelectProps) {
+export function ClubSelect({ onSelectClub, onBack, excludeClubId, title, subtitle }: ClubSelectProps) {
   const groupedByTier = [1, 2, 3, 4, 5].map((tier) => ({
     tier,
     label: TIER_LABELS[tier],
-    clubs: CLUBS.filter((c) => c.tier === tier),
+    clubs: CLUBS.filter((c) => c.tier === tier && c.id !== excludeClubId),
   }));
 
   return (
@@ -33,10 +36,10 @@ export function ClubSelect({ onSelectClub, onBack }: ClubSelectProps) {
           &larr; Back
         </button>
         <h1 className="plm-text-2xl plm-font-bold plm-text-gray-900 plm-mb-1">
-          Choose Your Club
+          {title || 'Choose Your Club'}
         </h1>
         <p className="plm-text-gray-500 plm-text-sm plm-mb-6">
-          Select a Premier League club to manage
+          {subtitle || 'Select a Premier League club to manage'}
         </p>
 
         {groupedByTier.map(({ tier, label, clubs }) => (

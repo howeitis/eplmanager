@@ -63,7 +63,7 @@ import type {
 } from './types/entities';
 
 type Screen = 'title' | 'save_select' | 'club_select' | 'manager_creation' | 'game';
-type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'match_results' | 'season_end' | 'club_squad' | 'board_meeting';
+type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'match_results' | 'season_end' | 'club_squad' | 'board_meeting' | 'resign_club_select';
 
 const PHASE_ORDER: GamePhase[] = [
   'summer_window', 'july_advance', 'august', 'august_deadline',
@@ -295,6 +295,57 @@ function App() {
     setSelectedClub(club);
     setScreen('manager_creation');
   }, []);
+
+  const handleResignToClub = useCallback(async (club: ClubData) => {
+    const state = store.getState();
+    const manager = state.manager;
+    if (!manager) return;
+    const seasonNumber = state.seasonNumber;
+    const oldClubId = manager.clubId;
+    const oldClub = clubDataMap.get(oldClubId);
+
+    state.endCurrentTenure(seasonNumber);
+    state.addAccomplishment({
+      id: `acc-departed-${Date.now()}`,
+      season: seasonNumber,
+      clubId: oldClubId,
+      type: 'club-departed',
+      headline: `Resigned from ${oldClub?.name || oldClubId}`,
+    });
+    state.startNewTenure(club.id, seasonNumber);
+    state.addAccomplishment({
+      id: `acc-hired-${Date.now()}`,
+      season: seasonNumber,
+      clubId: club.id,
+      type: 'club-hired',
+      headline: `Took charge at ${club.name}`,
+    });
+
+    // Reset board expectation for the new club
+    const newExpectation = calculateBoardExpectation(club.tier, manager.reputation, 0);
+    state.setBoardExpectation({ minPosition: newExpectation.minPosition, description: newExpectation.description });
+
+    // Update save metadata to reflect the new club
+    if (state.saveSlot) {
+      state.setSaveMetadata({
+        slot: state.saveSlot,
+        clubId: club.id,
+        clubName: club.name,
+        seasonNumber,
+        leaguePosition: 0,
+        lastSaved: new Date().toISOString(),
+        managerName: manager.name,
+        managerAvatar: manager.avatar,
+      });
+    }
+
+    // Clear user-specific state that doesn't carry across clubs
+    state.setCaptain(null);
+    state.clearTransferOffers();
+
+    await saveGame(state.saveSlot!, store.getState());
+    setGameView('manager');
+  }, [store]);
 
   const handleManagerCreated = useCallback(async (data: ManagerCreationData) => {
     const club = selectedClub!;
@@ -1239,7 +1290,16 @@ function App() {
               <SeasonHistoryScreen />
             )}
             {gameView === 'manager' && (
-              <ManagerProfileScreen />
+              <ManagerProfileScreen onResign={() => setGameView('resign_club_select')} />
+            )}
+            {gameView === 'resign_club_select' && (
+              <ClubSelect
+                onSelectClub={handleResignToClub}
+                onBack={() => setGameView('manager')}
+                excludeClubId={store.getState().manager?.clubId}
+                title="New Appointment"
+                subtitle="Choose a new club to take charge of"
+              />
             )}
             {gameView === 'match_results' && (
               <MatchResults

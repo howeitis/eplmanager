@@ -461,7 +461,7 @@ const TRANSFER_EVENTS: EventTemplate[] = [
       const rating = rng.randomInt(65, 72);
       const newPlayer = generatePlayer(rng, pos, rating, club.namePool, `${club.id}-academy-${ctx.seasonNumber}`);
       newPlayer.trait = 'Loyal';
-      newPlayer.value = calculateMarketValue(newPlayer.overall, newPlayer.age, newPlayer.form) * 0.8;
+      newPlayer.value = calculateMarketValue(newPlayer.overall, newPlayer.age, 0, newPlayer.trait) * 0.8;
       return {
         description: `Former academy player ${newPlayer.name} wants to come home. Available at a discount (${pos}, ${rating}).`,
         modifiers: [],

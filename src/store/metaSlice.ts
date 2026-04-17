@@ -24,6 +24,8 @@ export interface MetaSlice {
   addAccomplishment: (accomplishment: ManagerAccomplishment) => void;
   updateCurrentTenure: (updates: Partial<{ gamesManaged: number; leagueTitles: number; faCups: number; bestLeagueFinish: number }>) => void;
   incrementManagerAge: () => void;
+  endCurrentTenure: (endSeason: number) => void;
+  startNewTenure: (clubId: string, startSeason: number) => void;
 }
 
 export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set) => ({
@@ -95,6 +97,38 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set)
     set((state) => {
       if (!state.manager) return {};
       return { manager: { ...state.manager, age: state.manager.age + 1 } };
+    });
+  },
+
+  endCurrentTenure: (endSeason) => {
+    set((state) => {
+      if (!state.manager || state.manager.tenures.length === 0) return {};
+      const tenures = [...state.manager.tenures];
+      const current = tenures[tenures.length - 1];
+      if (current.endSeason) return {};
+      tenures[tenures.length - 1] = { ...current, endSeason };
+      return { manager: { ...state.manager, tenures } };
+    });
+  },
+
+  startNewTenure: (clubId, startSeason) => {
+    set((state) => {
+      if (!state.manager) return {};
+      const newTenure = {
+        clubId,
+        startSeason,
+        gamesManaged: 0,
+        leagueTitles: 0,
+        faCups: 0,
+        bestLeagueFinish: 20,
+      };
+      return {
+        manager: {
+          ...state.manager,
+          clubId,
+          tenures: [...state.manager.tenures, newTenure],
+        },
+      };
     });
   },
 });

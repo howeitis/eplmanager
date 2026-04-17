@@ -23,11 +23,11 @@ const BUDGET_FLOOR: Record<number, number> = {
 // ─── Budget Replenishment by Position ───
 
 function getPositionBudgetPayout(position: number): number {
-  if (position === 1) return 60;
-  if (position <= 4) return 50;
-  if (position <= 10) return 40;
-  if (position <= 17) return 30;
-  return 20; // 18th-20th
+  if (position === 1) return 75;
+  if (position <= 4) return 65;
+  if (position <= 10) return 55;
+  if (position <= 17) return 45;
+  return 35; // 18th-20th
 }
 
 // ─── Board Expectations ───

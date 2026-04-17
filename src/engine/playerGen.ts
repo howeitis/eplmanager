@@ -58,22 +58,25 @@ export function calculateOverall(stats: PlayerStats, position: Position): number
   return Math.round(total);
 }
 
-export function calculateMarketValue(overall: number, age: number, form: number): number {
-  // Base value from overall
-  let value = Math.pow((overall - 40) / 40, 2) * 50;
+export function calculateMarketValue(overall: number, age: number, _form: number = 0, trait?: string): number {
+  // Unified cubic curve — matches transfers.calculateMarketValue so list and detail views agree.
+  // Form is intentionally ignored; values should reflect ability + age + trait only.
+  const normalized = (overall - 50) / 30;
+  const base = Math.pow(normalized, 3) * 45;
 
-  // Age factor: peak at 25-28, declines sharply after 30
-  if (age <= 20) value *= 1.3; // Young premium
-  else if (age <= 24) value *= 1.2;
-  else if (age <= 28) value *= 1.0;
-  else if (age <= 30) value *= 0.7;
-  else if (age <= 32) value *= 0.4;
-  else value *= 0.2;
+  let ageFactor: number;
+  if (age >= 17 && age <= 21) ageFactor = 1.3;
+  else if (age >= 22 && age <= 28) ageFactor = 1.0;
+  else if (age >= 29 && age <= 31) ageFactor = 0.65;
+  else ageFactor = 0.35;
 
-  // Form bonus
-  value *= 1 + form * 0.03;
+  let traitFactor = 1.0;
+  if (trait === 'Prospect') traitFactor = 1.4;
+  else if (trait === 'Clutch') traitFactor = 1.15;
+  else if (trait === 'Fragile') traitFactor = 0.8;
 
-  return Math.max(0.5, Math.round(value * 10) / 10);
+  const raw = base * ageFactor * traitFactor;
+  return Math.max(0.5, Math.min(90, Math.round(raw * 10) / 10));
 }
 
 function generateNameAndNationality(rng: SeededRNG, namePool: NationalityWeight[]): { name: string; nationality: string } {
@@ -192,7 +195,7 @@ export function generatePlayer(
   const stats = generateStats(rng, position, targetOverall);
   const overall = calculateOverall(stats, position);
   const form = rng.randomInt(-2, 2);
-  const value = calculateMarketValue(overall, age, form);
+  const value = calculateMarketValue(overall, age, 0, trait);
 
   // ~10% of young players (17-21) are high potential, ~5% are early peakers
   let highPotential = false;

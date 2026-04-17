@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import type { SeasonHistory as SeasonHistoryType } from '../../types/entities';
@@ -9,6 +9,7 @@ export function SeasonHistoryScreen() {
   const seasonHistories = useGameStore((s) => s.seasonHistories);
   const manager = useGameStore((s) => s.manager);
   const playerClubId = manager?.clubId;
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // All-time records
   const records = useMemo(() => {
@@ -53,6 +54,80 @@ export function SeasonHistoryScreen() {
     return result;
   }, [seasonHistories, playerClubId]);
 
+  const tutorialButton = (
+    <button
+      onClick={() => setShowTutorial(true)}
+      className="plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-2 plm-rounded-full plm-border plm-border-blue-200 plm-bg-blue-50 plm-text-blue-700 plm-text-xs plm-font-semibold hover:plm-bg-blue-100 plm-min-h-[36px]"
+    >
+      <span aria-hidden="true">❓</span>
+      <span>New here? How it works</span>
+    </button>
+  );
+
+  const tutorialModal = showTutorial && (
+    <div
+      className="plm-fixed plm-inset-0 plm-z-[100] plm-flex plm-items-center plm-justify-center plm-p-4"
+      style={{ background: 'rgba(0,0,0,0.55)' }}
+      onClick={() => setShowTutorial(false)}
+    >
+      <div
+        className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-max-w-lg plm-w-full plm-shadow-xl plm-overflow-hidden plm-max-h-[85vh] plm-flex plm-flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="plm-flex plm-items-center plm-justify-between plm-px-5 plm-py-3 plm-border-b plm-border-warm-200">
+          <h3 className="plm-font-display plm-font-bold plm-text-lg plm-text-charcoal">
+            How the game works
+          </h3>
+          <button
+            onClick={() => setShowTutorial(false)}
+            aria-label="Close tutorial"
+            className="plm-text-warm-500 hover:plm-text-charcoal plm-text-xl plm-leading-none"
+          >
+            ×
+          </button>
+        </div>
+        <div className="plm-overflow-y-auto plm-px-5 plm-py-4 plm-space-y-4 plm-text-sm plm-text-charcoal">
+          <Section title="The season">
+            Each season runs August–May, advanced one month at a time from the Hub. Set your formation and
+            mentality in the Squad tab before each month.
+          </Section>
+          <Section title="Squad & captain">
+            You have 16+ players across six positions (GK, CB, FB, MF, WG, ST). Pick a captain for a small
+            TSS boost. Injuries create temporary fill-ins that auto-expire.
+          </Section>
+          <Section title="Matches">
+            Results are simulated from Team Strength (stats × formation × mentality + home advantage + form).
+            You'll see each month's results and top scorers.
+          </Section>
+          <Section title="Transfers">
+            Two windows: summer and January. Browse listings, shortlist targets, make offers, and field
+            incoming bids. Form doesn't affect market value — only ability, age, and trait.
+          </Section>
+          <Section title="Board expectations">
+            Your board sets a minimum finish each season. Beating it raises reputation and budget; missing
+            it has the opposite effect. Reputation at 0 = sack.
+          </Section>
+          <Section title="Season end">
+            Aging kicks in: players 33+ may retire, 36+ often do. Retirees are replaced by regens. You also
+            get an annual youth intake of 1–2 academy graduates.
+          </Section>
+          <Section title="Manager career">
+            Trophies, accomplishments, and tenures are tracked across clubs. You can resign from the Manager
+            tab and take over a different club mid-career.
+          </Section>
+        </div>
+        <div className="plm-px-5 plm-py-3 plm-border-t plm-border-warm-200 plm-bg-warm-50">
+          <button
+            onClick={() => setShowTutorial(false)}
+            className="plm-w-full plm-py-2.5 plm-rounded plm-bg-charcoal plm-text-white plm-text-sm plm-font-semibold hover:plm-bg-charcoal-light"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (seasonHistories.length === 0) {
     return (
       <div className="plm-w-full">
@@ -60,16 +135,20 @@ export function SeasonHistoryScreen() {
           <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-2">
             Season History
           </h2>
-          <p className="plm-text-sm plm-text-warm-500">
+          <p className="plm-text-sm plm-text-warm-500 plm-mb-4">
             No completed seasons yet. History will appear after your first full season.
           </p>
+          <div className="plm-flex plm-justify-center">{tutorialButton}</div>
         </div>
+        {tutorialModal}
       </div>
     );
   }
 
   return (
     <div className="plm-space-y-4 plm-w-full">
+      <div className="plm-flex plm-justify-end">{tutorialButton}</div>
+      {tutorialModal}
       {/* Trophy Cabinet */}
       {trophies.length > 0 && (
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
@@ -239,4 +318,15 @@ function getOrdinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h4 className="plm-font-display plm-font-bold plm-text-sm plm-text-charcoal plm-mb-1">
+        {title}
+      </h4>
+      <p className="plm-text-sm plm-text-warm-600 plm-leading-relaxed">{children}</p>
+    </div>
+  );
 }

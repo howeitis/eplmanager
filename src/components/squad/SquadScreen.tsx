@@ -9,6 +9,7 @@ import { SquadProgression } from './SquadProgression';
 import { GoalScorersWidget } from '../hub/GoalScorersWidget';
 import { useModalParams } from '../../hooks/useModalParams';
 import type { XISwap } from '../../engine/startingXI';
+import { refreshPlayerValue } from '../../engine/transfers';
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 type SortKey = 'position' | 'overall' | 'age' | 'form' | 'name';
@@ -405,7 +406,7 @@ function MobilePlayerCard({
           <div className="plm-grid plm-grid-cols-3 plm-gap-2 plm-mb-2">
             <StatCell label="Age" value={player.age} />
             <StatCell label="Trait" value={player.trait} />
-            <StatCell label="Value" value={`£${player.value.toFixed(1)}M`} />
+            <StatCell label="Value" value={`£${refreshPlayerValue(player).toFixed(1)}M`} />
           </div>
           <div className="plm-grid plm-grid-cols-6 plm-gap-1">
             {(['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'] as const).map((stat) => (
