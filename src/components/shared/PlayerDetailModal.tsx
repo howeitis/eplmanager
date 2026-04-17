@@ -48,7 +48,6 @@ export function PlayerDetailModal() {
   const currentPhase = useGameStore((s) => s.currentPhase);
   const shortlist = useGameStore((s) => s.shortlist);
   const toggleShortlist = useGameStore((s) => s.toggleShortlist);
-  const removeFromShortlist = useGameStore((s) => s.removeFromShortlist);
   const addMarketListing = useGameStore((s) => s.addMarketListing);
   const marketListings = useGameStore((s) => s.marketListings);
 
@@ -520,6 +519,7 @@ function OtherClubActions({
   const adjustBudget = useGameStore((s) => s.adjustBudget);
   const recordTransfer = useGameStore((s) => s.recordTransfer);
   const removeMarketListing = useGameStore((s) => s.removeMarketListing);
+  const removeFromShortlist = useGameStore((s) => s.removeFromShortlist);
   const addTickerMessage = useGameStore((s) => s.addTickerMessage);
 
   const playerClubId = manager?.clubId || '';
