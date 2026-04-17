@@ -45,7 +45,7 @@ export function OutgoingOffers({ offers, clubs, budget, onAcceptCounter }: Outgo
       <h2 className="plm-text-sm plm-font-bold plm-text-gray-900 plm-mb-3">
         Outgoing Offers
       </h2>
-      <div className="plm-space-y-2">
+      <div className="plm-grid plm-grid-cols-1 lg:plm-grid-cols-2 plm-gap-2">
         {offers.map((offer) => (
           <div
             key={offer.id}

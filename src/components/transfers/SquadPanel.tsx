@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import type { Player, Club } from '../../types/entities';
+import { useMemo, useState } from 'react';
+import type { Player, Club, Position } from '../../types/entities';
 import { getContinentSalePrice, canSellToContinent } from '../../engine/transfers';
 import { useModalParams } from '../../hooks/useModalParams';
 import { ShortlistStar } from '../shared/ShortlistStar';
+
+const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
+type SortKey = 'position' | 'overall' | 'age' | 'form';
 
 interface SquadPanelProps {
   club: Club;
@@ -11,11 +14,31 @@ interface SquadPanelProps {
 
 export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
   const [confirmSell, setConfirmSell] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('position');
+  const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
   const { openModal } = useModalParams();
 
-  const roster = [...club.roster]
-    .filter((p) => !p.isTemporary)
-    .sort((a, b) => b.overall - a.overall);
+  const roster = useMemo(() => {
+    let result = club.roster.filter((p) => !p.isTemporary);
+    if (filterPos !== 'ALL') {
+      result = result.filter((p) => p.position === filterPos);
+    }
+    result = [...result].sort((a, b) => {
+      switch (sortKey) {
+        case 'position': {
+          const posA = POSITION_ORDER.indexOf(a.position);
+          const posB = POSITION_ORDER.indexOf(b.position);
+          if (posA !== posB) return posA - posB;
+          return b.overall - a.overall;
+        }
+        case 'overall': return b.overall - a.overall;
+        case 'age': return a.age - b.age;
+        case 'form': return b.form - a.form;
+        default: return 0;
+      }
+    });
+    return result;
+  }, [club.roster, sortKey, filterPos]);
 
   const handleConfirmSell = (player: Player) => {
     onSellToContinent(player);
@@ -28,10 +51,47 @@ export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
         Your Squad
       </h2>
       <p className="plm-text-xs plm-text-gray-500 plm-mb-3">
-        {roster.length} players
+        {roster.length} player{roster.length !== 1 ? 's' : ''}
       </p>
 
-      <div className="plm-space-y-2">
+      {/* Position filter */}
+      <div className="plm-flex plm-flex-wrap plm-gap-1.5 plm-mb-2" role="group" aria-label="Filter by position">
+        {(['ALL', ...POSITION_ORDER] as const).map((pos) => (
+          <button
+            key={pos}
+            onClick={() => setFilterPos(pos)}
+            aria-pressed={filterPos === pos}
+            className={`plm-px-3 plm-py-1.5 plm-text-xs plm-font-medium plm-rounded plm-transition-colors plm-min-h-[44px] plm-min-w-[44px] ${
+              filterPos === pos
+                ? 'plm-bg-gray-900 plm-text-white'
+                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200'
+            }`}
+          >
+            {pos}
+          </button>
+        ))}
+      </div>
+
+      {/* Sort */}
+      <div className="plm-flex plm-flex-wrap plm-items-center plm-gap-1 plm-mb-3" role="group" aria-label="Sort players">
+        <span className="plm-text-[10px] plm-text-gray-500 plm-uppercase plm-tracking-wider plm-mr-1">Sort:</span>
+        {(['position', 'overall', 'age', 'form'] as SortKey[]).map((key) => (
+          <button
+            key={key}
+            onClick={() => setSortKey(key)}
+            aria-pressed={sortKey === key}
+            className={`plm-px-2.5 plm-py-1.5 plm-text-xs plm-font-medium plm-rounded plm-transition-colors plm-min-h-[44px] ${
+              sortKey === key
+                ? 'plm-bg-gray-900 plm-text-white'
+                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200'
+            }`}
+          >
+            {key.charAt(0).toUpperCase() + key.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      <div className="plm-grid plm-grid-cols-1 lg:plm-grid-cols-2 plm-gap-2">
         {roster.map((player) => {
           const salePrice = getContinentSalePrice(player);
           const canSell = canSellToContinent(player);

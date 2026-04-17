@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useModalParams } from '../../hooks/useModalParams';
 import { refreshPlayerValue } from '../../engine/transfers';
-import type { Club, Player } from '../../types/entities';
+import type { Club, Player, Position } from '../../types/entities';
 
 type ShortlistStatus = 'at_club' | 'transferred' | 'signed' | 'retired';
+
+const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
+type ShortlistSortKey = 'position' | 'overall' | 'age' | 'value';
 
 interface ShortlistEntry {
   playerId: string;
@@ -28,6 +31,8 @@ export function ShortlistPanel({ clubs, playerClubId, isTransferWindow, onMakeOf
   const transferHistory = useGameStore((s) => s.transferHistory);
   const marketListings = useGameStore((s) => s.marketListings);
   const { openModal } = useModalParams();
+  const [sortKey, setSortKey] = useState<ShortlistSortKey>('position');
+  const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
 
   const entries = useMemo<ShortlistEntry[]>(() => {
     return shortlist.map((playerId) => {
@@ -61,6 +66,32 @@ export function ShortlistPanel({ clubs, playerClubId, isTransferWindow, onMakeOf
     });
   }, [shortlist, clubs, playerClubId, transferHistory]);
 
+  const visibleEntries = useMemo<ShortlistEntry[]>(() => {
+    let result = entries;
+    if (filterPos !== 'ALL') {
+      result = result.filter((e) => e.player?.position === filterPos);
+    }
+    const sorted = [...result].sort((a, b) => {
+      // Retired/unknown players always last
+      if (!a.player && !b.player) return 0;
+      if (!a.player) return 1;
+      if (!b.player) return -1;
+      switch (sortKey) {
+        case 'position': {
+          const posA = POSITION_ORDER.indexOf(a.player.position);
+          const posB = POSITION_ORDER.indexOf(b.player.position);
+          if (posA !== posB) return posA - posB;
+          return b.player.overall - a.player.overall;
+        }
+        case 'overall': return b.player.overall - a.player.overall;
+        case 'age': return a.player.age - b.player.age;
+        case 'value': return refreshPlayerValue(b.player) - refreshPlayerValue(a.player);
+        default: return 0;
+      }
+    });
+    return sorted;
+  }, [entries, filterPos, sortKey]);
+
   if (shortlist.length === 0) {
     return (
       <div className="plm-text-center plm-py-12">
@@ -82,8 +113,45 @@ export function ShortlistPanel({ clubs, playerClubId, isTransferWindow, onMakeOf
         </span>
       </div>
 
-      <div className="plm-space-y-2">
-        {entries.map((entry) => (
+      {/* Position filter */}
+      <div className="plm-flex plm-flex-wrap plm-gap-1.5 plm-mb-2" role="group" aria-label="Filter by position">
+        {(['ALL', ...POSITION_ORDER] as const).map((pos) => (
+          <button
+            key={pos}
+            onClick={() => setFilterPos(pos)}
+            aria-pressed={filterPos === pos}
+            className={`plm-px-3 plm-py-1.5 plm-text-xs plm-font-medium plm-rounded plm-transition-colors plm-min-h-[44px] plm-min-w-[44px] ${
+              filterPos === pos
+                ? 'plm-bg-gray-900 plm-text-white'
+                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200'
+            }`}
+          >
+            {pos}
+          </button>
+        ))}
+      </div>
+
+      {/* Sort */}
+      <div className="plm-flex plm-flex-wrap plm-items-center plm-gap-1 plm-mb-3" role="group" aria-label="Sort shortlist">
+        <span className="plm-text-[10px] plm-text-gray-500 plm-uppercase plm-tracking-wider plm-mr-1">Sort:</span>
+        {(['position', 'overall', 'age', 'value'] as ShortlistSortKey[]).map((key) => (
+          <button
+            key={key}
+            onClick={() => setSortKey(key)}
+            aria-pressed={sortKey === key}
+            className={`plm-px-2.5 plm-py-1.5 plm-text-xs plm-font-medium plm-rounded plm-transition-colors plm-min-h-[44px] ${
+              sortKey === key
+                ? 'plm-bg-gray-900 plm-text-white'
+                : 'plm-bg-gray-100 plm-text-gray-600 hover:plm-bg-gray-200'
+            }`}
+          >
+            {key.charAt(0).toUpperCase() + key.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      <div className="plm-grid plm-grid-cols-1 lg:plm-grid-cols-2 plm-gap-2">
+        {visibleEntries.map((entry) => (
           <ShortlistRow
             key={entry.playerId}
             entry={entry}

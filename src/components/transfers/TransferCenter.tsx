@@ -575,7 +575,11 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
       </div>
 
       {/* Content — single active module on all breakpoints */}
-      <div className="plm-max-w-4xl plm-mx-auto plm-px-4 plm-py-4">
+      <div className={`${
+        activeTab === 'squad' || activeTab === 'incoming' || activeTab === 'outgoing' || activeTab === 'shortlist'
+          ? 'plm-max-w-6xl'
+          : 'plm-max-w-4xl'
+      } plm-mx-auto plm-px-4 plm-py-4`}>
         {activeTab === 'market' && (
           <MarketBoard
             listings={marketPlayersWithListings}
