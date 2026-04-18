@@ -428,25 +428,29 @@ export function RetroPlayerCard({
       onKeyDown={disableFlip ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFlip(); } }}
       aria-label={disableFlip ? undefined : `${player.name} card — tap to flip`}
     >
-      {/* ─── Club crest watermark (ALL card tiers when clubId provided) ─── */}
-      {clubId && (
+      {/* ─── Background crest / flag layout ─────────────────────────────
+          • Standard cards: a single club crest centered behind the emoji.
+          • Elite (gold) cards: national flag on the left + club crest
+            slightly right of center, both at the same height. Crest sits
+            ahead of the flag on the z-axis. */}
+      {clubId && !isGold && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
           <img
             src={getClubLogoUrl(clubId)}
             alt=""
-            className="plm-absolute plm-opacity-[0.16]"
+            className="plm-absolute plm-opacity-[0.18]"
             style={{
-              width: '50%',
+              width: '55%',
               height: 'auto',
-              bottom: '15%',
-              right: '-5%',
+              top: '10%',
+              left: '50%',
+              transform: 'translateX(-50%)',
             }}
             aria-hidden="true"
           />
         </div>
       )}
 
-      {/* ─── National flag watermark (gold cards only) ─── */}
       {isGold && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
           <img
@@ -454,10 +458,27 @@ export function RetroPlayerCard({
             alt=""
             className="plm-absolute plm-opacity-[0.14]"
             style={{
-              width: '80%',
+              width: '48%',
               height: 'auto',
               top: '10%',
-              left: '10%',
+              left: '3%',
+            }}
+            aria-hidden="true"
+          />
+        </div>
+      )}
+
+      {isGold && clubId && (
+        <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[2] plm-overflow-hidden">
+          <img
+            src={getClubLogoUrl(clubId)}
+            alt=""
+            className="plm-absolute plm-opacity-[0.2]"
+            style={{
+              width: '44%',
+              height: 'auto',
+              top: '10%',
+              left: '54%',
             }}
             aria-hidden="true"
           />
