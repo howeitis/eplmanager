@@ -208,36 +208,44 @@ export interface ScoutSummaryContext {
   recentTransfers?: TransferRecord[];
 }
 
-export function generateScoutSummary(
+export interface ScoutSummaryParts {
+  form: string;
+  bio: string;
+}
+
+export function generateScoutSummaryParts(
   player: Player,
   context?: ScoutSummaryContext,
-): string {
-  const parts: string[] = [];
+): ScoutSummaryParts {
+  const bioParts: string[] = [];
 
-  // Preamble + trait always anchor the summary.
-  parts.push(getAgePreamble(player.age, player.overall));
-  parts.push(getTraitPhrase(player.trait, player.overall));
+  bioParts.push(getAgePreamble(player.age, player.overall));
+  bioParts.push(getTraitPhrase(player.trait, player.overall));
 
-  // Hero stat is punchy — keep when it fires.
   const heroStat = getHeroStatSentence(player.stats);
-  if (heroStat) parts.push(heroStat);
+  if (heroStat) bioParts.push(heroStat);
 
-  // Only keep form when it's notable (hot or cold), otherwise it's filler.
-  const form = player.form ?? 0;
-  if (form >= 2 || form <= -2) {
-    parts.push(getFormSentence(form));
-  }
-
-  // Transfer context wins over the academy line — if we have a transfer, skip academy.
   const transferLine = context?.recentTransfers
     ? getTransferSentence(player, context.recentTransfers)
     : null;
   if (transferLine) {
-    parts.push(transferLine);
+    bioParts.push(transferLine);
   } else if (player.age <= 22) {
-    // Only surface the academy tidbit for young players where it carries real meaning.
-    parts.push(getYouthAcademySentence(player));
+    bioParts.push(getYouthAcademySentence(player));
   }
 
-  return parts.join(' ');
+  return {
+    form: getFormSentence(player.form ?? 0),
+    bio: bioParts.join(' '),
+  };
+}
+
+export function generateScoutSummary(
+  player: Player,
+  context?: ScoutSummaryContext,
+): string {
+  const { form, bio } = generateScoutSummaryParts(player, context);
+  const formValue = player.form ?? 0;
+  // Preserve legacy behavior: only include the form sentence when notable.
+  return formValue >= 2 || formValue <= -2 ? `${bio} ${form}` : bio;
 }
