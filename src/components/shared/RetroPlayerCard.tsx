@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
 import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '../../data/assets';
 import { generateScoutSummaryParts } from '../../engine/scoutSummary';
@@ -146,18 +146,29 @@ function getFoilStampColor(overall: number, age?: number): string {
 const ELITE_STAT_THRESHOLD = 90;
 const ELITE_STAT_COLOR = '#9D174D';
 
-// Very subtle form-driven drop shadow — greens for hot, reds for cold.
+// Form-driven drop shadow — reads as an active energy field.
+// Greens are vibrant electric emerald (not muted earth green); reds stay red.
 // form is clamped to [-5, 5] by the engine.
 function getFormDropShadow(form: number): string | null {
-  if (form >= 4) return '0 0 14px 1px rgba(6,78,59,0.5)';       // dark green
-  if (form === 3) return '0 0 12px 1px rgba(21,128,61,0.42)';    // mid green
-  if (form === 2) return '0 0 10px 1px rgba(34,197,94,0.32)';    // green
-  if (form === 1) return '0 0 8px 1px rgba(134,239,172,0.32)';   // light green
+  if (form >= 4) return '0 0 14px 1px rgba(16,185,129,0.95)';    // vivid emerald
+  if (form === 3) return '0 0 12px 1px rgba(16,185,129,0.80)';   // emerald
+  if (form === 2) return '0 0 10px 1px rgba(52,211,153,0.65)';   // bright emerald
+  if (form === 1) return '0 0 8px 1px rgba(52,211,153,0.45)';    // soft emerald
   if (form === 0) return null;                                   // neutral
-  if (form === -1) return '0 0 8px 1px rgba(252,165,165,0.32)';  // light red
-  if (form === -2) return '0 0 10px 1px rgba(239,68,68,0.32)';   // red
-  if (form === -3) return '0 0 12px 1px rgba(220,38,38,0.42)';   // mid red
-  return '0 0 14px 1px rgba(127,29,29,0.5)';                     // dark red
+  if (form === -1) return '0 0 8px 1px rgba(252,165,165,0.45)';  // light red
+  if (form === -2) return '0 0 10px 1px rgba(239,68,68,0.55)';   // red
+  if (form === -3) return '0 0 12px 1px rgba(220,38,38,0.65)';   // mid red
+  return '0 0 14px 1px rgba(127,29,29,0.80)';                    // dark red
+}
+
+// Shift a hex color by an additive RGB offset (positive = lighten, negative = darken).
+function shiftHex(hex: string, delta: number): string {
+  const clamp = (v: number) => Math.max(0, Math.min(255, v));
+  const r = clamp(parseInt(hex.slice(1, 3), 16) + delta);
+  const g = clamp(parseInt(hex.slice(3, 5), 16) + delta);
+  const b = clamp(parseInt(hex.slice(5, 7), 16) + delta);
+  const toHex = (v: number) => v.toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 function isLightColor(hex: string): boolean {
@@ -210,7 +221,10 @@ export function RetroPlayerCard({
 }: RetroPlayerCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [glarePos, setGlarePos] = useState<{ x: number; y: number } | null>(null);
+  const [metaScale, setMetaScale] = useState(1);
   const cardRef = useRef<HTMLDivElement>(null);
+  const metaWrapRef = useRef<HTMLDivElement>(null);
+  const metaInnerRef = useRef<HTMLDivElement>(null);
 
   const isGold = player.overall >= 80;
   const isShimmerGold = player.overall >= 86;
@@ -289,6 +303,21 @@ export function RetroPlayerCard({
     if (disableFlip) return;
     setIsFlipped((prev) => !prev);
   }, [disableFlip]);
+
+  // Auto-scale the nationality · age · club meta line so it always fits on
+  // one line, even for long country or club names.
+  useLayoutEffect(() => {
+    if (isFlipped) return;
+    const wrap = metaWrapRef.current;
+    const inner = metaInnerRef.current;
+    if (!wrap || !inner) return;
+    // Measure natural content width without scaling.
+    const natural = inner.scrollWidth;
+    const avail = wrap.clientWidth;
+    if (!natural || !avail) return;
+    const next = natural > avail ? Math.max(0.55, avail / natural) : 1;
+    setMetaScale((prev) => (Math.abs(prev - next) > 0.005 ? next : prev));
+  }, [player.nationality, player.age, clubName, size, isFlipped]);
 
   // ─── Card back (just the clean game logo) ───
   if (isFlipped) {
@@ -373,7 +402,7 @@ export function RetroPlayerCard({
   return (
     <div
       ref={cardRef}
-      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${isShimmerGold ? 'plm-animate-border-shimmer' : ''}`}
+      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 plm-flex plm-flex-col ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${isShimmerGold ? 'plm-animate-border-shimmer' : ''}`}
       style={{
         background: bgGradient,
         border: `3px solid ${borderColor}`,
@@ -570,8 +599,15 @@ export function RetroPlayerCard({
         </div>
       </div>
 
-      {/* Face emoji */}
-      <div className="plm-flex plm-justify-center plm-relative plm-z-[5]">
+      {/* Face emoji — fixed-height container so the name plate below never
+          drifts up into the emoji glyph's descent. */}
+      <div
+        className="plm-flex plm-justify-center plm-items-end plm-relative plm-z-[5] plm-flex-shrink-0"
+        style={{
+          height:
+            size === 'xl' ? 96 : size === 'lg' ? 72 : size === 'md' ? 56 : 42,
+        }}
+      >
         <div
           className={`${fs.emoji} plm-leading-none`}
           style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
@@ -580,72 +616,99 @@ export function RetroPlayerCard({
         </div>
       </div>
 
-      {/* Name plate */}
+      {/* Name plate — subtle linear gradient (darker edges → brighter center)
+          with inner shadow for an embossed feel. */}
+      {(() => {
+        const baseName = clubColors?.primary || borderColor;
+        const nameEdge = shiftHex(baseName, -28);
+        const nameCenter = shiftHex(baseName, 18);
+        return (
+          <div
+            className="plm-mx-2.5 plm-mt-1.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5] plm-flex-shrink-0"
+            style={{
+              background: `linear-gradient(to right, ${nameEdge} 0%, ${nameCenter} 50%, ${nameEdge} 100%)`,
+              borderBottom: `2px solid ${clubColors?.secondary || overallColor}`,
+              boxShadow:
+                'inset 0 1px 2px rgba(0,0,0,0.35), inset 0 -1px 2px rgba(0,0,0,0.22)',
+            }}
+          >
+            <div
+              key={`name-${player.id}`}
+              className={`${fs.name} plm-font-display plm-font-bold plm-uppercase plm-tracking-wide plm-truncate plm-px-1 plm-animate-name-write`}
+              style={{
+                color: isLightColor(baseName) ? '#1A1A1A' : '#FFFFFF',
+                textShadow: isLightColor(baseName)
+                  ? '0 1px 0 rgba(255,255,255,0.4)'
+                  : '0 1px 1px rgba(0,0,0,0.45)',
+              }}
+            >
+              {player.name}{isCaptain ? ' ©' : ''}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Editorial meta line: nationality · age · club — foil-stamped metallic.
+          Content is auto-scaled via `metaScale` so long country/club names
+          always fit on one line. */}
       <div
-        className="plm-mx-2.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5]"
-        style={{
-          backgroundColor: clubColors?.primary || borderColor,
-          borderBottom: `2px solid ${clubColors?.secondary || overallColor}`,
-        }}
+        ref={metaWrapRef}
+        className="plm-mt-1 plm-px-3 plm-relative plm-z-[5] plm-flex-shrink-0 plm-overflow-hidden"
       >
         <div
-          key={`name-${player.id}`}
-          className={`${fs.name} plm-font-display plm-font-bold plm-uppercase plm-tracking-wide plm-truncate plm-px-1 plm-animate-name-write`}
-          style={{ color: isLightColor(clubColors?.primary || borderColor) ? '#1A1A1A' : '#FFFFFF' }}
-        >
-          {player.name}{isCaptain ? ' ©' : ''}
-        </div>
-      </div>
-
-      {/* Editorial meta line: nationality · age · club — foil-stamped metallic */}
-      <div
-        className="plm-flex plm-justify-center plm-items-center plm-mt-1 plm-px-3 plm-relative plm-z-[5]"
-        style={{ columnGap: size === 'xl' ? 14 : size === 'lg' ? 10 : 8 }}
-      >
-        <span
-          className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
-          style={{ color: foilStampColor, letterSpacing: '0.18em' }}
-        >
-          {getNationalityLabel(player.nationality)}
-        </span>
-        <span
-          aria-hidden="true"
-          className="plm-inline-block plm-rounded-full"
+          ref={metaInnerRef}
+          className="plm-flex plm-justify-center plm-items-center plm-whitespace-nowrap"
           style={{
-            width: 3,
-            height: 3,
-            backgroundColor: foilStampColor,
-            opacity: 0.7,
-            flexShrink: 0,
+            columnGap: size === 'xl' ? 14 : size === 'lg' ? 10 : 8,
+            transform: metaScale < 1 ? `scale(${metaScale})` : undefined,
+            transformOrigin: 'center',
           }}
-        />
-        <span
-          className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
-          style={{ color: foilStampColor, letterSpacing: '0.18em' }}
         >
-          Age {player.age}
-        </span>
-        {clubName && (
-          <>
-            <span
-              aria-hidden="true"
-              className="plm-inline-block plm-rounded-full"
-              style={{
-                width: 3,
-                height: 3,
-                backgroundColor: foilStampColor,
-                opacity: 0.7,
-                flexShrink: 0,
-              }}
-            />
-            <span
-              className={`${fs.pos} plm-uppercase plm-font-semibold plm-truncate`}
-              style={{ color: foilStampColor, letterSpacing: '0.18em' }}
-            >
-              {clubName}
-            </span>
-          </>
-        )}
+          <span
+            className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
+            style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+          >
+            {getNationalityLabel(player.nationality)}
+          </span>
+          <span
+            aria-hidden="true"
+            className="plm-inline-block plm-rounded-full"
+            style={{
+              width: 3,
+              height: 3,
+              backgroundColor: foilStampColor,
+              opacity: 0.7,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
+            style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+          >
+            Age {player.age}
+          </span>
+          {clubName && (
+            <>
+              <span
+                aria-hidden="true"
+                className="plm-inline-block plm-rounded-full"
+                style={{
+                  width: 3,
+                  height: 3,
+                  backgroundColor: foilStampColor,
+                  opacity: 0.7,
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
+                style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+              >
+                {clubName}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Stats grid — 6 columns, label over value, tabular bold numbers.
@@ -682,12 +745,10 @@ export function RetroPlayerCard({
         })}
       </div>
 
-      {/* Bio paragraph — scout summary, no label */}
-      {size !== 'sm' && summaryParts && (
-        <div
-          className="plm-absolute plm-left-2.5 plm-right-2.5 plm-z-[5]"
-          style={{ bottom: size === 'xl' ? 22 : 18 }}
-        >
+      {/* Bio paragraph — scout summary, centered vertically in the space
+          between the stats row and the bottom bar. */}
+      {size !== 'sm' && summaryParts ? (
+        <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-px-2.5 plm-relative plm-z-[5] plm-min-h-0">
           <p
             className={`${
               size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
@@ -697,6 +758,9 @@ export function RetroPlayerCard({
             {summaryParts.bio}
           </p>
         </div>
+      ) : (
+        // Still consume the flex slot so the bottom bar hugs the card bottom.
+        <div className="plm-flex-1" />
       )}
 
       {/* ─── Achievement stamps (gold cards) ─── */}
@@ -727,7 +791,7 @@ export function RetroPlayerCard({
       )}
 
 
-      {/* ─── Serial number bottom-left ─── */}
+      {/* ─── Serial number bottom-left (metallic foil stamp) ─── */}
       {size !== 'sm' && (
         <div
           key={`serial-${player.id}`}
@@ -735,41 +799,42 @@ export function RetroPlayerCard({
         >
           <span
             className="plm-font-mono plm-font-bold"
-            style={{ fontSize: size === 'xl' ? 9 : 7, color: '#DC2626' }}
+            style={{ fontSize: size === 'xl' ? 9 : 7, color: foilStampColor }}
           >
             {serialNumber}
           </span>
         </div>
       )}
 
-      {/* ─── Corner shape with achievement text overlaid on top ─── */}
-      <div className="plm-absolute plm-bottom-1 plm-right-1.5 plm-z-[5]">
-        <div className="plm-relative plm-flex plm-items-center plm-justify-center">
-          <CornerShape
-            shape={cornerShape}
-            color={overallColor}
-            borderColor={borderColor}
-            size={
-              cornerOverlay
-                ? (size === 'xl' ? 46 : size === 'lg' ? 40 : size === 'md' ? 36 : 28)
-                : (size === 'sm' ? 16 : 20)
-            }
-          />
-          {cornerOverlay && (
-            <span
-              className="plm-absolute plm-inset-0 plm-flex plm-items-center plm-justify-center plm-font-display plm-font-black plm-uppercase plm-pointer-events-none"
-              style={{
-                fontSize: size === 'xl' ? 9 : size === 'lg' ? 8 : 7,
-                color: '#DC2626',
-                textShadow: '0 0 3px rgba(255,255,255,0.85), 0 0 1px rgba(255,255,255,1)',
-                letterSpacing: '0.04em',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {cornerOverlay}
-            </span>
-          )}
+      {/* ─── Centered achievement label at the bottom of the card ─── */}
+      {cornerOverlay && size !== 'sm' && (
+        <div
+          className="plm-absolute plm-bottom-1 plm-left-1/2 plm-z-[6] plm-pointer-events-none"
+          style={{ transform: 'translateX(-50%)' }}
+        >
+          <span
+            className="plm-font-display plm-font-black plm-uppercase plm-whitespace-nowrap"
+            style={{
+              fontSize: size === 'xl' ? 12 : size === 'lg' ? 11 : 10,
+              color: '#DC2626',
+              letterSpacing: '0.12em',
+              textShadow:
+                '0 0 4px rgba(255,255,255,0.85), 0 1px 1px rgba(0,0,0,0.35)',
+            }}
+          >
+            {cornerOverlay}
+          </span>
         </div>
+      )}
+
+      {/* ─── Small corner shape bottom-right ─── */}
+      <div className="plm-absolute plm-bottom-1 plm-right-1.5 plm-z-[5]">
+        <CornerShape
+          shape={cornerShape}
+          color={overallColor}
+          borderColor={borderColor}
+          size={size === 'sm' ? 16 : 20}
+        />
       </div>
     </div>
   );
