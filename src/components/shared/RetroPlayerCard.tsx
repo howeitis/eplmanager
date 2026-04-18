@@ -277,6 +277,14 @@ export function RetroPlayerCard({
 
   const fs = fontSizes[size];
 
+  // Emoji sizing — 25% bigger than the default Tailwind text-*xl ramp.
+  const emojiFontPx: Record<string, number> = { sm: 38, md: 45, lg: 60, xl: 90 };
+  const emojiBoxPx: Record<string, number> = { sm: 52, md: 70, lg: 90, xl: 120 };
+
+  // Reserved vertical space at the bottom of the card so the bio centers
+  // above the tallest bottom element (ICON/LEGEND text or corner shape).
+  const bottomReservePx: Record<string, number> = { sm: 18, md: 24, lg: 26, xl: 30 };
+
   // ─── Foil glare effect (gold cards only) ───
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isGold || !cardRef.current) return;
@@ -520,7 +528,7 @@ export function RetroPlayerCard({
       )}
 
       {/* Top section: OVR + Position + Flag */}
-      <div className="plm-flex plm-justify-between plm-items-start plm-px-2.5 plm-pt-2 plm-relative plm-z-[5]">
+      <div className="plm-flex plm-justify-between plm-items-start plm-px-2.5 plm-pt-1 plm-relative plm-z-[5]">
         <div className="plm-text-center">
           <div
             key={`ovr-${player.overall}`}
@@ -600,17 +608,18 @@ export function RetroPlayerCard({
       </div>
 
       {/* Face emoji — fixed-height container so the name plate below never
-          drifts up into the emoji glyph's descent. */}
+          drifts up into the emoji glyph's descent. Sized 25% larger than the
+          default Tailwind text-ramp so the emoji reads as the visual anchor. */}
       <div
         className="plm-flex plm-justify-center plm-items-end plm-relative plm-z-[5] plm-flex-shrink-0"
-        style={{
-          height:
-            size === 'xl' ? 96 : size === 'lg' ? 72 : size === 'md' ? 56 : 42,
-        }}
+        style={{ height: emojiBoxPx[size] }}
       >
         <div
-          className={`${fs.emoji} plm-leading-none`}
-          style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+          className="plm-leading-none"
+          style={{
+            fontSize: emojiFontPx[size],
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
+          }}
         >
           {getPlayerEmoji(player.id)}
         </div>
@@ -624,7 +633,7 @@ export function RetroPlayerCard({
         const nameCenter = shiftHex(baseName, 18);
         return (
           <div
-            className="plm-mx-2.5 plm-mt-1.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5] plm-flex-shrink-0"
+            className="plm-mx-2.5 plm-mt-0.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5] plm-flex-shrink-0"
             style={{
               background: `linear-gradient(to right, ${nameEdge} 0%, ${nameCenter} 50%, ${nameEdge} 100%)`,
               borderBottom: `2px solid ${clubColors?.secondary || overallColor}`,
@@ -713,7 +722,7 @@ export function RetroPlayerCard({
 
       {/* Stats grid — 6 columns, label over value, tabular bold numbers.
           Only the single top stat (≥90) gets the dark-magenta elite accent. */}
-      <div className="plm-mx-2.5 plm-mt-1.5 plm-grid plm-grid-cols-6 plm-gap-x-1 plm-relative plm-z-[5]">
+      <div className="plm-mx-2.5 plm-mt-1 plm-grid plm-grid-cols-6 plm-gap-x-1 plm-relative plm-z-[5]">
         {STAT_KEYS.map((stat) => {
           const value = player.stats[stat];
           const isElite =
@@ -745,10 +754,13 @@ export function RetroPlayerCard({
         })}
       </div>
 
-      {/* Bio paragraph — scout summary, centered vertically in the space
-          between the stats row and the bottom bar. */}
+      {/* Bio paragraph — centered in the space between the stats row and the
+          top of the tallest bottom element (reserved via paddingBottom). */}
       {size !== 'sm' && summaryParts ? (
-        <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-px-2.5 plm-relative plm-z-[5] plm-min-h-0">
+        <div
+          className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-px-2.5 plm-relative plm-z-[5] plm-min-h-0"
+          style={{ paddingBottom: bottomReservePx[size] }}
+        >
           <p
             className={`${
               size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
@@ -817,9 +829,10 @@ export function RetroPlayerCard({
             style={{
               fontSize: size === 'xl' ? 12 : size === 'lg' ? 11 : 10,
               color: '#DC2626',
-              letterSpacing: '0.12em',
+              letterSpacing: '0.14em',
+              WebkitTextStroke: '0.6px #DC2626',
               textShadow:
-                '0 0 4px rgba(255,255,255,0.85), 0 1px 1px rgba(0,0,0,0.35)',
+                '0 0 4px rgba(255,255,255,0.9), 0 1px 1px rgba(0,0,0,0.35)',
             }}
           >
             {cornerOverlay}
