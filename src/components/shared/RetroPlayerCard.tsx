@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
 import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '../../data/assets';
-import { generateScoutSummary } from '../../engine/scoutSummary';
+import { generateScoutSummaryParts } from '../../engine/scoutSummary';
 
 // ─── Emoji pool ───
 
@@ -129,6 +129,23 @@ function getCardBgGradient(overall: number, age?: number): string {
   return 'linear-gradient(135deg, #FAF0E6 0%, #D2B48C 30%, #FAF0E6 50%, #D2B48C 70%, #FAF0E6 100%)';
 }
 
+// Foil-stamped metallic ink that complements each card tier. Deeper,
+// higher-contrast shades so the stamp reads as embossed metallic on the
+// card's base color rather than re-using the bright overall hue.
+function getFoilStampColor(overall: number, age?: number): string {
+  if (age !== undefined && age <= 21 && overall >= 75 && overall < 80) {
+    return '#6B5A14'; // antique champagne foil (future star)
+  }
+  if (overall >= 80) return '#7A5A10'; // deep antique gold foil
+  if (overall >= 75) return '#3F3F46'; // brushed pewter foil
+  if (overall >= 65) return '#5A3418'; // burnished copper foil
+  return '#4A3A2E'; // dark sepia foil
+}
+
+// Elite-stat accent — magenta foil for stats that break 90.
+const ELITE_STAT_THRESHOLD = 90;
+const ELITE_STAT_COLOR = '#C2185B';
+
 function isLightColor(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -188,10 +205,12 @@ export function RetroPlayerCard({
   const overallColor = getOverallColor(player.overall, player.age);
   const borderColor = getCardBorderColor(player.overall, player.age);
   const bgGradient = getCardBgGradient(player.overall, player.age);
+  const foilStampColor = getFoilStampColor(player.overall, player.age);
   const heroStat = (isGold || futureStar) ? getHeroStat(player.stats) : null;
   const heroStatElite = heroStat !== null && heroStat.value >= 95;
   const serialNumber = getSerialNumber(player.id);
   const trophies = player.trophiesWon || [];
+  const summaryParts = size !== 'sm' ? generateScoutSummaryParts(player, { recentTransfers }) : null;
 
   // ─── Bottom-right corner shape ───
   // Wonderkid → twinkling star, gold (80+) → star, silver (65+) → diamond, else → circle.
@@ -541,47 +560,80 @@ export function RetroPlayerCard({
         </div>
       </div>
 
-      {/* Nationality + Age */}
-      <div className="plm-flex plm-justify-center plm-items-center plm-gap-1 plm-mt-0.5 plm-relative plm-z-[5]">
-        <span className={`${fs.pos} plm-uppercase plm-tracking-wider plm-font-semibold`} style={{ color: borderColor }}>
+      {/* Editorial meta line: nationality · age · club — foil-stamped metallic */}
+      <div
+        className="plm-flex plm-justify-center plm-items-center plm-mt-1 plm-px-3 plm-relative plm-z-[5]"
+        style={{ columnGap: size === 'xl' ? 14 : size === 'lg' ? 10 : 8 }}
+      >
+        <span
+          className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
+          style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+        >
           {getNationalityLabel(player.nationality)}
         </span>
-        <span style={{ color: borderColor }}>&middot;</span>
-        <span className={`${fs.pos} plm-uppercase plm-tracking-wider plm-font-semibold`} style={{ color: borderColor }}>
+        <span
+          aria-hidden="true"
+          className="plm-inline-block plm-rounded-full"
+          style={{
+            width: 3,
+            height: 3,
+            backgroundColor: foilStampColor,
+            opacity: 0.7,
+            flexShrink: 0,
+          }}
+        />
+        <span
+          className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
+          style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+        >
           Age {player.age}
         </span>
+        {clubName && (
+          <>
+            <span
+              aria-hidden="true"
+              className="plm-inline-block plm-rounded-full"
+              style={{
+                width: 3,
+                height: 3,
+                backgroundColor: foilStampColor,
+                opacity: 0.7,
+                flexShrink: 0,
+              }}
+            />
+            <span
+              className={`${fs.pos} plm-uppercase plm-font-semibold plm-truncate`}
+              style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+            >
+              {clubName}
+            </span>
+          </>
+        )}
       </div>
 
-      {/* Full club name */}
-      {clubName && (
-        <div className="plm-flex plm-justify-center plm-px-2 plm-mt-0.5 plm-relative plm-z-[5]">
-          <span
-            className={`${fs.pos} plm-uppercase plm-tracking-wider plm-font-semibold plm-text-center plm-leading-tight`}
-            style={{ color: borderColor }}
-          >
-            {clubName}
-          </span>
-        </div>
-      )}
-
-      {/* Stats grid */}
-      <div className="plm-mx-2.5 plm-mt-0.5 plm-grid plm-grid-cols-3 plm-gap-x-1 plm-gap-y-0 plm-relative plm-z-[5]">
+      {/* Stats grid — 6 columns, label over value, tabular bold numbers */}
+      <div className="plm-mx-2.5 plm-mt-1.5 plm-grid plm-grid-cols-6 plm-gap-x-1 plm-relative plm-z-[5]">
         {STAT_KEYS.map((stat) => {
           const value = player.stats[stat];
-          const isHero = heroStat?.key === stat && isGold;
+          const isElite = value >= ELITE_STAT_THRESHOLD;
           return (
-            <div key={stat} className="plm-flex plm-items-center plm-justify-between plm-px-1">
+            <div key={stat} className="plm-flex plm-flex-col plm-items-center plm-justify-center">
               <span
-                className={`${fs.stat} plm-font-bold plm-uppercase`}
-                style={{ color: isHero ? '#DC2626' : borderColor }}
+                className={`${fs.stat} plm-font-semibold plm-uppercase plm-leading-none`}
+                style={{
+                  color: isElite ? ELITE_STAT_COLOR : borderColor,
+                  letterSpacing: '0.1em',
+                  opacity: isElite ? 1 : 0.85,
+                }}
               >
                 {stat}
               </span>
               <span
-                className={`${fs.stat} plm-font-black plm-tabular-nums`}
+                className={`${fs.stat} plm-font-black plm-tabular-nums plm-leading-none plm-mt-0.5`}
                 style={{
-                  color: isHero ? '#DC2626' : '#1A1A1A',
-                  textShadow: isHero ? '0 0 6px rgba(220,38,38,0.4)' : undefined,
+                  color: isElite ? ELITE_STAT_COLOR : '#1A1A1A',
+                  textShadow: isElite ? '0 0 6px rgba(194,24,91,0.35)' : undefined,
+                  fontSize: '115%',
                 }}
               >
                 {value}
@@ -591,19 +643,53 @@ export function RetroPlayerCard({
         })}
       </div>
 
-      {/* Scout summary bio — all card tiers, md+ sizes, fills remaining space */}
-      {size !== 'sm' && (
+      {/* Form + Bio sections — stacked, separated by a subtle hairline */}
+      {size !== 'sm' && summaryParts && (
         <div
           className="plm-absolute plm-left-2.5 plm-right-2.5 plm-z-[5]"
           style={{ bottom: size === 'xl' ? 22 : 18 }}
         >
+          <div
+            className={`${
+              size === 'xl' ? 'plm-text-[10px]' : size === 'lg' ? 'plm-text-[9px]' : 'plm-text-[8px]'
+            } plm-uppercase plm-font-bold plm-tracking-widest plm-text-center`}
+            style={{ color: foilStampColor, opacity: 0.85 }}
+          >
+            Form
+          </div>
+          <p
+            className={`${
+              size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
+            } plm-leading-snug plm-text-center`}
+            style={{ color: '#2B2620' }}
+          >
+            {summaryParts.form}
+          </p>
+          <div
+            className="plm-mx-auto plm-my-1"
+            style={{
+              height: 1,
+              width: '40%',
+              backgroundColor: foilStampColor,
+              opacity: 0.35,
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className={`${
+              size === 'xl' ? 'plm-text-[10px]' : size === 'lg' ? 'plm-text-[9px]' : 'plm-text-[8px]'
+            } plm-uppercase plm-font-bold plm-tracking-widest plm-text-center`}
+            style={{ color: foilStampColor, opacity: 0.85 }}
+          >
+            Bio
+          </div>
           <p
             className={`${
               size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
             } plm-italic plm-leading-snug plm-text-center`}
             style={{ color: '#2B2620' }}
           >
-            {generateScoutSummary(player, { recentTransfers })}
+            {summaryParts.bio}
           </p>
         </div>
       )}
