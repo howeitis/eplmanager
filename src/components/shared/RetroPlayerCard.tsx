@@ -142,9 +142,23 @@ function getFoilStampColor(overall: number, age?: number): string {
   return '#4A3A2E'; // dark sepia foil
 }
 
-// Elite-stat accent — magenta foil for stats that break 90.
+// Elite-stat accent — dark magenta foil. Only the single top stat qualifies.
 const ELITE_STAT_THRESHOLD = 90;
-const ELITE_STAT_COLOR = '#C2185B';
+const ELITE_STAT_COLOR = '#9D174D';
+
+// Very subtle form-driven drop shadow — greens for hot, reds for cold.
+// form is clamped to [-5, 5] by the engine.
+function getFormDropShadow(form: number): string | null {
+  if (form >= 4) return '0 0 14px 1px rgba(6,78,59,0.5)';       // dark green
+  if (form === 3) return '0 0 12px 1px rgba(21,128,61,0.42)';    // mid green
+  if (form === 2) return '0 0 10px 1px rgba(34,197,94,0.32)';    // green
+  if (form === 1) return '0 0 8px 1px rgba(134,239,172,0.32)';   // light green
+  if (form === 0) return null;                                   // neutral
+  if (form === -1) return '0 0 8px 1px rgba(252,165,165,0.32)';  // light red
+  if (form === -2) return '0 0 10px 1px rgba(239,68,68,0.32)';   // red
+  if (form === -3) return '0 0 12px 1px rgba(220,38,38,0.42)';   // mid red
+  return '0 0 14px 1px rgba(127,29,29,0.5)';                     // dark red
+}
 
 function isLightColor(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -201,13 +215,14 @@ export function RetroPlayerCard({
   const isGold = player.overall >= 80;
   const isShimmerGold = player.overall >= 86;
   const futureStar = getFutureStarTier(player);
-  const isOnFire = (player.form ?? 0) >= 5;
   const overallColor = getOverallColor(player.overall, player.age);
   const borderColor = getCardBorderColor(player.overall, player.age);
   const bgGradient = getCardBgGradient(player.overall, player.age);
   const foilStampColor = getFoilStampColor(player.overall, player.age);
-  const heroStat = (isGold || futureStar) ? getHeroStat(player.stats) : null;
+  // Top stat only — we highlight a single elite stat per card.
+  const heroStat = getHeroStat(player.stats);
   const heroStatElite = heroStat !== null && heroStat.value >= 95;
+  const formShadow = getFormDropShadow(player.form ?? 0);
   const serialNumber = getSerialNumber(player.id);
   const trophies = player.trophiesWon || [];
   const summaryParts = size !== 'sm' ? generateScoutSummaryParts(player, { recentTransfers }) : null;
@@ -358,10 +373,13 @@ export function RetroPlayerCard({
   return (
     <div
       ref={cardRef}
-      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${isShimmerGold ? 'plm-animate-border-shimmer' : ''} ${isOnFire ? 'plm-animate-fire-glow' : ''}`}
+      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${isShimmerGold ? 'plm-animate-border-shimmer' : ''}`}
       style={{
         background: bgGradient,
         border: `3px solid ${borderColor}`,
+        boxShadow: formShadow
+          ? `0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1), ${formShadow}`
+          : undefined,
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -462,7 +480,7 @@ export function RetroPlayerCard({
             width: size === 'xl' ? 32 : size === 'lg' ? 26 : 22,
             height: size === 'xl' ? 32 : size === 'lg' ? 26 : 22,
             background: 'rgba(255,255,255,0.92)',
-            border: `1.5px solid ${heroStatElite ? '#DC2626' : borderColor}`,
+            border: `1.5px solid ${heroStatElite ? ELITE_STAT_COLOR : borderColor}`,
             boxShadow: heroStatElite ? undefined : '0 2px 6px rgba(0,0,0,0.2)',
           }}
         >
@@ -527,6 +545,25 @@ export function RetroPlayerCard({
                 title="Wonderkid"
               >
                 WK
+              </div>
+            </div>
+          )}
+          {/* Homegrown wax seal — tucked under the flag */}
+          {player.homegrown && size !== 'sm' && (
+            <div className="plm-flex plm-justify-end plm-mt-0.5">
+              <div
+                className="plm-flex plm-items-center plm-justify-center plm-rounded-full plm-font-black plm-text-white"
+                style={{
+                  width: size === 'xl' ? 22 : 16,
+                  height: size === 'xl' ? 22 : 16,
+                  background: 'radial-gradient(circle at 40% 40%, #dc2626, #7f1d1d)',
+                  border: '1.5px solid #991b1b',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+                  fontSize: size === 'xl' ? 9 : 7,
+                }}
+                title="Homegrown"
+              >
+                HG
               </div>
             </div>
           )}
@@ -611,11 +648,13 @@ export function RetroPlayerCard({
         )}
       </div>
 
-      {/* Stats grid — 6 columns, label over value, tabular bold numbers */}
+      {/* Stats grid — 6 columns, label over value, tabular bold numbers.
+          Only the single top stat (≥90) gets the dark-magenta elite accent. */}
       <div className="plm-mx-2.5 plm-mt-1.5 plm-grid plm-grid-cols-6 plm-gap-x-1 plm-relative plm-z-[5]">
         {STAT_KEYS.map((stat) => {
           const value = player.stats[stat];
-          const isElite = value >= ELITE_STAT_THRESHOLD;
+          const isElite =
+            heroStat?.key === stat && value >= ELITE_STAT_THRESHOLD;
           return (
             <div key={stat} className="plm-flex plm-flex-col plm-items-center plm-justify-center">
               <span
@@ -632,7 +671,7 @@ export function RetroPlayerCard({
                 className={`${fs.stat} plm-font-black plm-tabular-nums plm-leading-none plm-mt-0.5`}
                 style={{
                   color: isElite ? ELITE_STAT_COLOR : '#1A1A1A',
-                  textShadow: isElite ? '0 0 6px rgba(194,24,91,0.35)' : undefined,
+                  textShadow: isElite ? '0 0 6px rgba(157,23,77,0.35)' : undefined,
                   fontSize: '115%',
                 }}
               >
@@ -643,46 +682,12 @@ export function RetroPlayerCard({
         })}
       </div>
 
-      {/* Form + Bio sections — stacked, separated by a subtle hairline */}
+      {/* Bio paragraph — scout summary, no label */}
       {size !== 'sm' && summaryParts && (
         <div
           className="plm-absolute plm-left-2.5 plm-right-2.5 plm-z-[5]"
           style={{ bottom: size === 'xl' ? 22 : 18 }}
         >
-          <div
-            className={`${
-              size === 'xl' ? 'plm-text-[10px]' : size === 'lg' ? 'plm-text-[9px]' : 'plm-text-[8px]'
-            } plm-uppercase plm-font-bold plm-tracking-widest plm-text-center`}
-            style={{ color: foilStampColor, opacity: 0.85 }}
-          >
-            Form
-          </div>
-          <p
-            className={`${
-              size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
-            } plm-leading-snug plm-text-center`}
-            style={{ color: '#2B2620' }}
-          >
-            {summaryParts.form}
-          </p>
-          <div
-            className="plm-mx-auto plm-my-1"
-            style={{
-              height: 1,
-              width: '40%',
-              backgroundColor: foilStampColor,
-              opacity: 0.35,
-            }}
-            aria-hidden="true"
-          />
-          <div
-            className={`${
-              size === 'xl' ? 'plm-text-[10px]' : size === 'lg' ? 'plm-text-[9px]' : 'plm-text-[8px]'
-            } plm-uppercase plm-font-bold plm-tracking-widest plm-text-center`}
-            style={{ color: foilStampColor, opacity: 0.85 }}
-          >
-            Bio
-          </div>
           <p
             className={`${
               size === 'xl' ? 'plm-text-xs' : size === 'lg' ? 'plm-text-[10px]' : 'plm-text-[9px]'
@@ -722,32 +727,6 @@ export function RetroPlayerCard({
       )}
 
 
-      {/* ─── Homegrown wax seal on club crest area ─── */}
-      {player.homegrown && clubId && size !== 'sm' && (
-        <div
-          className="plm-absolute plm-z-[16]"
-          style={{
-            bottom: size === 'xl' ? 52 : size === 'lg' ? 42 : 34,
-            right: size === 'xl' ? 10 : 8,
-          }}
-        >
-          <div
-            className="plm-flex plm-items-center plm-justify-center plm-rounded-full plm-font-black plm-text-white"
-            style={{
-              width: size === 'xl' ? 26 : size === 'lg' ? 22 : 18,
-              height: size === 'xl' ? 26 : size === 'lg' ? 22 : 18,
-              background: 'radial-gradient(circle at 40% 40%, #dc2626, #7f1d1d)',
-              border: '1.5px solid #991b1b',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
-              fontSize: size === 'xl' ? 9 : 7,
-            }}
-            title="Homegrown"
-          >
-            HG
-          </div>
-        </div>
-      )}
-
       {/* ─── Serial number bottom-left ─── */}
       {size !== 'sm' && (
         <div
@@ -763,27 +742,34 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {/* ─── Corner shape + achievement text (bottom-right) ─── */}
-      <div className="plm-absolute plm-bottom-1 plm-right-1.5 plm-z-[5] plm-flex plm-items-center plm-gap-1">
-        {cornerOverlay && (
-          <span
-            className="plm-font-display plm-font-black plm-uppercase plm-tracking-wider"
-            style={{
-              fontSize: size === 'xl' ? 10 : size === 'lg' ? 9 : 8,
-              color: '#DC2626',
-              textShadow: '0 0 3px rgba(255,255,255,0.6)',
-              letterSpacing: '0.08em',
-            }}
-          >
-            {cornerOverlay}
-          </span>
-        )}
-        <CornerShape
-          shape={cornerShape}
-          color={overallColor}
-          borderColor={borderColor}
-          size={size === 'sm' ? 16 : 20}
-        />
+      {/* ─── Corner shape with achievement text overlaid on top ─── */}
+      <div className="plm-absolute plm-bottom-1 plm-right-1.5 plm-z-[5]">
+        <div className="plm-relative plm-flex plm-items-center plm-justify-center">
+          <CornerShape
+            shape={cornerShape}
+            color={overallColor}
+            borderColor={borderColor}
+            size={
+              cornerOverlay
+                ? (size === 'xl' ? 46 : size === 'lg' ? 40 : size === 'md' ? 36 : 28)
+                : (size === 'sm' ? 16 : 20)
+            }
+          />
+          {cornerOverlay && (
+            <span
+              className="plm-absolute plm-inset-0 plm-flex plm-items-center plm-justify-center plm-font-display plm-font-black plm-uppercase plm-pointer-events-none"
+              style={{
+                fontSize: size === 'xl' ? 9 : size === 'lg' ? 8 : 7,
+                color: '#DC2626',
+                textShadow: '0 0 3px rgba(255,255,255,0.85), 0 0 1px rgba(255,255,255,1)',
+                letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {cornerOverlay}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
