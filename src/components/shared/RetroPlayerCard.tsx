@@ -88,11 +88,35 @@ function getSerialNumber(id: string): string {
 }
 
 // ─── Card tier: future stars ───
-function getFutureStarTier(player: Player): 'wonderkid' | 'star' | null {
+// Any u21 player rated 75+ counts as a future star. The very best
+// (u21 + 82+) are promoted to "starboy" and get the louder treatment.
+function getFutureStarTier(player: Player): 'starboy' | 'future-star' | null {
   if (player.age > 21) return null;
-  if (player.overall >= 80) return 'wonderkid';
-  if (player.overall >= 75) return 'star';
+  if (player.overall >= 82) return 'starboy';
+  if (player.overall >= 75) return 'future-star';
   return null;
+}
+
+// Map full club names to the shortened form used on player cards.
+const CLUB_SHORT_NAMES: Record<string, string> = {
+  'Manchester City': 'City',
+  'Manchester United': 'United',
+  'Tottenham Hotspur': 'Tottenham',
+  'Newcastle United': 'Newcastle',
+  'Aston Villa': 'Villa',
+  'Brighton & Hove Albion': 'Brighton',
+  'West Ham United': 'West Ham',
+  'AFC Bournemouth': 'Bournemouth',
+  'Crystal Palace': 'Palace',
+  'Wolverhampton Wanderers': 'Wolves',
+  'Nottingham Forest': 'Forest',
+  'Leicester City': 'Leicester',
+  'Ipswich Town': 'Ipswich',
+};
+
+function shortenClubName(name: string | undefined): string | undefined {
+  if (!name) return name;
+  return CLUB_SHORT_NAMES[name] ?? name;
 }
 
 // ─── Color helpers ───
@@ -241,25 +265,32 @@ export function RetroPlayerCard({
   const trophies = player.trophiesWon || [];
   const summaryParts = size !== 'sm' ? generateScoutSummaryParts(player, { recentTransfers }) : null;
 
-  // ─── Bottom-right corner shape ───
-  // Wonderkid → twinkling star, gold (80+) → star, silver (65+) → diamond, else → circle.
-  // Plus overlay text: 8+ trophies → LEGEND, 90+ overall → ICON, wonderkid → FUTURE STAR.
-  const cornerShape: 'circle' | 'diamond' | 'star' | 'twinkling-star' =
-    futureStar === 'wonderkid'
-      ? 'twinkling-star'
-      : player.overall >= 80
-      ? 'star'
-      : player.overall >= 65
-      ? 'diamond'
-      : 'circle';
+  // ─── Bottom-right corner ornament ───
+  // Highest tier wins: legend/icon → 👑, starboy/future star → ✨, gold → star,
+  // silver → diamond, else → circle. The corner emoji replaces the SVG shape
+  // when it's set, so the bottom-right ornament always reflects the top tier.
   const cornerOverlay =
     trophies.length >= 8
       ? 'LEGEND'
       : player.overall >= 90
       ? 'ICON'
-      : futureStar === 'wonderkid'
+      : futureStar === 'starboy'
+      ? 'STARBOY'
+      : futureStar === 'future-star'
       ? 'FUTURE STAR'
       : null;
+  const cornerEmoji: string | null =
+    cornerOverlay === 'LEGEND' || cornerOverlay === 'ICON'
+      ? '👑'
+      : cornerOverlay === 'STARBOY' || cornerOverlay === 'FUTURE STAR'
+      ? '✨'
+      : null;
+  const cornerShape: 'circle' | 'diamond' | 'star' =
+    player.overall >= 80
+      ? 'star'
+      : player.overall >= 65
+      ? 'diamond'
+      : 'circle';
 
   const sizeClasses: Record<string, string> = {
     sm: 'plm-w-40 plm-h-56',
@@ -277,9 +308,11 @@ export function RetroPlayerCard({
 
   const fs = fontSizes[size];
 
-  // Emoji sizing — 25% bigger than the default Tailwind text-*xl ramp.
-  const emojiFontPx: Record<string, number> = { sm: 38, md: 45, lg: 60, xl: 90 };
-  const emojiBoxPx: Record<string, number> = { sm: 52, md: 70, lg: 90, xl: 120 };
+  // Emoji sizing — 25% bigger than the default Tailwind text-*xl ramp,
+  // with a further 15% bump on top so the face stays the visual anchor as
+  // crests grow alongside it.
+  const emojiFontPx: Record<string, number> = { sm: 44, md: 52, lg: 69, xl: 104 };
+  const emojiBoxPx: Record<string, number> = { sm: 60, md: 80, lg: 104, xl: 138 };
 
   // Reserved vertical space at the bottom of the card so the bio centers
   // above the tallest bottom element (ICON/LEGEND text or corner shape).
@@ -429,18 +462,18 @@ export function RetroPlayerCard({
       aria-label={disableFlip ? undefined : `${player.name} card — tap to flip`}
     >
       {/* ─── Background crest / flag layout ─────────────────────────────
-          • Standard cards: a single club crest centered behind the emoji.
-          • Elite (gold) cards: national flag on the left + club crest
-            slightly right of center, both at the same height. Crest sits
-            ahead of the flag on the z-axis. */}
-      {clubId && !isGold && (
+          • Standard cards (<83): a single club crest centered behind the emoji.
+          • Elite cards (83+): national flag on the left + club crest slightly
+            right of center, both at the same height. Crest sits ahead of the
+            flag on the z-axis. */}
+      {clubId && player.overall < 83 && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
           <img
             src={getClubLogoUrl(clubId)}
             alt=""
             className="plm-absolute plm-opacity-[0.18]"
             style={{
-              width: '55%',
+              width: '63%',
               height: 'auto',
               top: '10%',
               left: '50%',
@@ -451,7 +484,7 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {isGold && (
+      {player.overall >= 83 && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
           <img
             src={getNationalityFlagUrl(player.nationality)}
@@ -468,17 +501,17 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {isGold && clubId && (
+      {player.overall >= 83 && clubId && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[2] plm-overflow-hidden">
           <img
             src={getClubLogoUrl(clubId)}
             alt=""
             className="plm-absolute plm-opacity-[0.2]"
             style={{
-              width: '44%',
+              width: '51%',
               height: 'auto',
               top: '10%',
-              left: '54%',
+              left: '49%',
             }}
             aria-hidden="true"
           />
@@ -507,8 +540,8 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {/* ─── Sparkle overlay for wonderkid (u21 80+) or elite (90+) ─── */}
-      {(futureStar === 'wonderkid' || player.overall >= 90) && (
+      {/* ─── Sparkle overlay for any future star (u21 75+) or elite (90+) ─── */}
+      {(futureStar !== null || player.overall >= 90) && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[3] plm-overflow-hidden">
           {[...Array(player.overall >= 90 ? 9 : 6)].map((_, i) => (
             <div
@@ -587,25 +620,6 @@ export function RetroPlayerCard({
               size === 'sm' ? 'plm-w-5 plm-h-3.5' : size === 'xl' ? 'plm-w-8 plm-h-6' : 'plm-w-6 plm-h-4'
             }`}
           />
-          {/* WK badge under flag */}
-          {futureStar === 'wonderkid' && size !== 'sm' && (
-            <div className="plm-flex plm-justify-end plm-mt-0.5">
-              <div
-                className="plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-white plm-font-black"
-                style={{
-                  width: size === 'xl' ? 22 : 16,
-                  height: size === 'xl' ? 22 : 16,
-                  background: 'radial-gradient(circle at 40% 40%, #FFD700, #FF8C00)',
-                  border: '1.5px solid #D97706',
-                  boxShadow: '0 0 6px rgba(255,165,0,0.7)',
-                  fontSize: size === 'xl' ? 9 : 7,
-                }}
-                title="Wonderkid"
-              >
-                WK
-              </div>
-            </div>
-          )}
           {/* Homegrown wax seal — tucked under the flag */}
           {player.homegrown && size !== 'sm' && (
             <div className="plm-flex plm-justify-end plm-mt-0.5">
@@ -734,7 +748,7 @@ export function RetroPlayerCard({
                 className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
                 style={{ color: foilStampColor, letterSpacing: '0.18em' }}
               >
-                {clubName}
+                {shortenClubName(clubName)}
               </span>
             </>
           )}
@@ -861,14 +875,28 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {/* ─── Small corner shape bottom-right ─── */}
-      <div className="plm-absolute plm-bottom-1 plm-right-1.5 plm-z-[5]">
-        <CornerShape
-          shape={cornerShape}
-          color={overallColor}
-          borderColor={borderColor}
-          size={size === 'sm' ? 16 : 20}
-        />
+      {/* ─── Bottom-right corner ornament ───
+          STARBOY/FUTURE STAR → ✨, LEGEND/ICON → 👑, otherwise the tier shape. */}
+      <div className="plm-absolute plm-bottom-1 plm-right-1.5 plm-z-[5] plm-leading-none">
+        {cornerEmoji ? (
+          <span
+            className={cornerEmoji === '✨' ? 'plm-animate-twinkle-star plm-inline-block' : 'plm-inline-block'}
+            style={{
+              fontSize: size === 'sm' ? 14 : size === 'xl' ? 22 : 18,
+              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.45))',
+            }}
+            aria-hidden="true"
+          >
+            {cornerEmoji}
+          </span>
+        ) : (
+          <CornerShape
+            shape={cornerShape}
+            color={overallColor}
+            borderColor={borderColor}
+            size={size === 'sm' ? 16 : 20}
+          />
+        )}
       </div>
     </div>
   );
@@ -880,7 +908,7 @@ function CornerShape({
   borderColor,
   size,
 }: {
-  shape: 'circle' | 'diamond' | 'star' | 'twinkling-star';
+  shape: 'circle' | 'diamond' | 'star';
   color: string;
   borderColor: string;
   size: number;
@@ -899,15 +927,6 @@ function CornerShape({
       <div className="plm-opacity-40">
         <svg width={size} height={size} viewBox="0 0 24 24">
           <path d="M12 2 L22 12 L12 22 L2 12 Z" fill={borderColor} />
-        </svg>
-      </div>
-    );
-  }
-  if (shape === 'twinkling-star') {
-    return (
-      <div className="plm-animate-twinkle-star">
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       </div>
     );
