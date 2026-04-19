@@ -78,6 +78,29 @@ function numberWord(n: number): string {
   return n >= 0 && n < NUM_WORDS.length ? NUM_WORDS[n] : String(n);
 }
 
+// Keep in sync with the shortener used on player cards so club names read
+// the same in both places. Falls through to the full name if not mapped.
+const CLUB_SHORT_NAMES: Record<string, string> = {
+  'Manchester City': 'City',
+  'Manchester United': 'United',
+  'Tottenham Hotspur': 'Tottenham',
+  'Newcastle United': 'Newcastle',
+  'Aston Villa': 'Villa',
+  'Brighton & Hove Albion': 'Brighton',
+  'West Ham United': 'West Ham',
+  'AFC Bournemouth': 'Bournemouth',
+  'Crystal Palace': 'Palace',
+  'Wolverhampton Wanderers': 'Wolves',
+  'Nottingham Forest': 'Forest',
+  'Leicester City': 'Leicester',
+  'Ipswich Town': 'Ipswich',
+};
+
+function shortenClubName(name: string | undefined): string | undefined {
+  if (!name) return name;
+  return CLUB_SHORT_NAMES[name] ?? name;
+}
+
 function buildBio(manager: ManagerProfile): string {
   if (manager.bio && manager.bio.trim().length > 0) return manager.bio.trim();
   const adj = PHILOSOPHY_ADJECTIVE[manager.philosophy] || 'seasoned';
@@ -210,13 +233,24 @@ export function ManagerCard({
         </div>
       </div>
 
-      {/* Editorial meta line — nationality · club, foil-stamped */}
+      {/* Editorial meta line — nationality · age · club (shortened), foil-stamped */}
       <div className="plm-mt-0.5 plm-px-3 plm-relative plm-z-[5] plm-flex-shrink-0 plm-flex plm-justify-center plm-items-center plm-whitespace-nowrap plm-overflow-hidden" style={{ columnGap: 8 }}>
         <span
           className="plm-text-[9px] plm-uppercase plm-font-semibold plm-whitespace-nowrap plm-truncate"
           style={{ color: foilColor, letterSpacing: '0.16em' }}
         >
           {getNationalityLabel(manager.nationality)}
+        </span>
+        <span
+          aria-hidden="true"
+          className="plm-inline-block plm-rounded-full plm-flex-shrink-0"
+          style={{ width: 3, height: 3, backgroundColor: foilColor, opacity: 0.7 }}
+        />
+        <span
+          className="plm-text-[9px] plm-uppercase plm-font-semibold plm-whitespace-nowrap"
+          style={{ color: foilColor, letterSpacing: '0.16em' }}
+        >
+          Age {manager.age}
         </span>
         {clubName && (
           <>
@@ -229,35 +263,48 @@ export function ManagerCard({
               className="plm-text-[9px] plm-uppercase plm-font-semibold plm-whitespace-nowrap plm-truncate"
               style={{ color: foilColor, letterSpacing: '0.16em' }}
             >
-              {clubName}
+              {shortenClubName(clubName)}
             </span>
           </>
         )}
       </div>
 
-      {/* Stats — compact, 2x2 grid so the bio has room */}
-      <div className="plm-mx-2.5 plm-mt-1 plm-grid plm-grid-cols-2 plm-gap-x-2 plm-gap-y-0.5 plm-relative plm-z-[5]">
-        <StatRow label="Age" value={String(manager.age)} borderColor={borderColor} />
-        <StatRow label="Form." value={manager.preferredFormation} borderColor={borderColor} />
-        <StatRow label="Style" value={PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy} borderColor={borderColor} />
-        <StatRow label="Games" value={String(manager.totalGamesManaged)} borderColor={borderColor} />
+      {/* Stat rows — classic one-per-line layout: formation, style, games,
+          then trophies with the emoji row directly under the count. */}
+      <div className="plm-mx-3 plm-mt-1.5 plm-space-y-1 plm-relative plm-z-[5]">
+        <div className="plm-flex plm-justify-between plm-items-baseline">
+          <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Formation</span>
+          <span className="plm-text-xs plm-font-black plm-tabular-nums" style={{ color: '#1A1A1A' }}>{manager.preferredFormation}</span>
+        </div>
+        <div className="plm-flex plm-justify-between plm-items-baseline">
+          <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Style</span>
+          <span className="plm-text-xs plm-font-black" style={{ color: '#1A1A1A' }}>{PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy}</span>
+        </div>
+        <div className="plm-flex plm-justify-between plm-items-baseline">
+          <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Games</span>
+          <span className="plm-text-xs plm-font-black plm-tabular-nums" style={{ color: '#1A1A1A' }}>{manager.totalGamesManaged}</span>
+        </div>
+        <div>
+          <div className="plm-flex plm-justify-between plm-items-baseline">
+            <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Trophies</span>
+            <span className="plm-text-xs plm-font-black plm-tabular-nums" style={{ color: tierColor, textShadow: '0 1px 1px rgba(0,0,0,0.25)' }}>{totalTrophies}</span>
+          </div>
+          {trophyEmojis.length > 0 && (
+            <div className="plm-flex plm-flex-wrap plm-gap-0.5 plm-mt-0.5 plm-justify-end">
+              {trophyEmojis.map((emoji, i) => (
+                <span key={i} style={{ fontSize: 11, filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.3))' }}>{emoji}</span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Bio paragraph — fills remaining space, italic, centered */}
-      <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-px-2.5 plm-relative plm-z-[5] plm-min-h-0 plm-pb-5">
+      {/* Bio paragraph — fills the remaining space beneath the stats */}
+      <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-px-3 plm-relative plm-z-[5] plm-min-h-0 plm-pb-5 plm-pt-1">
         <p className="plm-text-[9px] plm-italic plm-leading-snug plm-text-center" style={{ color: '#2B2620' }}>
           {bio}
         </p>
       </div>
-
-      {/* Trophy strip — just above footer when present */}
-      {trophyEmojis.length > 0 && (
-        <div className="plm-absolute plm-bottom-5 plm-left-2.5 plm-right-2.5 plm-flex plm-flex-wrap plm-gap-0.5 plm-z-[5]">
-          {trophyEmojis.map((emoji, i) => (
-            <span key={i} style={{ fontSize: 10, filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.3))' }}>{emoji}</span>
-          ))}
-        </div>
-      )}
 
       {/* Season badge */}
       {seasonNumber && (
@@ -287,22 +334,6 @@ export function ManagerCard({
           </span>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function StatRow({ label, value, borderColor }: { label: string; value: string; borderColor: string }) {
-  return (
-    <div className="plm-flex plm-justify-between plm-items-baseline plm-min-w-0">
-      <span
-        className="plm-text-[8px] plm-font-bold plm-uppercase plm-tracking-wider plm-flex-shrink-0"
-        style={{ color: borderColor, opacity: 0.85 }}
-      >
-        {label}
-      </span>
-      <span className="plm-text-[11px] plm-font-black plm-tabular-nums plm-truncate plm-ml-1" style={{ color: '#1A1A1A' }}>
-        {value}
-      </span>
     </div>
   );
 }
