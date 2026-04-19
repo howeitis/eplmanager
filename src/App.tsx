@@ -1015,11 +1015,15 @@ function App() {
       }
     }
 
-    // Annual youth intake: each club promotes 1-2 academy graduates
+    // Annual youth intake: every club gets 1 + (retiring players) academy
+    // graduates, so there's always at least one prospect in the start-of-season
+    // pack and the intake scales with squad turnover.
     let playerYouthIntake: import('./types/entities').Player[] = [];
     for (const club of clubs) {
       const youthRng = new SeededRNG(`${sSeed}-youth-${club.id}`);
-      const youthPlayers = annualYouthIntake(youthRng, club, seasonNumber);
+      const clubAging = agingResults_.find((r) => r.clubId === club.id);
+      const retireCount = clubAging?.retired.length ?? 0;
+      const youthPlayers = annualYouthIntake(youthRng, club, seasonNumber, retireCount);
       if (club.id === playerClubId) {
         playerYouthIntake = youthPlayers;
       }
@@ -1088,12 +1092,10 @@ function App() {
     );
     state.setBoardExpectation({ minPosition: newExpectation.minPosition, description: newExpectation.description });
 
-    // Collect retirement replacements for player's club (show alongside youth intake)
-    const playerAgingResult = agingResults_.find((r) => r.clubId === playerClubId);
-    const retirementReplacements = playerAgingResult?.retired.map((r) => r.replacement) ?? [];
-
-    // Save youth intake + retirement replacements for the pack reveal
-    setYouthIntakePlayers([...playerYouthIntake, ...retirementReplacements]);
+    // Save youth intake for the pack reveal. Retirement replacements are
+    // already applied to the roster via processLeagueAging — the pack now
+    // surfaces only the youth prospects (sized 1 + retiring count).
+    setYouthIntakePlayers(playerYouthIntake);
 
     // Auto-set captain: keep current if still in squad, otherwise pick best player
     const postAgingPlayerClub = store.getState().clubs.find((c) => c.id === playerClubId);
@@ -1239,7 +1241,7 @@ function App() {
           .sort((a, b) => b.overall - a.overall)
           .slice(0, 11);
         setPackPlayers(starters);
-        setPackConfig({ title: 'Starter Pack', subtitle: playerClub.name });
+        setPackConfig({ title: 'Starting XI', subtitle: playerClub.name });
         return;
       }
     }

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { RetroPlayerCard } from './RetroPlayerCard';
+import { getClubLogoUrl } from '../../data/assets';
 import type { Player } from '../../types/entities';
 
 interface PackOpeningProps {
@@ -170,9 +171,9 @@ export function PackOpening({
           tabIndex={0}
           aria-label="Tap to open pack"
         >
-          {/* Pack visual */}
+          {/* Pack visual — same footprint as an xl player card (w-[21rem] h-[31rem]) */}
           <div
-            className={`plm-relative plm-w-48 plm-h-64 md:plm-w-56 md:plm-h-72 plm-rounded-2xl plm-shadow-2xl plm-flex plm-flex-col plm-items-center plm-justify-center plm-border-4 plm-transition-all ${
+            className={`plm-relative plm-w-[21rem] plm-h-[31rem] plm-rounded-xl plm-shadow-2xl plm-flex plm-flex-col plm-items-center plm-border-4 plm-transition-all plm-overflow-hidden ${
               packState === 'shaking' ? 'plm-animate-pack-shake' : ''
             } ${packState === 'opening' ? 'plm-animate-pack-burst' : ''}`}
             style={{
@@ -180,29 +181,64 @@ export function PackOpening({
               borderColor: clubColors.secondary || '#FFD700',
             }}
           >
-            {/* Pack decoration */}
-            <div className="plm-absolute plm-inset-3 plm-border-2 plm-rounded-xl plm-pointer-events-none" style={{ borderColor: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.2)' }} />
-
-            {/* Pack content */}
-            <div className="plm-text-4xl plm-mb-2" aria-hidden="true">{'\u26BD'}</div>
+            {/* Inner decorative border */}
             <div
-              className="plm-font-display plm-text-lg plm-font-black plm-uppercase plm-tracking-wider plm-text-center plm-px-4 plm-leading-tight"
-              style={{ color: isLight ? '#1A1A1A' : '#FFFFFF' }}
-            >
-              {packTitle}
-            </div>
-            {packSubtitle && (
+              className="plm-absolute plm-inset-3 plm-border-2 plm-rounded-lg plm-pointer-events-none"
+              style={{ borderColor: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)' }}
+            />
+
+            {/* EPL Manager logo — top anchor */}
+            <div className="plm-flex plm-flex-col plm-items-center plm-mt-10 plm-gap-1.5 plm-relative plm-z-[2]">
+              <img
+                src="/epl_manager_logo.webp"
+                alt="EPL Manager"
+                className="plm-w-28 plm-h-28 plm-object-contain plm-drop-shadow-lg"
+              />
               <div
-                className="plm-text-xs plm-font-body plm-mt-1 plm-uppercase plm-tracking-wider plm-opacity-80"
+                className="plm-font-display plm-text-[11px] plm-font-bold plm-uppercase plm-tracking-[0.18em] plm-opacity-80"
                 style={{ color: isLight ? '#1A1A1A' : '#FFFFFF' }}
               >
-                {packSubtitle}
+                Premier League Manager
               </div>
-            )}
+            </div>
+
+            {/* Club crest — center anchor, large */}
+            <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-w-full plm-px-8 plm-relative plm-z-[2]">
+              {clubId ? (
+                <img
+                  src={getClubLogoUrl(clubId)}
+                  alt={clubName}
+                  className="plm-w-44 plm-h-44 plm-object-contain plm-drop-shadow-xl"
+                />
+              ) : (
+                <div className="plm-text-6xl" aria-hidden="true">{'\u26BD'}</div>
+              )}
+            </div>
+
+            {/* Pack title + subtitle — bottom anchor */}
+            <div className="plm-flex plm-flex-col plm-items-center plm-gap-1 plm-mb-10 plm-px-4 plm-relative plm-z-[2]">
+              <div
+                className="plm-font-display plm-text-2xl plm-font-black plm-uppercase plm-tracking-wider plm-text-center plm-leading-tight"
+                style={{
+                  color: isLight ? '#1A1A1A' : '#FFFFFF',
+                  textShadow: isLight ? '0 1px 0 rgba(255,255,255,0.3)' : '0 1px 2px rgba(0,0,0,0.45)',
+                }}
+              >
+                {packTitle}
+              </div>
+              {packSubtitle && (
+                <div
+                  className="plm-text-[11px] plm-font-body plm-uppercase plm-tracking-[0.16em] plm-opacity-75"
+                  style={{ color: isLight ? '#1A1A1A' : '#FFFFFF' }}
+                >
+                  {packSubtitle}
+                </div>
+              )}
+            </div>
 
             {/* Card count badge */}
-            <div className="plm-absolute plm-bottom-4 plm-bg-black/30 plm-rounded-full plm-px-3 plm-py-1">
-              <span className="plm-text-xs plm-font-bold plm-text-white plm-tabular-nums">
+            <div className="plm-absolute plm-bottom-4 plm-right-4 plm-bg-black/30 plm-rounded-full plm-px-3 plm-py-1">
+              <span className="plm-text-[11px] plm-font-bold plm-text-white plm-tabular-nums">
                 {players.length} cards
               </span>
             </div>

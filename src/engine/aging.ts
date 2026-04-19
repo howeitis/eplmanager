@@ -161,24 +161,21 @@ export function generateRegen(
 }
 
 /**
- * Annual youth intake: each club promotes 1-2 academy graduates per season,
- * independent of retirements. Keeps rosters fresh and ensures a pipeline of
- * young talent even when no one retires.
+ * Annual youth intake: every club promotes at least one academy graduate per
+ * season, plus one extra per retiring player (1 + retireCount). Guarantees
+ * the youth pack at the start of each new season and scales with turnover.
  */
 export function annualYouthIntake(
   rng: SeededRNG,
   club: Club,
   seasonNumber: number,
+  retireCount: number = 0,
 ): Player[] {
-  const intakeCount = rng.randomInt(1, 2);
+  const intakeCount = 1 + Math.max(0, retireCount);
   const positions: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
   const newPlayers: Player[] = [];
 
   for (let i = 0; i < intakeCount; i++) {
-    // If squad is already at 18+, skip (don't bloat rosters)
-    const nonTemp = club.roster.filter((p) => !p.isTemporary);
-    if (nonTemp.length >= 18) break;
-
     const pos = positions[rng.randomInt(0, positions.length - 1)];
     const regenId = `${club.id}-youth-s${seasonNumber}-${i}`;
     const player = generateRegen(rng, pos, club, regenId);

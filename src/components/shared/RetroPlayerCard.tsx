@@ -310,9 +310,10 @@ export function RetroPlayerCard({
 
   // Emoji sizing — 25% bigger than the default Tailwind text-*xl ramp,
   // with a further 15% bump on top so the face stays the visual anchor as
-  // crests grow alongside it.
+  // crests grow alongside it. The box height is tight against the glyph so
+  // the bio paragraph below has more breathing room.
   const emojiFontPx: Record<string, number> = { sm: 44, md: 52, lg: 69, xl: 104 };
-  const emojiBoxPx: Record<string, number> = { sm: 60, md: 80, lg: 104, xl: 138 };
+  const emojiBoxPx: Record<string, number> = { sm: 50, md: 66, lg: 86, xl: 116 };
 
   // Reserved vertical space at the bottom of the card so the bio centers
   // above the tallest bottom element (ICON/LEGEND text or corner shape).
@@ -668,7 +669,7 @@ export function RetroPlayerCard({
         const nameCenter = shiftHex(baseName, 18);
         return (
           <div
-            className="plm-mx-2.5 plm-mt-0.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5] plm-flex-shrink-0"
+            className="plm-mx-2.5 plm-py-0.5 plm-rounded plm-text-center plm-relative plm-z-[5] plm-flex-shrink-0"
             style={{
               background: `linear-gradient(to right, ${nameEdge} 0%, ${nameCenter} 50%, ${nameEdge} 100%)`,
               borderBottom: `2px solid ${clubColors?.secondary || overallColor}`,
@@ -697,7 +698,7 @@ export function RetroPlayerCard({
           always fit on one line. */}
       <div
         ref={metaWrapRef}
-        className="plm-mt-1 plm-px-3 plm-relative plm-z-[5] plm-flex-shrink-0 plm-overflow-hidden"
+        className="plm-mt-0.5 plm-px-3 plm-relative plm-z-[5] plm-flex-shrink-0 plm-overflow-hidden"
       >
         <div
           ref={metaInnerRef}
@@ -757,7 +758,7 @@ export function RetroPlayerCard({
 
       {/* Stats grid — 6 columns, label over value, tabular bold numbers.
           Only the single top stat (≥90) gets the dark-magenta elite accent. */}
-      <div className="plm-mx-2.5 plm-mt-1 plm-grid plm-grid-cols-6 plm-gap-x-1 plm-relative plm-z-[5]">
+      <div className="plm-mx-2.5 plm-mt-0.5 plm-grid plm-grid-cols-6 plm-gap-x-1 plm-relative plm-z-[5]">
         {STAT_KEYS.map((stat) => {
           const value = player.stats[stat];
           const isElite =

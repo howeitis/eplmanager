@@ -11,17 +11,15 @@ interface ScorerRow {
   avgForm: number;
 }
 
-const MATCH_PHASES = [
-  'august', 'september', 'october', 'november', 'december',
-  'january', 'february', 'march', 'april', 'may',
-] as const;
-
 function isPreMatch(phase: string): boolean {
   return phase === 'summer_window' || phase === 'july_advance';
 }
 
+// Any phase after July (matches have kicked off) shows goal scorers —
+// including the January transfer window and deadline-day phases, where
+// Aug–Dec goals already exist on the roster.
 function hasMatchesPlayed(phase: string): boolean {
-  return MATCH_PHASES.indexOf(phase as typeof MATCH_PHASES[number]) >= 0 || phase === 'season_end';
+  return !isPreMatch(phase);
 }
 
 function sortScorers(a: ScorerRow, b: ScorerRow): number {
