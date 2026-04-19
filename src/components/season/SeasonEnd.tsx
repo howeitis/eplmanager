@@ -7,6 +7,8 @@ import { Confetti } from '../shared/Confetti';
 import type { AgingResult } from '../../engine/aging';
 import type { LeagueTableRow, Player, Club } from '../../types/entities';
 
+import { CLUB_MANAGERS, TIER_EXPECTED_POSITION } from '../../data/managers';
+
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
 interface Award {
@@ -188,19 +190,56 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
       });
     }
 
-    // Manager of the Season
-    if (playerPosition <= 3 || (boardExpectation && playerPosition <= boardExpectation.minPosition - 5)) {
-      result.push({
-        title: 'Manager of the Season',
-        winner: manager?.name || 'You',
-        club: playerClubData?.name || '',
-        clubColor: playerClubData?.colors.primary || '#1A1A1A',
-        stat: `${playerPosition}${getOrdinal(playerPosition)} place`,
-      });
+    // Manager of the Year — always awarded, based on overperformance vs tier
+    {
+      let bestOverperf = -Infinity;
+      let motyCandidateId = '';
+
+      for (let i = 0; i < sortedTable.length; i++) {
+        const row = sortedTable[i];
+        const clubData = clubDataMap.get(row.clubId);
+        if (!clubData) continue;
+
+        const expected = TIER_EXPECTED_POSITION[clubData.tier] ?? 10;
+        const actual = i + 1;
+        const overperformance = expected - actual; // positive = overperformed
+
+        if (overperformance > bestOverperf) {
+          bestOverperf = overperformance;
+          motyCandidateId = row.clubId;
+        }
+      }
+
+      // Champion always gets consideration — if they overperformed more, they win
+      if (championId && motyCandidateId !== championId) {
+        const champData = clubDataMap.get(championId);
+        const champExpected = TIER_EXPECTED_POSITION[champData?.tier ?? 1] ?? 2.5;
+        const champOverperf = champExpected - 1;
+        if (champOverperf >= bestOverperf) {
+          motyCandidateId = championId;
+        }
+      }
+
+      if (motyCandidateId) {
+        const motyClub = clubDataMap.get(motyCandidateId);
+        const motyActual = sortedTable.findIndex((r) => r.clubId === motyCandidateId) + 1;
+        // Use user's manager name if it's their club, otherwise real EPL manager name
+        const motyName = motyCandidateId === playerClubId
+          ? (manager?.name || 'You')
+          : (CLUB_MANAGERS[motyCandidateId] || 'Unknown Manager');
+
+        result.push({
+          title: 'Manager of the Year',
+          winner: motyName,
+          club: motyClub?.name || '',
+          clubColor: motyClub?.colors.primary || '#1A1A1A',
+          stat: `${motyActual}${getOrdinal(motyActual)} place`,
+        });
+      }
     }
 
     return result;
-  }, [sortedTable, clubs, faCupWinner, manager, boardExpectation, playerPosition, playerClubData]);
+  }, [sortedTable, clubs, faCupWinner, manager, playerPosition, playerClubId, playerClubData]);
 
   // Generate interview
   const interview = useMemo(() => {

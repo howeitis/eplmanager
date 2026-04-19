@@ -124,11 +124,11 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
         )}
       </div>
 
-      {/* ─── Events banner ─── */}
-      {events.length > 0 && (
+      {/* ─── Events banner (exclude form-category — already visible on squad screen) ─── */}
+      {events.filter((e) => e.category !== 'form').length > 0 && (
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
           <div className="plm-space-y-1.5">
-            {events.map((event) => (
+            {events.filter((e) => e.category !== 'form').map((event) => (
               <EventBanner key={event.id} event={event} />
             ))}
           </div>

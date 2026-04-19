@@ -612,6 +612,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
           <IncomingOffers
             offers={incomingOffers}
             clubs={clubs}
+            playerClubId={playerClubId}
             onRespond={handleRespondToOffer}
           />
         )}

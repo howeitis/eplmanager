@@ -20,7 +20,21 @@
       "Bash(find 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage' -type f -name *.ts -o -name *.tsx)",
       "Bash(find 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage\\\\src' -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
       "Bash(find 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage\\\\src\\\\components' -type d -name *progress* -o -name *progression*)",
-      "Bash(grep -r \"PlayerDetailModal\\\\|useModalParams\\\\|openModal\" 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage\\\\src' --include=*.tsx --include=*.ts)"
+      "Bash(grep -r \"PlayerDetailModal\\\\|useModalParams\\\\|openModal\" 'C:\\\\Users\\\\omhhe\\\\.gemini\\\\antigravity\\\\workspace\\\\Howe to Manage\\\\src' --include=*.tsx --include=*.ts)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(grep -n \"acceptIncomingOffer\\\\|respondToIncoming\\\\|clearTransferOffers\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\store\\\\\\\\marketSlice.ts\")",
+      "Bash(grep -n \"incoming\\\\|Incoming\\\\|respondToIncoming\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\store\\\\\\\\marketSlice.ts\")",
+      "Bash(grep -n \"incoming\\\\|Incoming\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\engine\\\\\\\\transfers.ts\")",
+      "Bash(find \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"respondToOffer\\\\|acceptOffer\\\\|respondToIncomingOffer\\\\|acceptIncomingOffer\" {} \\\\;)",
+      "Bash(grep -rn \"status.*accepted\\\\|'accepted'\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\store\\\\\\\\marketSlice.ts\")",
+      "Bash(grep -rn \"direction.*incoming\\\\|direction: 'incoming'\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\components\")",
+      "Bash(grep -rn \"acceptIncoming\\\\|respondIncoming\\\\|handleAcceptOffer\\\\|onAcceptOffer\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\components\")",
+      "Bash(grep -n \"updateTransferOffer\\\\|recordTransfer\\\\|accepted\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\components\\\\\\\\transfers\\\\\\\\TransferCenter.tsx\")"
     ]
   }
 }

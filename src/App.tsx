@@ -42,9 +42,11 @@ import {
 import {
   autoSelectXI,
   autoSwapInjuredPlayers,
+  autoSubReturningPlayers,
   validateXI,
   type XISwap,
 } from './engine/startingXI';
+import { processMidSeasonAdjustments } from './engine/midSeasonAdjustments';
 import { generateMonthlyEvents } from './engine/events';
 import { simulateFACup } from './engine/faCup';
 import { processLeagueAging, replenishSquad, annualYouthIntake, type AgingResult } from './engine/aging';
@@ -623,6 +625,25 @@ function App() {
 
     // ─── January window → January (play matches, window still open) ───
     if (currentPhase === 'january_window') {
+      // Mid-season stat adjustments for outlier players
+      const midSeasonRng = new SeededRNG(`${sSeed}-midseason-adjustments`);
+      const midSeasonResults = processMidSeasonAdjustments(midSeasonRng, clubs);
+
+      // Notify user of adjustments to their club's players
+      if (midSeasonResults.length > 0) {
+        for (const adj of midSeasonResults) {
+          if (adj.clubId === playerClubId) {
+            const delta = adj.newOverall - adj.oldOverall;
+            const arrow = delta > 0 ? '📈' : '📉';
+            state.addTickerMessage(
+              `${arrow} ${adj.playerName} (${adj.oldOverall} → ${adj.newOverall}): ${adj.reason}`,
+            );
+          }
+        }
+        // Re-sync store with mutated rosters
+        state.initializeClubs(CLUBS, new Map(clubs.map((c) => [c.id, c.roster])));
+      }
+
       state.setPhase('january');
     }
 
@@ -739,52 +760,156 @@ function App() {
       results.push(result);
       state.recordResult(fixture.id, result);
 
-      // Update player goal/assist stats
+      // NOTE: Goal/assist/cleansheet tracking is now batch-aggregated after the
+      // fixture loop to avoid stale reads from snapshot club objects.
+    }
+
+    // ─── Batch-aggregate goals, assists, clean sheets across all results ───
+    // This avoids the stale-snapshot bug where multiple goals by the same
+    // player in the same month would all read the same pre-month value.
+    const goalDeltas = new Map<string, Map<string, number>>();  // clubId → playerId → delta
+    const assistDeltas = new Map<string, Map<string, number>>();
+    const csDeltas = new Map<string, Map<string, number>>();
+
+    for (const result of results) {
       for (const scorer of result.scorers) {
-        const club = scorer.isHome ? homeClub : awayClub;
-        const player = club.roster.find((p) => p.id === scorer.playerId);
-        if (player) {
-          const prev = Number.isFinite(player.goals) ? player.goals : 0;
-          state.updatePlayer(club.id, player.id, { goals: prev + 1 });
-        }
+        const clubId = scorer.isHome ? result.homeClubId : result.awayClubId;
+        if (!goalDeltas.has(clubId)) goalDeltas.set(clubId, new Map());
+        const m = goalDeltas.get(clubId)!;
+        m.set(scorer.playerId, (m.get(scorer.playerId) || 0) + 1);
       }
       for (const assister of result.assisters) {
-        const club = assister.isHome ? homeClub : awayClub;
-        const player = club.roster.find((p) => p.id === assister.playerId);
-        if (player) {
-          const prev = Number.isFinite(player.assists) ? player.assists : 0;
-          state.updatePlayer(club.id, player.id, { assists: prev + 1 });
-        }
+        const clubId = assister.isHome ? result.homeClubId : result.awayClubId;
+        if (!assistDeltas.has(clubId)) assistDeltas.set(clubId, new Map());
+        const m = assistDeltas.get(clubId)!;
+        m.set(assister.playerId, (m.get(assister.playerId) || 0) + 1);
       }
-      // Clean sheets
       if (result.awayGoals === 0) {
-        for (const p of homeClub.roster) {
-          if (['GK', 'CB', 'FB'].includes(p.position) && !p.injured) {
-            const prev = Number.isFinite(p.cleanSheets) ? p.cleanSheets : 0;
-            state.updatePlayer(homeClub.id, p.id, { cleanSheets: prev + 1 });
+        const homeClub = clubs.find((c) => c.id === result.homeClubId);
+        if (homeClub) {
+          if (!csDeltas.has(homeClub.id)) csDeltas.set(homeClub.id, new Map());
+          const m = csDeltas.get(homeClub.id)!;
+          for (const p of homeClub.roster) {
+            if (['GK', 'CB', 'FB'].includes(p.position) && !p.injured) {
+              m.set(p.id, (m.get(p.id) || 0) + 1);
+            }
           }
         }
       }
       if (result.homeGoals === 0) {
-        for (const p of awayClub.roster) {
-          if (['GK', 'CB', 'FB'].includes(p.position) && !p.injured) {
-            const prev = Number.isFinite(p.cleanSheets) ? p.cleanSheets : 0;
-            state.updatePlayer(awayClub.id, p.id, { cleanSheets: prev + 1 });
+        const awayClub = clubs.find((c) => c.id === result.awayClubId);
+        if (awayClub) {
+          if (!csDeltas.has(awayClub.id)) csDeltas.set(awayClub.id, new Map());
+          const m = csDeltas.get(awayClub.id)!;
+          for (const p of awayClub.roster) {
+            if (['GK', 'CB', 'FB'].includes(p.position) && !p.injured) {
+              m.set(p.id, (m.get(p.id) || 0) + 1);
+            }
           }
         }
       }
     }
 
-    // Process injuries
+    // Apply batched deltas (reads fresh state for each player)
+    for (const [clubId, playerMap] of goalDeltas) {
+      for (const [playerId, delta] of playerMap) {
+        const freshClub = store.getState().clubs.find((c) => c.id === clubId);
+        const freshPlayer = freshClub?.roster.find((p) => p.id === playerId);
+        if (freshPlayer) {
+          state.updatePlayer(clubId, playerId, {
+            goals: (Number.isFinite(freshPlayer.goals) ? freshPlayer.goals : 0) + delta,
+          });
+        }
+      }
+    }
+    for (const [clubId, playerMap] of assistDeltas) {
+      for (const [playerId, delta] of playerMap) {
+        const freshClub = store.getState().clubs.find((c) => c.id === clubId);
+        const freshPlayer = freshClub?.roster.find((p) => p.id === playerId);
+        if (freshPlayer) {
+          state.updatePlayer(clubId, playerId, {
+            assists: (Number.isFinite(freshPlayer.assists) ? freshPlayer.assists : 0) + delta,
+          });
+        }
+      }
+    }
+    for (const [clubId, playerMap] of csDeltas) {
+      for (const [playerId, delta] of playerMap) {
+        const freshClub = store.getState().clubs.find((c) => c.id === clubId);
+        const freshPlayer = freshClub?.roster.find((p) => p.id === playerId);
+        if (freshPlayer) {
+          state.updatePlayer(clubId, playerId, {
+            cleanSheets: (Number.isFinite(freshPlayer.cleanSheets) ? freshPlayer.cleanSheets : 0) + delta,
+          });
+        }
+      }
+    }
+
+    // Process injuries — track recovered players for auto-sub
+    const recoveredPlayerIds: string[] = [];
     for (const club of clubs) {
       const injuryRng = new SeededRNG(`${sSeed}-injuries-${phase}-${club.id}`);
+      // Track who was injured before healing
+      const wasInjured = new Set(club.roster.filter((p) => p.injured).map((p) => p.id));
       healInjuries(club.roster);
+      // Track who recovered
+      if (club.id === playerClubId) {
+        for (const p of club.roster) {
+          if (wasInjured.has(p.id) && !p.injured) {
+            recoveredPlayerIds.push(p.id);
+          }
+        }
+      }
       const newInjuries = processInjuries(injuryRng, club.roster, club.id);
       for (const injury of newInjuries) {
         state.updatePlayer(club.id, injury.playerId, {
           injured: true,
           injuryWeeks: injury.weeksOut,
         });
+      }
+    }
+
+    // Auto-sub returning injured players back into Starting XI
+    if (recoveredPlayerIds.length > 0) {
+      const updatedPlayerClub = store.getState().clubs.find((c) => c.id === playerClubId);
+      if (updatedPlayerClub) {
+        const currentXI = store.getState().startingXI;
+        const returnResult = autoSubReturningPlayers(currentXI, formation, updatedPlayerClub.roster, recoveredPlayerIds);
+        if (returnResult.swaps.length > 0) {
+          state.setStartingXI(returnResult.newXI);
+          // Add recovery notifications
+          const recoveryNotifs: XISwap[] = returnResult.swaps.map((s) => ({
+            ...s,
+            inPlayerName: `⚕️ ${s.inPlayerName} (returned from injury)`,
+          }));
+          setXiNotifications((prev) => [...prev, ...recoveryNotifs]);
+        }
+      }
+    }
+
+    // Captain auto-transfer: if the captain was injured/swapped out, reassign
+    const postInjuryXI = store.getState().startingXI;
+    const currentCaptainId = store.getState().captainId;
+    if (currentCaptainId && !Object.values(postInjuryXI).includes(currentCaptainId)) {
+      const updatedPlayerClub = store.getState().clubs.find((c) => c.id === playerClubId);
+      if (updatedPlayerClub) {
+        const xiPlayerIds = Object.values(postInjuryXI);
+        const xiPlayers = updatedPlayerClub.roster.filter((p) => xiPlayerIds.includes(p.id) && !p.isTemporary);
+        const bestInXI = xiPlayers.sort((a, b) => b.overall - a.overall)[0];
+        if (bestInXI) {
+          const oldCaptain = updatedPlayerClub.roster.find((p) => p.id === currentCaptainId);
+          state.setCaptain(bestInXI.id);
+          setXiNotifications((prev) => [
+            ...prev,
+            {
+              slot: 'Captain',
+              outPlayerId: currentCaptainId,
+              outPlayerName: oldCaptain?.name || 'Previous captain',
+              inPlayerId: bestInXI.id,
+              inPlayerName: `🏅 ${bestInXI.name} takes the armband`,
+            },
+          ]);
+        }
       }
     }
 

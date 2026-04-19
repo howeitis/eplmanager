@@ -295,7 +295,73 @@ export function calculateXIBasedSquadRating(
   return xiAvg + depthBonus;
 }
 
+// ─── Auto-Sub Returning Players ───
+
+/**
+ * When players return from injury, check if they should be restored to the
+ * Starting XI. A recovered player replaces the current holder of a matching
+ * position slot if the recovered player has higher (overall + form).
+ */
+export function autoSubReturningPlayers(
+  xi: StartingXIMap,
+  formation: Formation,
+  roster: Player[],
+  recoveredPlayerIds: string[],
+): { newXI: StartingXIMap; swaps: XISwap[] } {
+  if (recoveredPlayerIds.length === 0) return { newXI: xi, swaps: [] };
+
+  const slots = getFormationSlots(formation);
+  const newXI = { ...xi };
+  const swaps: XISwap[] = [];
+
+  for (const recoveredId of recoveredPlayerIds) {
+    const recovered = roster.find((p) => p.id === recoveredId);
+    if (!recovered || recovered.isTemporary) continue;
+
+    const recoveredScore = recovered.overall + recovered.form;
+
+    // Already in XI? Skip
+    if (Object.values(newXI).includes(recoveredId)) continue;
+
+    // Find all slots that match this player's position
+    const matchingSlots = slots.filter((s) => s.position === recovered.position);
+
+    // Also check compatible slots (e.g., WG in MF slot)
+    const compatSlots = slots.filter(
+      (s) =>
+        s.position !== recovered.position &&
+        checkPositionCompatibility(s.position, recovered.position, recovered.stats) !== 'cross',
+    );
+
+    // Check matching slots first, then compatible
+    for (const slotDef of [...matchingSlots, ...compatSlots]) {
+      const currentHolderId = newXI[slotDef.slot];
+      if (!currentHolderId) continue;
+
+      const currentHolder = roster.find((p) => p.id === currentHolderId);
+      if (!currentHolder) continue;
+
+      const currentScore = currentHolder.overall + currentHolder.form;
+
+      if (recoveredScore > currentScore) {
+        newXI[slotDef.slot] = recoveredId;
+        swaps.push({
+          slot: slotDef.slot,
+          outPlayerId: currentHolder.id,
+          outPlayerName: currentHolder.name,
+          inPlayerId: recovered.id,
+          inPlayerName: recovered.name,
+        });
+        break; // Player placed — move to next recovered player
+      }
+    }
+  }
+
+  return { newXI, swaps };
+}
+
 // ─── Formation Slot Helpers (re-exported for convenience) ───
 
 export { getFormationSlots, checkPositionCompatibility };
 export type { FormationSlotDef };
+

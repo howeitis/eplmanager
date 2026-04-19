@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import type { TransferOffer, Club } from '../../types/entities';
+import { useModalParams } from '../../hooks/useModalParams';
 
 interface IncomingOffersProps {
   offers: TransferOffer[];
   clubs: Club[];
+  playerClubId: string;
   onRespond: (offer: TransferOffer, accept: boolean) => void;
 }
 
@@ -17,7 +19,9 @@ interface OfferGroup {
   topFee: number;
 }
 
-export function IncomingOffers({ offers, clubs, onRespond }: IncomingOffersProps) {
+export function IncomingOffers({ offers, clubs, playerClubId, onRespond }: IncomingOffersProps) {
+  const { openModal } = useModalParams();
+
   const getClubName = (clubId: string) =>
     clubs.find((c) => c.id === clubId)?.name || clubId;
 
@@ -79,8 +83,15 @@ export function IncomingOffers({ offers, clubs, onRespond }: IncomingOffersProps
             className="plm-bg-white plm-rounded-lg plm-border plm-border-blue-200 plm-p-3"
           >
             <div className="plm-flex plm-items-start plm-justify-between plm-gap-2 plm-mb-2">
-              <div className="plm-min-w-0">
-                <div className="plm-text-sm plm-font-semibold plm-text-gray-900 plm-truncate">
+              <div
+                className="plm-min-w-0 plm-cursor-pointer hover:plm-opacity-70 plm-transition-opacity"
+                onClick={() => openModal(group.playerId, playerClubId)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(group.playerId, playerClubId); } }}
+                aria-label={`View ${group.playerName} player card`}
+              >
+                <div className="plm-text-sm plm-font-semibold plm-text-blue-700 plm-underline plm-decoration-blue-300 plm-truncate">
                   {group.playerName}
                 </div>
                 <div className="plm-text-xs plm-text-gray-500">
