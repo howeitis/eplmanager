@@ -10,31 +10,49 @@ const PHILOSOPHY_LABELS: Record<string, string> = {
   'rotation-heavy': 'Rotation-Heavy',
 };
 
-// ─── Trophy-based card tier ───
+// ─── Reputation-based card tier ───
+// Mirrors the player card's overall → tier mapping so gold/silver/bronze
+// reads the same way across player and manager cards.
+type ManagerTier = 'elite' | 'gold' | 'silver' | 'bronze' | 'base';
 
-function getTrophyTier(trophies: number): 'bronze' | 'silver' | 'gold' | 'shiny-gold' {
-  if (trophies >= 25) return 'shiny-gold';
-  if (trophies >= 10) return 'gold';
-  if (trophies >= 3) return 'silver';
-  return 'bronze';
+function getReputationTier(reputation: number): ManagerTier {
+  if (reputation >= 90) return 'elite';
+  if (reputation >= 80) return 'gold';
+  if (reputation >= 75) return 'silver';
+  if (reputation >= 65) return 'bronze';
+  return 'base';
 }
 
-function getTierColor(tier: ReturnType<typeof getTrophyTier>): string {
-  if (tier === 'shiny-gold' || tier === 'gold') return '#FFD700';
+function getTierColor(tier: ManagerTier): string {
+  if (tier === 'elite' || tier === 'gold') return '#FFD700';
   if (tier === 'silver') return '#C0C0C0';
-  return '#CD7F32';
+  if (tier === 'bronze') return '#CD7F32';
+  return '#8B7355';
 }
 
-function getTierBorderColor(tier: ReturnType<typeof getTrophyTier>): string {
-  if (tier === 'shiny-gold' || tier === 'gold') return '#B8860B';
+function getTierBorderColor(tier: ManagerTier): string {
+  if (tier === 'elite' || tier === 'gold') return '#B8860B';
   if (tier === 'silver') return '#808080';
-  return '#8B4513';
+  if (tier === 'bronze') return '#8B4513';
+  return '#6B5B45';
 }
 
-function getTierBgGradient(tier: ReturnType<typeof getTrophyTier>): string {
-  if (tier === 'shiny-gold' || tier === 'gold') return 'linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 60%, #1a1a2e 100%)';
-  if (tier === 'silver') return 'linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 50%, #1a1a2e 100%)';
-  return 'linear-gradient(135deg, #2d2a26 0%, #3d3a36 50%, #2d2a26 100%)';
+function getTierBgGradient(tier: ManagerTier): string {
+  if (tier === 'elite' || tier === 'gold')
+    return 'linear-gradient(135deg, #FFF8DC 0%, #FFD700 30%, #FFF8DC 50%, #FFD700 70%, #FFF8DC 100%)';
+  if (tier === 'silver')
+    return 'linear-gradient(135deg, #F5F5F5 0%, #C0C0C0 30%, #F5F5F5 50%, #C0C0C0 70%, #F5F5F5 100%)';
+  if (tier === 'bronze')
+    return 'linear-gradient(135deg, #FFF3E0 0%, #CD7F32 30%, #FFF3E0 50%, #CD7F32 70%, #FFF3E0 100%)';
+  return 'linear-gradient(135deg, #FAF0E6 0%, #D2B48C 30%, #FAF0E6 50%, #D2B48C 70%, #FAF0E6 100%)';
+}
+
+// Foil-stamped ink that reads as embossed metallic on the card base.
+function getFoilStampColor(tier: ManagerTier): string {
+  if (tier === 'elite' || tier === 'gold') return '#7A5A10';
+  if (tier === 'silver') return '#3F3F46';
+  if (tier === 'bronze') return '#5A3418';
+  return '#4A3A2E';
 }
 
 function isLightColor(hex: string): boolean {
@@ -42,6 +60,35 @@ function isLightColor(hex: string): boolean {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return (r * 299 + g * 587 + b * 114) / 1000 > 160;
+}
+
+// Philosophy → descriptor used in the auto-generated bio line.
+const PHILOSOPHY_ADJECTIVE: Record<string, string> = {
+  attacking: 'fearless',
+  possession: 'methodical',
+  pragmatic: 'pragmatic',
+  defensive: 'disciplined',
+  developmental: 'patient',
+  'rotation-heavy': 'rotational',
+};
+
+const NUM_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+function numberWord(n: number): string {
+  return n >= 0 && n < NUM_WORDS.length ? NUM_WORDS[n] : String(n);
+}
+
+function buildBio(manager: ManagerProfile): string {
+  if (manager.bio && manager.bio.trim().length > 0) return manager.bio.trim();
+  const adj = PHILOSOPHY_ADJECTIVE[manager.philosophy] || 'seasoned';
+  const phil = PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy;
+  const nat = getNationalityLabel(manager.nationality);
+  const trophies = (manager.totalLeagueTitles || 0) + (manager.totalFaCups || 0);
+  const seasons = Math.max(1, Math.round((manager.totalGamesManaged || 0) / 38));
+  if (trophies === 0) {
+    return `A ${adj} tactician from ${nat} leading out with a ${phil} ${manager.preferredFormation}.`;
+  }
+  return `A ${adj} tactician from ${nat} whose ${phil} ${manager.preferredFormation} has delivered ${numberWord(trophies)} ${trophies === 1 ? 'trophy' : 'trophies'} in ${numberWord(seasons)} season${seasons === 1 ? '' : 's'}.`;
 }
 
 interface ManagerCardProps {
@@ -58,70 +105,60 @@ export function ManagerCard({
   seasonNumber,
 }: ManagerCardProps) {
   const totalTrophies = (manager.totalLeagueTitles || 0) + (manager.totalFaCups || 0);
-  const tier = getTrophyTier(totalTrophies);
+  const tier = getReputationTier(manager.reputation);
   const tierColor = getTierColor(tier);
   const borderColor = getTierBorderColor(tier);
   const bgGradient = getTierBgGradient(tier);
-  const isShimmerGold = tier === 'shiny-gold';
+  const foilColor = getFoilStampColor(tier);
+  const isShimmer = tier === 'elite';
+  const bio = buildBio(manager);
 
-  // Build trophy emoji string
   const trophyEmojis = [
     ...Array(manager.totalLeagueTitles || 0).fill('🏆'),
     ...Array(manager.totalFaCups || 0).fill('🏅'),
-  ].slice(0, 10); // cap at 10 visible
+  ].slice(0, 10);
 
   const clubLogoUrl = getClubLogoUrl(manager.clubId);
 
   return (
     <div
-      className={`plm-w-56 plm-h-80 plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${isShimmerGold ? 'plm-animate-border-shimmer' : ''}`}
+      className={`plm-w-56 plm-h-80 plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 plm-flex plm-flex-col ${isShimmer ? 'plm-animate-border-shimmer' : ''}`}
       style={{
         background: bgGradient,
         border: `3px solid ${borderColor}`,
       }}
     >
-      {/* Shimmer sweep for gold/shiny-gold */}
-      {(tier === 'gold' || tier === 'shiny-gold') && (
+      {/* Shimmer sweep for elite */}
+      {isShimmer && (
         <div className="plm-absolute plm-inset-0 plm-overflow-hidden plm-pointer-events-none plm-z-10">
           <div
             className="plm-absolute plm-top-0 plm-h-full plm-w-1/3 plm-animate-shimmer"
             style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)',
             }}
           />
         </div>
       )}
 
-      {/* Club crest watermark */}
+      {/* Club crest watermark — centered behind the avatar */}
       {clubLogoUrl && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
           <img
             src={clubLogoUrl}
             alt=""
-            className="plm-absolute plm-opacity-[0.07]"
-            style={{ width: '55%', height: 'auto', bottom: '12%', right: '-5%' }}
+            className="plm-absolute plm-opacity-[0.16]"
+            style={{ width: '60%', height: 'auto', top: '8%', left: '50%', transform: 'translateX(-50%)' }}
             aria-hidden="true"
           />
         </div>
       )}
 
-      {/* National flag watermark */}
-      <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
-        <img
-          src={getNationalityFlagUrl(manager.nationality)}
-          alt=""
-          className="plm-absolute plm-opacity-[0.05] plm-blur-[1px]"
-          style={{ width: '75%', height: 'auto', top: '8%', left: '12%' }}
-          aria-hidden="true"
-        />
-      </div>
-
       {/* Top: REP + Flag */}
-      <div className="plm-flex plm-justify-between plm-items-start plm-px-3 plm-pt-2.5 plm-relative plm-z-[5]">
+      <div className="plm-flex plm-justify-between plm-items-start plm-px-2.5 plm-pt-1 plm-relative plm-z-[5]">
         <div className="plm-text-center">
           <div
             className="plm-text-3xl plm-font-display plm-font-black plm-leading-none"
-            style={{ color: tierColor, textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}
+            style={{ color: tierColor, textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
           >
             {manager.reputation}
           </div>
@@ -136,16 +173,16 @@ export function ManagerCard({
           <img
             src={getNationalityFlagUrl(manager.nationality)}
             alt={getNationalityLabel(manager.nationality)}
-            className="plm-inline-block plm-w-7 plm-h-5 plm-rounded-sm plm-object-cover"
+            className="plm-inline-block plm-w-6 plm-h-4 plm-rounded-sm plm-object-cover"
           />
         </div>
       </div>
 
-      {/* Avatar */}
-      <div className="plm-flex plm-justify-center plm-mt-1 plm-relative plm-z-[5]">
+      {/* Avatar — tight to the top section so the bio below has room */}
+      <div className="plm-flex plm-justify-center plm-relative plm-z-[5] plm-flex-shrink-0" style={{ height: 50 }}>
         <div
-          className="plm-text-4xl plm-leading-none"
-          style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+          className="plm-leading-none"
+          style={{ fontSize: 44, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.18))' }}
         >
           {manager.avatar}
         </div>
@@ -153,61 +190,71 @@ export function ManagerCard({
 
       {/* Name plate */}
       <div
-        className="plm-mx-3 plm-mt-1.5 plm-py-1.5 plm-rounded plm-text-center plm-relative plm-z-[5]"
+        className="plm-mx-2.5 plm-py-0.5 plm-rounded plm-text-center plm-relative plm-z-[5] plm-flex-shrink-0"
         style={{
-          backgroundColor: clubColors?.primary || '#333',
+          backgroundColor: clubColors?.primary || borderColor,
           borderBottom: `2px solid ${clubColors?.secondary || tierColor}`,
+          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.3)',
         }}
       >
         <div
           className="plm-text-sm plm-font-display plm-font-bold plm-uppercase plm-tracking-wide plm-truncate plm-px-1"
-          style={{ color: isLightColor(clubColors?.primary || '#333') ? '#1A1A1A' : '#FFFFFF' }}
+          style={{
+            color: isLightColor(clubColors?.primary || borderColor) ? '#1A1A1A' : '#FFFFFF',
+            textShadow: isLightColor(clubColors?.primary || borderColor)
+              ? '0 1px 0 rgba(255,255,255,0.4)'
+              : '0 1px 1px rgba(0,0,0,0.45)',
+          }}
         >
           {manager.name}
         </div>
       </div>
 
-      {/* Club name + nationality */}
-      <div className="plm-text-center plm-mt-1 plm-relative plm-z-[5] plm-px-2">
-        {clubName && (
-          <div className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider plm-truncate" style={{ color: tierColor }}>
-            {clubName}
-          </div>
-        )}
-        <div className="plm-text-[8px] plm-uppercase plm-tracking-wider plm-opacity-60" style={{ color: borderColor }}>
+      {/* Editorial meta line — nationality · club, foil-stamped */}
+      <div className="plm-mt-0.5 plm-px-3 plm-relative plm-z-[5] plm-flex-shrink-0 plm-flex plm-justify-center plm-items-center plm-whitespace-nowrap plm-overflow-hidden" style={{ columnGap: 8 }}>
+        <span
+          className="plm-text-[9px] plm-uppercase plm-font-semibold plm-whitespace-nowrap plm-truncate"
+          style={{ color: foilColor, letterSpacing: '0.16em' }}
+        >
           {getNationalityLabel(manager.nationality)}
-        </div>
+        </span>
+        {clubName && (
+          <>
+            <span
+              aria-hidden="true"
+              className="plm-inline-block plm-rounded-full plm-flex-shrink-0"
+              style={{ width: 3, height: 3, backgroundColor: foilColor, opacity: 0.7 }}
+            />
+            <span
+              className="plm-text-[9px] plm-uppercase plm-font-semibold plm-whitespace-nowrap plm-truncate"
+              style={{ color: foilColor, letterSpacing: '0.16em' }}
+            >
+              {clubName}
+            </span>
+          </>
+        )}
       </div>
 
-      {/* Stats — spacious layout */}
-      <div className="plm-mx-3 plm-mt-2.5 plm-space-y-1.5 plm-relative plm-z-[5]">
-        <div className="plm-flex plm-justify-between plm-items-baseline">
-          <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Age</span>
-          <span className="plm-text-xs plm-font-black plm-text-white">{manager.age}</span>
-        </div>
-        <div className="plm-flex plm-justify-between plm-items-baseline">
-          <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Formation</span>
-          <span className="plm-text-xs plm-font-black plm-text-white">{manager.preferredFormation}</span>
-        </div>
-        <div className="plm-flex plm-justify-between plm-items-baseline">
-          <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Style</span>
-          <span className="plm-text-xs plm-font-black plm-text-white">{PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy}</span>
-        </div>
-        <div className="plm-flex plm-justify-between plm-items-baseline">
-          <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Games</span>
-          <span className="plm-text-xs plm-font-black plm-text-white plm-tabular-nums">{manager.totalGamesManaged}</span>
-        </div>
-        <div className="plm-flex plm-justify-between plm-items-baseline">
-          <span className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider" style={{ color: borderColor }}>Trophies</span>
-          <span className="plm-text-xs plm-font-black plm-tabular-nums" style={{ color: tierColor }}>{totalTrophies}</span>
-        </div>
+      {/* Stats — compact, 2x2 grid so the bio has room */}
+      <div className="plm-mx-2.5 plm-mt-1 plm-grid plm-grid-cols-2 plm-gap-x-2 plm-gap-y-0.5 plm-relative plm-z-[5]">
+        <StatRow label="Age" value={String(manager.age)} borderColor={borderColor} />
+        <StatRow label="Form." value={manager.preferredFormation} borderColor={borderColor} />
+        <StatRow label="Style" value={PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy} borderColor={borderColor} />
+        <StatRow label="Games" value={String(manager.totalGamesManaged)} borderColor={borderColor} />
       </div>
 
-      {/* Trophy emojis */}
+      {/* Bio paragraph — fills remaining space, italic, centered */}
+      <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-px-2.5 plm-relative plm-z-[5] plm-min-h-0 plm-pb-5">
+        <p className="plm-text-[9px] plm-italic plm-leading-snug plm-text-center" style={{ color: '#2B2620' }}>
+          {bio}
+        </p>
+      </div>
+
+      {/* Trophy strip — just above footer when present */}
       {trophyEmojis.length > 0 && (
-        <div className="plm-absolute plm-bottom-5 plm-left-3 plm-right-3 plm-flex plm-flex-wrap plm-gap-0.5 plm-z-[5]">
+        <div className="plm-absolute plm-bottom-5 plm-left-2.5 plm-right-2.5 plm-flex plm-flex-wrap plm-gap-0.5 plm-z-[5]">
           {trophyEmojis.map((emoji, i) => (
-            <span key={i} style={{ fontSize: 11 }}>{emoji}</span>
+            <span key={i} style={{ fontSize: 10, filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.3))' }}>{emoji}</span>
           ))}
         </div>
       )}
@@ -215,45 +262,47 @@ export function ManagerCard({
       {/* Season badge */}
       {seasonNumber && (
         <div className="plm-absolute plm-bottom-1 plm-right-2 plm-z-[5]">
-          <span className="plm-text-[8px] plm-uppercase plm-tracking-wider plm-opacity-40 plm-text-white">
+          <span className="plm-text-[8px] plm-uppercase plm-tracking-wider" style={{ color: foilColor, opacity: 0.6 }}>
             S{seasonNumber}
           </span>
         </div>
       )}
 
-      {/* Reputation shape + trophy overlay (bottom-left) */}
+      {/* Reputation-shape + Icon/Legend label (bottom-left) */}
       <div className="plm-absolute plm-bottom-1 plm-left-2 plm-z-[5] plm-flex plm-items-center plm-gap-1">
-        <ManagerRepShape
-          reputation={manager.reputation}
-          tierColor={tierColor}
-          borderColor={borderColor}
-        />
+        <ManagerRepShape reputation={manager.reputation} tierColor={tierColor} borderColor={borderColor} />
         {totalTrophies >= 10 ? (
           <span
             className="plm-font-display plm-font-black plm-uppercase plm-tracking-wider"
-            style={{
-              fontSize: 9,
-              color: '#DC2626',
-              textShadow: '0 0 3px rgba(0,0,0,0.6)',
-              letterSpacing: '0.08em',
-            }}
+            style={{ fontSize: 9, color: '#DC2626', textShadow: '0 0 3px rgba(255,255,255,0.8)', letterSpacing: '0.08em' }}
           >
             Legend
           </span>
         ) : totalTrophies >= 5 ? (
           <span
             className="plm-font-display plm-font-black plm-uppercase plm-tracking-wider"
-            style={{
-              fontSize: 9,
-              color: '#DC2626',
-              textShadow: '0 0 3px rgba(0,0,0,0.6)',
-              letterSpacing: '0.08em',
-            }}
+            style={{ fontSize: 9, color: '#DC2626', textShadow: '0 0 3px rgba(255,255,255,0.8)', letterSpacing: '0.08em' }}
           >
             Icon
           </span>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function StatRow({ label, value, borderColor }: { label: string; value: string; borderColor: string }) {
+  return (
+    <div className="plm-flex plm-justify-between plm-items-baseline plm-min-w-0">
+      <span
+        className="plm-text-[8px] plm-font-bold plm-uppercase plm-tracking-wider plm-flex-shrink-0"
+        style={{ color: borderColor, opacity: 0.85 }}
+      >
+        {label}
+      </span>
+      <span className="plm-text-[11px] plm-font-black plm-tabular-nums plm-truncate plm-ml-1" style={{ color: '#1A1A1A' }}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -268,7 +317,9 @@ function ManagerRepShape({
   borderColor: string;
 }) {
   const size = 18;
-  if (reputation > 85) {
+  // Mirror the player corner-shape rules: gold → star, silver → diamond,
+  // bronze + below → circle.
+  if (reputation >= 80) {
     return (
       <div className="plm-opacity-60">
         <svg width={size} height={size} viewBox="0 0 24 24" fill={tierColor}>
@@ -277,7 +328,7 @@ function ManagerRepShape({
       </div>
     );
   }
-  if (reputation >= 70) {
+  if (reputation >= 75) {
     return (
       <div className="plm-opacity-50">
         <svg width={size} height={size} viewBox="0 0 24 24">

@@ -285,10 +285,13 @@ export function RetroPlayerCard({
       : cornerOverlay === 'STARBOY' || cornerOverlay === 'FUTURE STAR'
       ? '✨'
       : null;
+  // Tier-to-shape: gold → star, silver → diamond, bronze + below → circle.
+  // Bronze deliberately falls through to the circle so any non-silver/gold
+  // card reads as the "basic" shape.
   const cornerShape: 'circle' | 'diamond' | 'star' =
     player.overall >= 80
       ? 'star'
-      : player.overall >= 65
+      : player.overall >= 75
       ? 'diamond'
       : 'circle';
 
