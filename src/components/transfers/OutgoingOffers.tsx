@@ -66,7 +66,9 @@ export function OutgoingOffers({ offers, clubs, budget, onAcceptCounter }: Outgo
             </div>
 
             <p className="plm-text-xs plm-mb-1">
-              Your offer: &pound;{offer.fee.toFixed(1)}M
+              {offer.status === 'accepted' && offer.counterFee
+                ? <>Paid: &pound;{offer.counterFee.toFixed(1)}M <span className="plm-text-gray-400">(countered from &pound;{offer.fee.toFixed(1)}M)</span></>
+                : <>Your offer: &pound;{offer.fee.toFixed(1)}M</>}
             </p>
 
             {offer.status === 'countered' && offer.counterFee && (

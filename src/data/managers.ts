@@ -20,9 +20,9 @@ export const CLUB_MANAGERS: Record<string, string> = {
   'wolves': 'Vítor Pereira',
   'nottm-forest': 'Nuno Espírito Santo',
   'everton': 'Sean Dyche',
-  'leicester': 'Ruud van Nistelrooy',
-  'ipswich': 'Kieran McKenna',
-  'southampton': 'Ivan Jurić',
+  'leicester': 'Daniel Farke',
+  'ipswich': 'Régis Le Bris',
+  'southampton': 'Scott Parker',
 };
 
 /**

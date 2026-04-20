@@ -17,7 +17,7 @@ type ManagerTier = 'elite' | 'gold' | 'silver' | 'bronze' | 'base';
 
 function getReputationTier(reputation: number): ManagerTier {
   if (reputation >= 90) return 'elite';
-  if (reputation >= 80) return 'gold';
+  if (reputation >= 85) return 'gold';
   if (reputation >= 75) return 'silver';
   if (reputation >= 65) return 'bronze';
   return 'base';
@@ -92,8 +92,7 @@ const CLUB_SHORT_NAMES: Record<string, string> = {
   'Crystal Palace': 'Palace',
   'Wolverhampton Wanderers': 'Wolves',
   'Nottingham Forest': 'Forest',
-  'Leicester City': 'Leicester',
-  'Ipswich Town': 'Ipswich',
+  'Leeds United': 'Leeds',
 };
 
 function shortenClubName(name: string | undefined): string | undefined {
@@ -108,10 +107,12 @@ function buildBio(manager: ManagerProfile): string {
   const nat = getNationalityLabel(manager.nationality);
   const trophies = (manager.totalLeagueTitles || 0) + (manager.totalFaCups || 0);
   const seasons = Math.max(1, Math.round((manager.totalGamesManaged || 0) / 38));
+  // Place nationality adjective before the noun, skip if it duplicates the philosophy adjective
+  const natPrefix = adj.toLowerCase() === nat.toLowerCase() ? '' : ` ${nat}`;
   if (trophies === 0) {
-    return `A ${adj} tactician from ${nat} leading out with a ${phil} ${manager.preferredFormation}.`;
+    return `A ${adj}${natPrefix} tactician leading out with a ${phil} ${manager.preferredFormation}.`;
   }
-  return `A ${adj} tactician from ${nat} whose ${phil} ${manager.preferredFormation} has delivered ${numberWord(trophies)} ${trophies === 1 ? 'trophy' : 'trophies'} in ${numberWord(seasons)} season${seasons === 1 ? '' : 's'}.`;
+  return `A ${adj}${natPrefix} tactician whose ${phil} ${manager.preferredFormation} has delivered ${numberWord(trophies)} ${trophies === 1 ? 'trophy' : 'trophies'} in ${numberWord(seasons)} season${seasons === 1 ? '' : 's'}.`;
 }
 
 interface ManagerCardProps {

@@ -91,7 +91,7 @@ export function IncomingOffers({ offers, clubs, playerClubId, onRespond }: Incom
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(group.playerId, playerClubId); } }}
                 aria-label={`View ${group.playerName} player card`}
               >
-                <div className="plm-text-sm plm-font-semibold plm-text-blue-700 plm-underline plm-decoration-blue-300 plm-truncate">
+                <div className="plm-text-sm plm-font-semibold plm-text-gray-900 plm-truncate">
                   {group.playerName}
                 </div>
                 <div className="plm-text-xs plm-text-gray-500">

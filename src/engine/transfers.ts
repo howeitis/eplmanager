@@ -330,10 +330,12 @@ export function simulateAITransferWindow(
 
   // AI clubs try to fill position needs
   const aiClubs = clubs.filter((c) => c.id !== playerClubId);
-  const maxTransfersPerWindow = windowType === 'summer' ? 5 : 2;
 
   for (const aiClub of aiClubs) {
     const club = clubMap.get(aiClub.id)!;
+    const maxTransfersPerWindow = windowType === 'summer'
+      ? (club.tier <= 2 ? 7 : 5)
+      : 2;
     const needs = assessPositionNeeds(club);
     let transfersCompleted = 0;
 
@@ -347,6 +349,10 @@ export function simulateAITransferWindow(
       let bestCandidate: { player: Player; sellerClub: Club } | null = null;
       let bestValue = -1;
 
+      // Target overall for this club based on tier
+      const tierTargetOverall: Record<number, number> = { 1: 76, 2: 72, 3: 68, 4: 64, 5: 60 };
+      const targetOvr = tierTargetOverall[club.tier] || 66;
+
       for (const [otherId, otherClub] of clubMap.entries()) {
         if (otherId === club.id) continue;
 
@@ -359,7 +365,8 @@ export function simulateAITransferWindow(
 
         for (const candidate of candidatesAtPos) {
           const value = refreshPlayerValue(candidate);
-          if (value > availableBudget * 0.6) continue; // Don't blow entire budget
+          if (value > availableBudget * 0.8) continue; // Don't blow entire budget
+          if (candidate.overall < targetOvr - 6) continue; // Don't buy players way below tier standard
           if (candidate.overall > bestValue) {
             bestValue = candidate.overall;
             bestCandidate = { player: candidate, sellerClub: otherClub };
@@ -469,6 +476,98 @@ export function simulateAITransferWindow(
         `${playerToSell.name} (${playerToSell.position}, ${playerToSell.overall}) sold to ${sale.destination} for £${sale.fee}M.`,
       );
     }
+
+    // ── Quality gap pursuit: find and upgrade below-average positions ──
+    if (windowType === 'summer') {
+      const clubAvg = clubAverageOverall(club);
+      const weakPlayers = club.roster
+        .filter((p) => !p.isTemporary && !p.acquiredThisWindow && p.overall < clubAvg - 5)
+        .sort((a, b) => a.overall - b.overall);
+
+      for (const weakPlayer of weakPlayers.slice(0, 2)) {
+        if (transfersCompleted >= (club.tier <= 2 ? 7 : 5)) break;
+        const budget = mutableBudgets[club.id] || 0;
+        if (budget < 3) break;
+
+        let bestUpgrade: { player: Player; sellerClub: Club } | null = null;
+        let bestUpgradeOvr = weakPlayer.overall;
+
+        for (const [otherId, otherClub] of clubMap.entries()) {
+          if (otherId === club.id) continue;
+          const candidates = otherClub.roster.filter(
+            (p) => p.position === weakPlayer.position && !p.isTemporary && !p.acquiredThisWindow && p.overall >= bestUpgradeOvr + 3,
+          );
+          if (otherId !== playerClubId && candidates.length <= 1) continue;
+
+          for (const candidate of candidates) {
+            const value = refreshPlayerValue(candidate);
+            if (value > budget * 0.8) continue;
+            if (candidate.overall > bestUpgradeOvr) {
+              bestUpgradeOvr = candidate.overall;
+              bestUpgrade = { player: candidate, sellerClub: otherClub };
+            }
+          }
+        }
+
+        if (!bestUpgrade) continue;
+
+        const { player: upgPlayer, sellerClub: upgSeller } = bestUpgrade;
+        const upgValue = refreshPlayerValue(upgPlayer);
+        const upgFee = Math.round(upgValue * rng.randomFloat(1.0, 1.25) * 10) / 10;
+
+        const upgEval = evaluateOffer(
+          rng, upgFee, upgPlayer, upgSeller, club.id, club.tier,
+          Array.from(clubMap.values()),
+        );
+
+        if (upgEval.accepted) {
+          const refused = checkPlayerRefusal(rng, upgPlayer, club.tier, upgSeller.tier);
+          if (refused) continue;
+
+          if (upgSeller.id === playerClubId) {
+            incomingOffers.push({
+              id: `offer-qgap-${rng.randomInt(10000, 99999)}`,
+              playerId: upgPlayer.id,
+              playerName: upgPlayer.name,
+              playerPosition: upgPlayer.position,
+              playerOverall: upgPlayer.overall,
+              playerAge: upgPlayer.age,
+              fromClubId: upgSeller.id,
+              toClubId: club.id,
+              fee: upgFee,
+              status: 'pending',
+              direction: 'incoming',
+            });
+            continue;
+          }
+
+          mutableBudgets[club.id] = (mutableBudgets[club.id] || 0) - upgFee;
+          mutableBudgets[upgSeller.id] = (mutableBudgets[upgSeller.id] || 0) + upgFee;
+
+          const sellerMut = clubMap.get(upgSeller.id)!;
+          sellerMut.roster = sellerMut.roster.filter((p) => p.id !== upgPlayer.id);
+          const buyerMut = clubMap.get(club.id)!;
+          buyerMut.roster.push(resetProgressionForTransfer(upgPlayer));
+
+          completedTransfers.push({
+            playerId: upgPlayer.id,
+            playerName: upgPlayer.name,
+            playerPosition: upgPlayer.position,
+            playerOverall: upgPlayer.overall,
+            playerAge: upgPlayer.age,
+            fromClubId: upgSeller.id,
+            toClubId: club.id,
+            fee: upgFee,
+            season: seasonNumber,
+            window: windowType,
+          });
+          tickerMessages.push(
+            `${club.name} signed ${upgPlayer.name} (${upgPlayer.position}, ${upgPlayer.overall}) from ${upgSeller.name} for £${upgFee}M.`,
+          );
+          transfersCompleted++;
+        }
+      }
+    }
   }
 
   // --- Speculative incoming offers for the user's squad ---
@@ -495,19 +594,29 @@ export function simulateAITransferWindow(
       // 55% chance per eligible player per window
       if (rng.random() > 0.55) continue;
 
-      // Pick a plausible buyer: AI club with budget and same-tier-or-better
+      // Tier-appropriateness filter: top teams shouldn't want low-rated players
+      const maxBuyerTier = player.overall >= 75 ? 5  // Any tier can bid
+        : player.overall >= 68 ? 3                    // Tier 1-3
+        : player.overall >= 62 ? 5                    // Tier 2-5 (mid-range: all tiers)
+        : 5;                                          // Any tier for low players, but filter below
+      const minBuyerTier = player.overall < 62 ? 3 : 1; // Low-rated: only tier 3-5 bid
+
+      // Pick a plausible buyer: AI club with budget and appropriate tier
       const buyers = aiClubs
         .map((c) => clubMap.get(c.id)!)
-        .filter((c) => (mutableBudgets[c.id] || 0) >= refreshPlayerValue(player) * 0.9)
-        .sort((a, b) => (mutableBudgets[b.id] || 0) - (mutableBudgets[a.id] || 0));
+        .filter((c) => {
+          const canAfford = (mutableBudgets[c.id] || 0) >= refreshPlayerValue(player) * 0.9;
+          const tierOk = c.tier >= minBuyerTier && c.tier <= maxBuyerTier;
+          return canAfford && tierOk;
+        });
       if (buyers.length === 0) continue;
 
-      // Prefer clubs needing this position, otherwise pick one of top 5 richest
+      // Prefer clubs needing this position, otherwise pick randomly from eligible
       const preferred = buyers.find((b) => {
         const needs = assessPositionNeeds(b);
         return needs.some((n) => n.position === player.position);
       });
-      const buyer = preferred ?? buyers[rng.randomInt(0, Math.min(4, buyers.length - 1))];
+      const buyer = preferred ?? buyers[rng.randomInt(0, buyers.length - 1)];
 
       const marketValue = refreshPlayerValue(player);
       const offerFee = Math.round(marketValue * rng.randomFloat(0.95, 1.35) * 10) / 10;

@@ -355,8 +355,8 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'leicester',
-    name: 'Leicester City',
-    shortName: 'LEI',
+    name: 'Leeds United',
+    shortName: 'LEE',
     tier: 5,
     budget: 32,
     colors: { primary: '#003090', secondary: '#FDBE11' },
@@ -376,8 +376,8 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'ipswich',
-    name: 'Ipswich Town',
-    shortName: 'IPS',
+    name: 'Sunderland',
+    shortName: 'SUN',
     tier: 5,
     budget: 28,
     colors: { primary: '#3A64A3', secondary: '#FFFFFF' },
@@ -395,8 +395,8 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'southampton',
-    name: 'Southampton',
-    shortName: 'SOU',
+    name: 'Burnley',
+    shortName: 'BUR',
     tier: 5,
     budget: 30,
     colors: { primary: '#D71920', secondary: '#FFFFFF' },

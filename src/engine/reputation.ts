@@ -108,22 +108,22 @@ export function calculateSeasonReputationChange(
 
   if (gap >= 10) {
     // Massive overperformance (e.g., survival club wins title)
-    delta = 15;
+    delta = 8;
     budgetModifier = 0.25;
     reason = 'Extraordinary season — far exceeded all expectations.';
   } else if (gap >= 5) {
     // Strong overperformance
-    delta = 10;
+    delta = 5;
     budgetModifier = 0.15;
     reason = 'Brilliant season — significantly exceeded board expectations.';
   } else if (gap >= 2) {
     // Good overperformance
-    delta = 5;
+    delta = 3;
     budgetModifier = 0.10;
     reason = 'Strong season — exceeded board expectations.';
   } else if (gap >= 0) {
     // Met expectations
-    delta = 2;
+    delta = 1;
     budgetModifier = 0;
     reason = 'Solid season — met the board\'s expectations.';
   } else if (gap >= -3) {
@@ -144,8 +144,8 @@ export function calculateSeasonReputationChange(
   }
 
   // Title winner always gets a rep boost regardless of expectations
-  if (finishPosition === 1 && delta < 10) {
-    delta = 10;
+  if (finishPosition === 1 && delta < 6) {
+    delta = 6;
     reason = 'Champions! The board is thrilled.';
   }
 
@@ -169,8 +169,8 @@ export function calculateSeasonEndBudget(
 ): number {
   const payout = getPositionBudgetPayout(finishPosition);
 
-  // Unspent budget rolls over at 50%
-  const rollover = currentBudget * 0.5;
+  // Unspent budget rolls over fully
+  const rollover = currentBudget;
 
   // New budget = payout + rollover, then apply modifier
   let newBudget = payout + rollover;

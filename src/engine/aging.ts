@@ -121,11 +121,11 @@ export function calculateAgingChanges(
  * This maintains the competitive hierarchy across multi-season simulations.
  */
 const REGEN_RATING_RANGES: Record<number, [number, number]> = {
-  1: [62, 74], // Elite academies — can produce first-team quality
-  2: [58, 70], // Strong academies
-  3: [55, 66], // Solid academies
-  4: [52, 62], // Modest academies
-  5: [50, 59], // Basic academies
+  1: [65, 77], // Elite academies — can produce first-team quality
+  2: [62, 73], // Strong academies
+  3: [58, 69], // Solid academies
+  4: [55, 65], // Modest academies
+  5: [52, 62], // Basic academies
 };
 
 /**
