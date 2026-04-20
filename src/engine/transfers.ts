@@ -333,9 +333,8 @@ export function simulateAITransferWindow(
 
   for (const aiClub of aiClubs) {
     const club = clubMap.get(aiClub.id)!;
-    const maxTransfersPerWindow = windowType === 'summer'
-      ? (club.tier <= 2 ? 7 : 5)
-      : 2;
+    // Hard cap: max 3 transfers per window per club
+    const maxTransfersPerWindow = 3;
     const needs = assessPositionNeeds(club);
     let transfersCompleted = 0;
 
@@ -345,6 +344,13 @@ export function simulateAITransferWindow(
       // Find a player to buy from another club
       const availableBudget = mutableBudgets[club.id] || 0;
       if (availableBudget < 1) continue;
+
+      // Squad size guard: don't buy if at or above 25
+      if (club.roster.length >= 25) break;
+
+      // GK cap: don't buy another GK if already have 3
+      const currentGKs = club.roster.filter((p) => p.position === 'GK' && !p.isTemporary).length;
+      if (need.position === 'GK' && currentGKs >= 3) continue;
 
       let bestCandidate: { player: Player; sellerClub: Club } | null = null;
       let bestValue = -1;
@@ -360,8 +366,8 @@ export function simulateAITransferWindow(
         const candidatesAtPos = otherClub.roster.filter(
           (p) => p.position === need.position && !p.isTemporary && !p.acquiredThisWindow,
         );
-        // Don't strip AI clubs bare, but always allow scouting the user's club
-        if (otherId !== playerClubId && candidatesAtPos.length <= 1) continue;
+        // Don't strip AI clubs bare (min 16 roster), but always allow scouting the user's club
+        if (otherId !== playerClubId && (candidatesAtPos.length <= 1 || otherClub.roster.filter((p) => !p.isTemporary).length <= 16)) continue;
 
         for (const candidate of candidatesAtPos) {
           const value = refreshPlayerValue(candidate);
@@ -446,35 +452,38 @@ export function simulateAITransferWindow(
     }
 
     // AI also sells aging/low-value players — simulate continent sales occasionally
-    const agingPlayers = club.roster.filter(
-      (p) => p.age > 31 && p.overall < 65 && !p.isTemporary && !p.acquiredThisWindow,
-    );
-    if (agingPlayers.length > 0 && rng.random() < 0.3) {
-      const playerToSell = agingPlayers[rng.randomInt(0, agingPlayers.length - 1)];
-      const sale = executeContinentSale(rng, playerToSell);
-
-      const clubMut = clubMap.get(club.id)!;
-      clubMut.roster = clubMut.roster.filter((p) => p.id !== playerToSell.id);
-      mutableBudgets[club.id] = (mutableBudgets[club.id] || 0) + sale.fee;
-
-      const record: TransferRecord = {
-        playerId: playerToSell.id,
-        playerName: playerToSell.name,
-        playerPosition: playerToSell.position,
-        playerOverall: playerToSell.overall,
-        playerAge: playerToSell.age,
-        fromClubId: club.id,
-        toClubId: 'continent',
-        fee: sale.fee,
-        season: seasonNumber,
-        window: windowType,
-        isContinentSale: true,
-        continentDestination: `${sale.destination} (${sale.league})`,
-      };
-      completedTransfers.push(record);
-      tickerMessages.push(
-        `${playerToSell.name} (${playerToSell.position}, ${playerToSell.overall}) sold to ${sale.destination} for £${sale.fee}M.`,
+    // Only sell if roster is above minimum size
+    if (club.roster.filter((p) => !p.isTemporary).length > 16) {
+      const agingPlayers = club.roster.filter(
+        (p) => p.age > 31 && p.overall < 65 && !p.isTemporary && !p.acquiredThisWindow,
       );
+      if (agingPlayers.length > 0 && rng.random() < 0.3) {
+        const playerToSell = agingPlayers[rng.randomInt(0, agingPlayers.length - 1)];
+        const sale = executeContinentSale(rng, playerToSell);
+
+        const clubMut = clubMap.get(club.id)!;
+        clubMut.roster = clubMut.roster.filter((p) => p.id !== playerToSell.id);
+        mutableBudgets[club.id] = (mutableBudgets[club.id] || 0) + sale.fee;
+
+        const record: TransferRecord = {
+          playerId: playerToSell.id,
+          playerName: playerToSell.name,
+          playerPosition: playerToSell.position,
+          playerOverall: playerToSell.overall,
+          playerAge: playerToSell.age,
+          fromClubId: club.id,
+          toClubId: 'continent',
+          fee: sale.fee,
+          season: seasonNumber,
+          window: windowType,
+          isContinentSale: true,
+          continentDestination: `${sale.destination} (${sale.league})`,
+        };
+        completedTransfers.push(record);
+        tickerMessages.push(
+          `${playerToSell.name} (${playerToSell.position}, ${playerToSell.overall}) sold to ${sale.destination} for £${sale.fee}M.`,
+        );
+      }
     }
 
     // ── Quality gap pursuit: find and upgrade below-average positions ──
@@ -485,7 +494,9 @@ export function simulateAITransferWindow(
         .sort((a, b) => a.overall - b.overall);
 
       for (const weakPlayer of weakPlayers.slice(0, 2)) {
-        if (transfersCompleted >= (club.tier <= 2 ? 7 : 5)) break;
+        if (transfersCompleted >= maxTransfersPerWindow) break;
+        // Squad size guard
+        if (club.roster.length >= 25) break;
         const budget = mutableBudgets[club.id] || 0;
         if (budget < 3) break;
 
@@ -497,7 +508,9 @@ export function simulateAITransferWindow(
           const candidates = otherClub.roster.filter(
             (p) => p.position === weakPlayer.position && !p.isTemporary && !p.acquiredThisWindow && p.overall >= bestUpgradeOvr + 3,
           );
-          if (otherId !== playerClubId && candidates.length <= 1) continue;
+          // Don't strip AI clubs below min roster
+          const otherRealSize = otherClub.roster.filter((p) => !p.isTemporary).length;
+          if (otherId !== playerClubId && (candidates.length <= 1 || otherRealSize <= 16)) continue;
 
           for (const candidate of candidates) {
             const value = refreshPlayerValue(candidate);

@@ -107,12 +107,27 @@ function buildBio(manager: ManagerProfile): string {
   const nat = getNationalityLabel(manager.nationality);
   const trophies = (manager.totalLeagueTitles || 0) + (manager.totalFaCups || 0);
   const seasons = Math.max(1, Math.round((manager.totalGamesManaged || 0) / 38));
-  // Place nationality adjective before the noun, skip if it duplicates the philosophy adjective
-  const natPrefix = adj.toLowerCase() === nat.toLowerCase() ? '' : ` ${nat}`;
-  if (trophies === 0) {
-    return `A ${adj}${natPrefix} tactician leading out with a ${phil} ${manager.preferredFormation}.`;
+
+  // Avoid adjective repetition: if adj matches the philosophy label, drop adj and lead with nationality
+  const adjMatchesPhil = adj.toLowerCase() === phil.toLowerCase();
+  const natMatchesAdj = adj.toLowerCase() === nat.toLowerCase();
+
+  // Build the descriptor prefix: e.g. "A fearless English" or "A Scottish" (when adj=pragmatic matches phil)
+  let descriptor: string;
+  if (adjMatchesPhil) {
+    // Skip adj, just use nationality: "A Scottish tactician"
+    descriptor = `A ${nat}`;
+  } else if (natMatchesAdj) {
+    // Skip nat to avoid "A patient patient": "A patient tactician"
+    descriptor = `A ${adj}`;
+  } else {
+    descriptor = `A ${adj} ${nat}`;
   }
-  return `A ${adj}${natPrefix} tactician whose ${phil} ${manager.preferredFormation} has delivered ${numberWord(trophies)} ${trophies === 1 ? 'trophy' : 'trophies'} in ${numberWord(seasons)} season${seasons === 1 ? '' : 's'}.`;
+
+  if (trophies === 0) {
+    return `${descriptor} tactician leading out with a ${phil} ${manager.preferredFormation}.`;
+  }
+  return `${descriptor} tactician whose ${phil} ${manager.preferredFormation} has delivered ${numberWord(trophies)} ${trophies === 1 ? 'trophy' : 'trophies'} in ${numberWord(seasons)} season${seasons === 1 ? '' : 's'}.`;
 }
 
 interface ManagerCardProps {

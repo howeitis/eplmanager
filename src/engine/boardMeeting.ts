@@ -3,12 +3,13 @@ import type { BoardExpectation } from '../types/entities';
 
 // ─── Standing Classification ───
 
-export type ManagerStanding = 'on_track' | 'at_risk' | 'failing';
+export type ManagerStanding = 'exceeded' | 'on_track' | 'at_risk' | 'failing';
 
 export function classifyStanding(
   currentPosition: number,
   boardExpectation: BoardExpectation,
 ): ManagerStanding {
+  if (currentPosition <= boardExpectation.minPosition - 3) return 'exceeded';
   if (currentPosition <= boardExpectation.minPosition) return 'on_track';
   if (currentPosition <= boardExpectation.minPosition + 3) return 'at_risk';
   return 'failing';
@@ -19,6 +20,7 @@ export function classifyStanding(
 interface GreetingTemplate {
   personality: ChairmanPersonality;
   season1: string[];
+  returning_exceeded: string[];
   returning_on_track: string[];
   returning_at_risk: string[];
   returning_failing: string[];
@@ -31,6 +33,11 @@ const GREETING_TEMPLATES: GreetingTemplate[] = [
       "Welcome aboard, {manager}. We're delighted to have you. There's no rush here — we believe in building something lasting. Take the time to learn the squad and make this club your own.",
       "Glad to have you with us, {manager}. We know Rome wasn't built in a day, and neither will this project be. We trust your vision — now let's get to work.",
       "{manager}, welcome to the family. The board is united behind you. We believe in steady progress, not overnight miracles. Let's lay the foundations for something special.",
+    ],
+    returning_exceeded: [
+      "{manager}, what a season! Finishing {lastFinish} was beyond what any of us expected. The board is genuinely grateful for the work you've done. We're excited to see where you take us next.",
+      "Remarkable work, {manager}. A {lastFinish} finish exceeded all our expectations. The board wants you to know how much we appreciate what you've achieved. Keep this going.",
+      "{manager}, the board can't thank you enough. A {lastFinish} finish is a testament to your quality. We're behind you completely — let's see if we can go even further.",
     ],
     returning_on_track: [
       "Good to see you again, {manager}. Last season was exactly what we hoped for — a solid {lastFinish} finish. Let's keep building on that momentum, one step at a time.",
@@ -55,6 +62,11 @@ const GREETING_TEMPLATES: GreetingTemplate[] = [
       "Welcome, {manager}. I don't do long introductions. You know the expectations, you know the standards. Meet them, and we'll get along just fine.",
       "{manager}, the board has put its faith in you. That faith is not unconditional. This club has a proud history and I expect you to add to it. Starting now.",
     ],
+    returning_exceeded: [
+      "{manager}, a {lastFinish} finish. I'll admit — you've impressed me, and that's not easy. But don't let it go to your head. The target moves up. I expect even more.",
+      "Finishing {lastFinish} was a statement, {manager}. The board acknowledges your achievement. But remember — one great season means nothing if you can't follow it up.",
+      "{manager}, take a moment to enjoy the {lastFinish} finish. You've earned it. Now — the bar is higher. This club doesn't settle for past glory.",
+    ],
     returning_on_track: [
       "{manager}, the {lastFinish} finish last season was acceptable. Acceptable — not exceptional. I expect you to push for more this time around.",
       "Finishing {lastFinish} was a decent start, {manager}. But this club should never be satisfied with decent. Raise the bar.",
@@ -77,6 +89,11 @@ const GREETING_TEMPLATES: GreetingTemplate[] = [
       "{manager}, welcome to the start of something big. This club is going places, and you're the person we've chosen to lead the charge. Dream big — we certainly do.",
       "Welcome aboard, {manager}. We don't do small ambitions here. The board wants to see this club compete at the very highest level, and we believe you're the manager to get us there.",
       "{manager}, the future is bright and it starts today. We've invested in you because we see a vision for greatness. Let's turn that vision into reality.",
+    ],
+    returning_exceeded: [
+      "{manager}, incredible! A {lastFinish} finish is exactly the kind of ambition this club is built on. The board is thrilled — you've shown everyone what's possible. Now let's dream even bigger.",
+      "What a season, {manager}! Finishing {lastFinish} blew past every projection. This is the kind of momentum that changes a club's trajectory. The board is fully behind your vision.",
+      "{manager}, the {lastFinish} finish has the whole club buzzing. You've turned ambition into results. The board wants to push on — tell us what you need to go further.",
     ],
     returning_on_track: [
       "{manager}, finishing {lastFinish} last season was a strong step forward. But we're not building this project to stand still — let's push for the next level.",
@@ -101,6 +118,11 @@ const GREETING_TEMPLATES: GreetingTemplate[] = [
       "Welcome, {manager}. Before you look at the budget, understand our philosophy: value over vanity. We believe in smart recruitment, not headline transfers. Work within the means.",
       "{manager}, glad to have you. Let me set expectations: we're not going to outspend anyone. What we will do is outsmart them. That's what we hired you for.",
     ],
+    returning_exceeded: [
+      "{manager}, a {lastFinish} finish — and on our budget? That's extraordinary value. The board is deeply impressed. You've proven that smart management beats big spending every time.",
+      "Finishing {lastFinish} while keeping costs down is exactly what this club stands for, {manager}. The board couldn't be happier with the return on investment. Well done.",
+      "{manager}, the {lastFinish} finish speaks volumes about your efficiency. The shareholders are delighted — results like these make every penny worthwhile.",
+    ],
     returning_on_track: [
       "{manager}, the {lastFinish} finish last season was excellent value for what we spent. That's exactly the kind of efficiency this board appreciates. More of the same, please.",
       "Finishing {lastFinish} on our budget was an achievement, {manager}. The board values fiscal responsibility as much as results — and you delivered on both.",
@@ -123,6 +145,11 @@ const GREETING_TEMPLATES: GreetingTemplate[] = [
       "{manager}, welcome to a club with history in its bones. Generations of supporters have stood on these terraces. You're now part of that story — make it a chapter worth reading.",
       "Welcome, {manager}. If you look around this boardroom, you'll see the photographs on the walls. Every one of them tells a story of glory. It's been too long since we added a new frame.",
       "{manager}, this club was built by legends. The fans remember the great days, and they're waiting for someone to bring them back. We believe you can be that person.",
+    ],
+    returning_exceeded: [
+      "{manager}, finishing {lastFinish}! The old photographs on the wall are smiling. It's been a long time since this club felt like this. The supporters are singing your name.",
+      "A {lastFinish} finish, {manager}. I've been at this club a long time, and I haven't felt this pride in years. You're writing a new chapter worthy of the greats.",
+      "{manager}, the {lastFinish} finish has reminded everyone what this club can be. The legends of the past would be proud. The board extends its heartfelt thanks.",
     ],
     returning_on_track: [
       "{manager}, the {lastFinish} finish last season reminded us of the good times. The fans are starting to believe again. Keep that spirit alive.",
@@ -165,6 +192,9 @@ export function selectGreeting(
     pool = template.season1;
   } else {
     switch (standing) {
+      case 'exceeded':
+        pool = template.returning_exceeded;
+        break;
       case 'on_track':
         pool = template.returning_on_track;
         break;

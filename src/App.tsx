@@ -671,6 +671,18 @@ function App() {
         currentXI = swapResult.newXI;
       }
 
+      // Auto-captain: set to best overall player in the XI if no captain or captain not in XI
+      const xiPlayerIds = Object.values(currentXI);
+      const currentCaptainId = store.getState().captainId;
+      if (!currentCaptainId || !xiPlayerIds.includes(currentCaptainId)) {
+        const xiPlayers = playerClub.roster
+          .filter((p) => xiPlayerIds.includes(p.id) && !p.isTemporary)
+          .sort((a, b) => b.overall - a.overall);
+        if (xiPlayers.length > 0) {
+          state.setCaptain(xiPlayers[0].id);
+        }
+      }
+
       const validation = validateXI(currentXI, formation, playerClub.roster);
       if (!validation.valid) {
         return;

@@ -110,8 +110,7 @@ const CLUB_SHORT_NAMES: Record<string, string> = {
   'Crystal Palace': 'Palace',
   'Wolverhampton Wanderers': 'Wolves',
   'Nottingham Forest': 'Forest',
-  'Leicester City': 'Leicester',
-  'Ipswich Town': 'Ipswich',
+  'Leeds United': 'Leeds',
 };
 
 function shortenClubName(name: string | undefined): string | undefined {
