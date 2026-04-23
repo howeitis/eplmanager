@@ -52,8 +52,8 @@ export function calculateMarketValue(
 
   const raw = base * ageFactor * traitFactor;
 
-  // Floor at £0.5M, cap at £90M, round to 1 decimal
-  return Math.max(0.5, Math.min(90, Math.round(raw * 10) / 10));
+  // Floor at £0.5M, no upper ceiling — elite players can exceed £90M.
+  return Math.max(0.5, Math.round(raw * 10) / 10);
 }
 
 // --- Recalculate a player's market value ---

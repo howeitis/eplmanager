@@ -4,6 +4,7 @@ import { CLUBS } from '../../data/clubs';
 import { getClubLogoUrl } from '../../data/assets';
 import { ManagerCard } from '../shared/ManagerCard';
 import { saveGame } from '../../utils/save';
+import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 
 const PHILOSOPHY_LABELS: Record<string, string> = {
   attacking: 'Attacking',
@@ -47,6 +48,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [resignStep, setResignStep] = useState<0 | 1 | 2>(0);
+  const tutorial = useFirstVisitTutorial('manager', saveSlot);
 
   const handleSave = useCallback(async () => {
     if (!saveSlot || saving) return;
@@ -348,6 +350,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
           </div>
         </div>
       )}
+      {tutorial.show && <TutorialModal tab="manager" onClose={tutorial.onClose} />}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import type { SeasonHistory as SeasonHistoryType } from '../../types/entities';
-import { TutorialModal } from '../shared/TutorialModal';
+import { TutorialModal, useFirstVisitTutorial, type TutorialTab } from '../shared/TutorialModal';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
@@ -10,7 +10,12 @@ export function SeasonHistoryScreen() {
   const seasonHistories = useGameStore((s) => s.seasonHistories);
   const manager = useGameStore((s) => s.manager);
   const playerClubId = manager?.clubId;
-  const [showTutorial, setShowTutorial] = useState(false);
+  const saveSlot = useGameStore((s) => s.saveSlot);
+  const firstVisit = useFirstVisitTutorial('history', saveSlot);
+  // Which tab's tutorial to show in the review viewer (null = picker closed).
+  const [reviewTab, setReviewTab] = useState<TutorialTab | null>(null);
+  // Whether the "pick a tab" menu is visible.
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // All-time records
   const records = useMemo(() => {
@@ -57,7 +62,7 @@ export function SeasonHistoryScreen() {
 
   const tutorialButton = (
     <button
-      onClick={() => setShowTutorial(true)}
+      onClick={() => setPickerOpen(true)}
       className="plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-2 plm-rounded-full plm-border plm-border-blue-200 plm-bg-blue-50 plm-text-blue-700 plm-text-xs plm-font-semibold hover:plm-bg-blue-100 plm-min-h-[36px]"
     >
       <span aria-hidden="true">❓</span>
@@ -65,7 +70,21 @@ export function SeasonHistoryScreen() {
     </button>
   );
 
-  const tutorialModal = showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />;
+  const tutorialModal = (
+    <>
+      {firstVisit.show && <TutorialModal tab="history" onClose={firstVisit.onClose} />}
+      {reviewTab && <TutorialModal tab={reviewTab} onClose={() => setReviewTab(null)} />}
+      {pickerOpen && (
+        <TutorialPicker
+          onPick={(t) => {
+            setPickerOpen(false);
+            setReviewTab(t);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+    </>
+  );
 
   if (seasonHistories.length === 0) {
     return (
@@ -257,5 +276,66 @@ function getOrdinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+// ─── Tutorial review picker ────────────────────────────────────────────────
+// Shown from the "New here?" button. Lets the user jump into any tab's
+// tutorial from one place.
+const TUTORIAL_OPTIONS: { tab: TutorialTab; label: string; icon: string }[] = [
+  { tab: 'hub', label: 'Game Hub', icon: '🏟' },
+  { tab: 'squad', label: 'Squad', icon: '👥' },
+  { tab: 'transfers', label: 'Transfers', icon: '💷' },
+  { tab: 'history', label: 'History', icon: '📜' },
+  { tab: 'manager', label: 'Manager', icon: '🎩' },
+  { tab: 'overview', label: 'Full overview', icon: '📖' },
+];
+
+function TutorialPicker({
+  onPick,
+  onClose,
+}: {
+  onPick: (tab: TutorialTab) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="plm-fixed plm-inset-0 plm-z-[100] plm-flex plm-items-center plm-justify-center plm-p-4"
+      style={{ background: 'rgba(0,0,0,0.55)' }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tutorial-picker-title"
+    >
+      <div
+        className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-max-w-md plm-w-full plm-shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="plm-flex plm-items-center plm-justify-between plm-px-5 plm-py-3 plm-border-b plm-border-warm-200">
+          <h3 id="tutorial-picker-title" className="plm-font-display plm-font-bold plm-text-lg plm-text-charcoal">
+            Review a tutorial
+          </h3>
+          <button
+            onClick={onClose}
+            aria-label="Close tutorial picker"
+            className="plm-text-warm-500 hover:plm-text-charcoal plm-text-xl plm-leading-none"
+          >
+            ×
+          </button>
+        </div>
+        <div className="plm-p-3 plm-grid plm-grid-cols-2 plm-gap-2">
+          {TUTORIAL_OPTIONS.map((opt) => (
+            <button
+              key={opt.tab}
+              onClick={() => onPick(opt.tab)}
+              className="plm-flex plm-items-center plm-gap-2 plm-px-3 plm-py-3 plm-rounded plm-border plm-border-warm-200 plm-bg-warm-50 hover:plm-bg-blue-50 hover:plm-border-blue-200 plm-text-left plm-min-h-[44px]"
+            >
+              <span className="plm-text-lg" aria-hidden="true">{opt.icon}</span>
+              <span className="plm-text-sm plm-font-semibold plm-text-charcoal">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 

@@ -7,6 +7,7 @@ import { BoardStatus } from './BoardStatus';
 import { SquadMiniView } from './SquadMiniView';
 import { GoalScorersWidget } from './GoalScorersWidget';
 import { LeagueTable } from '../shared/LeagueTable';
+import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 import type { NavTab } from '../shared/BottomNav';
 
 interface GameHubProps {
@@ -25,8 +26,10 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
   const leagueTable = useGameStore((s) => s.leagueTable);
   const shortlistNotifications = useGameStore((s) => s.shortlistNotifications);
   const clearShortlistNotifications = useGameStore((s) => s.clearShortlistNotifications);
+  const saveSlot = useGameStore((s) => s.saveSlot);
 
   const [dismissedNotifications, setDismissedNotifications] = useState(false);
+  const tutorial = useFirstVisitTutorial('hub', saveSlot);
 
   // Reset dismissed state when new notifications arrive
   useEffect(() => {
@@ -213,6 +216,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
           </button>
         </div>
       </div>
+      {tutorial.show && <TutorialModal tab="hub" onClose={tutorial.onClose} />}
     </div>
   );
 }

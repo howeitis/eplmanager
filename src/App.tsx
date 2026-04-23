@@ -1033,7 +1033,26 @@ function App() {
     );
     state.updateReputation(repResult.delta);
 
-    // Log accomplishments
+    // Award trophy stickers to every non-temporary player on the winning
+    // clubs — applies to both the user's squad and AI squads, so retro cards
+    // across the league reflect their honours. Mutates the local `clubs`
+    // rosters in place (same pattern as aging) so the trophies survive the
+    // initializeClubs call further down in this handler.
+    const champion = sorted[0];
+    const awardTrophy = (clubId: string, type: 'league' | 'cup') => {
+      const club = clubs.find((c) => c.id === clubId);
+      if (!club) return;
+      for (const p of club.roster) {
+        if (p.isTemporary) continue;
+        const existing = p.trophiesWon ?? [];
+        if (existing.some((t) => t.season === seasonNumber && t.type === type)) continue;
+        p.trophiesWon = [...existing, { season: seasonNumber, type }];
+      }
+    };
+    awardTrophy(champion.clubId, 'league');
+    if (cupResult.winner) awardTrophy(cupResult.winner, 'cup');
+
+    // Log accomplishments for the user's manager profile only.
     if (playerPosition === 1) {
       state.addAccomplishment({
         id: `acc-title-s${seasonNumber}`,
@@ -1043,17 +1062,6 @@ function App() {
         headline: `Won the Premier League with ${clubDataMap.get(playerClubId)?.name}`,
       });
       state.updateCurrentTenure({ leagueTitles: (manager!.tenures?.at(-1)?.leagueTitles || 0) + 1 });
-      // Mark trophy on player roster
-      const championClub = store.getState().clubs.find((c) => c.id === playerClubId);
-      if (championClub) {
-        for (const p of championClub.roster) {
-          if (!p.isTemporary) {
-            state.updatePlayer(playerClubId, p.id, {
-              trophiesWon: [...(p.trophiesWon || []), { season: seasonNumber, type: 'league' }],
-            });
-          }
-        }
-      }
     }
     if (cupResult.winner === playerClubId) {
       state.addAccomplishment({
@@ -1064,17 +1072,6 @@ function App() {
         headline: `Won the FA Cup with ${clubDataMap.get(playerClubId)?.name}`,
       });
       state.updateCurrentTenure({ faCups: (manager!.tenures?.at(-1)?.faCups || 0) + 1 });
-      // Mark cup trophy on player roster
-      const cupClub = store.getState().clubs.find((c) => c.id === playerClubId);
-      if (cupClub) {
-        for (const p of cupClub.roster) {
-          if (!p.isTemporary) {
-            state.updatePlayer(playerClubId, p.id, {
-              trophiesWon: [...(p.trophiesWon || []), { season: seasonNumber, type: 'cup' }],
-            });
-          }
-        }
-      }
     }
     // Update tenure stats
     const gamesThisSeason = sorted.find((r) => r.clubId === playerClubId)?.played || 0;

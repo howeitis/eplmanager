@@ -10,6 +10,7 @@ import { GoalScorersWidget } from '../hub/GoalScorersWidget';
 import { useModalParams } from '../../hooks/useModalParams';
 import type { XISwap } from '../../engine/startingXI';
 import { refreshPlayerValue } from '../../engine/transfers';
+import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 type SortKey = 'position' | 'overall' | 'age' | 'form' | 'name';
@@ -44,6 +45,8 @@ export function SquadScreen({
   const tempFillIns = useGameStore((s) => s.tempFillIns);
   const startingXI = useGameStore((s) => s.startingXI);
   const captainId = useGameStore((s) => s.captainId);
+  const saveSlot = useGameStore((s) => s.saveSlot);
+  const tutorial = useFirstVisitTutorial('squad', saveSlot);
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
@@ -305,6 +308,7 @@ export function SquadScreen({
           ))}
         </div>
       </div>}
+      {tutorial.show && <TutorialModal tab="squad" onClose={tutorial.onClose} />}
     </div>
   );
 }

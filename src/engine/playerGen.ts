@@ -76,7 +76,7 @@ export function calculateMarketValue(overall: number, age: number, _form: number
   else if (trait === 'Fragile') traitFactor = 0.8;
 
   const raw = base * ageFactor * traitFactor;
-  return Math.max(0.5, Math.min(90, Math.round(raw * 10) / 10));
+  return Math.max(0.5, Math.round(raw * 10) / 10);
 }
 
 function generateNameAndNationality(rng: SeededRNG, namePool: NationalityWeight[]): { name: string; nationality: string } {

@@ -28,6 +28,7 @@ import { OutgoingOffers } from './OutgoingOffers';
 import { TransferTicker } from './TransferTicker';
 import { TransferLedger } from './TransferLedger';
 import { ShortlistPanel } from './ShortlistPanel';
+import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 
 type TransferTab = 'market' | 'squad' | 'incoming' | 'outgoing' | 'ticker' | 'ledger' | 'shortlist';
 
@@ -51,6 +52,8 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
   const marketFilters = useGameStore((s) => s.marketFilters);
   const featuredSlots = useGameStore((s) => s.featuredSlots);
   const featuredRefillIndex = useGameStore((s) => s.featuredRefillIndex);
+  const saveSlot = useGameStore((s) => s.saveSlot);
+  const tutorial = useFirstVisitTutorial('transfers', saveSlot);
 
   const shortlist = useGameStore((s) => s.shortlist);
   const addShortlistNotification = useGameStore((s) => s.addShortlistNotification);
@@ -640,6 +643,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
           <TransferTicker messages={tickerMessages} />
         )}
       </div>
+      {tutorial.show && <TutorialModal tab="transfers" onClose={tutorial.onClose} />}
     </div>
   );
 }

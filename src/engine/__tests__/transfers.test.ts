@@ -72,9 +72,9 @@ describe('Market Value Calculation', () => {
     expect(value).toBeGreaterThanOrEqual(0.5);
   });
 
-  it('caps at £90M', () => {
+  it('no upper ceiling — elite youth can exceed £90M', () => {
     const value = calculateMarketValue(99, 20, 5, 'Prospect');
-    expect(value).toBeLessThanOrEqual(90);
+    expect(value).toBeGreaterThan(90);
   });
 
   it('Prospect trait increases value by 40%', () => {

@@ -370,9 +370,10 @@ export function RetroPlayerCard({
         ref={cardRef}
         className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 plm-cursor-pointer plm-select-none`}
         style={{
-          background: isGold
-            ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #1a1a2e 100%)'
-            : 'linear-gradient(135deg, #2d2a26 0%, #3d3a36 50%, #2d2a26 100%)',
+          // Unified premium navy back across all tiers — same design the
+          // gold cards used, now applied to bronze and silver too.
+          background:
+            'linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #1a1a2e 100%)',
           border: `3px solid ${borderColor}`,
           animation: 'plm-card-flip 0.4s ease-out',
         }}
