@@ -598,7 +598,11 @@ export function RetroPlayerCard({
         style={{ height: emojiBoxPx[size] }}
       >
         <img
-          src={getPlayerFaceUri(player.id, clubColors?.primary)}
+          src={getPlayerFaceUri(player.id, {
+            shirtColor: clubColors?.primary,
+            age: player.age,
+            nationality: player.nationality,
+          })}
           alt=""
           aria-hidden="true"
           draggable={false}
