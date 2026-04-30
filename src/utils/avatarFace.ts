@@ -4,11 +4,8 @@ import { avataaars } from '@dicebear/collection';
 const playerCache = new Map<string, string>();
 const managerCache = new Map<string, string>();
 
-const PLAYER_BG = ['b6e3f4', 'c0aede', 'd1d4f9', 'ffd5dc', 'ffdfbf'];
-
-// Male-skewing hairstyles. Excludes long-hair/hijab/floppy-hat/etc. so the
-// player pool reads as young male footballers. Names match DiceBear v9
-// avataaars schema.
+// Male-skewing hairstyles only — no headwear, since pro-headshot players
+// don't pose in hats. Names match DiceBear v9 avataaars schema.
 const PLAYER_TOPS = [
   'shortCurly',
   'shortFlat',
@@ -20,10 +17,6 @@ const PLAYER_TOPS = [
   'dreads01',
   'dreads02',
   'frizzle',
-  'winterHat1',
-  'winterHat02',
-  'winterHat03',
-  'winterHat04',
 ] as const;
 
 const PLAYER_FACIAL_HAIR = [
@@ -54,21 +47,44 @@ const PLAYER_CLOTHES = [
   'collarAndSweater',
 ] as const;
 
-export function getPlayerFaceUri(seed: string): string {
-  const cached = playerCache.get(seed);
+// Composed/neutral expressions only — like a real headshot. A few
+// personality variants ('happy', 'twinkle' smile) keep it from feeling
+// stiff, but no surprised/dizzy/cry/hearts/eyepatch/etc.
+const PLAYER_EYES = ['default', 'happy', 'side', 'wink'] as const;
+const PLAYER_EYEBROWS = [
+  'default',
+  'defaultNatural',
+  'flatNatural',
+  'raisedExcited',
+  'upDown',
+] as const;
+const PLAYER_MOUTH = ['default', 'serious', 'smile', 'twinkle'] as const;
+
+function stripHash(hex?: string): string | undefined {
+  if (!hex) return undefined;
+  return hex.startsWith('#') ? hex.slice(1) : hex;
+}
+
+export function getPlayerFaceUri(seed: string, shirtColor?: string): string {
+  const colorKey = stripHash(shirtColor) ?? '';
+  const cacheKey = `${seed}|${colorKey}`;
+  const cached = playerCache.get(cacheKey);
   if (cached) return cached;
   const uri = createAvatar(avataaars, {
     seed,
-    backgroundColor: PLAYER_BG,
-    radius: 50,
+    backgroundColor: ['transparent'],
     top: [...PLAYER_TOPS],
     facialHair: [...PLAYER_FACIAL_HAIR],
     facialHairProbability: 35,
     hairColor: [...PLAYER_HAIR_COLOR],
     clothing: [...PLAYER_CLOTHES],
-    accessoriesProbability: 8,
+    ...(colorKey ? { clothesColor: [colorKey] } : {}),
+    eyes: [...PLAYER_EYES],
+    eyebrows: [...PLAYER_EYEBROWS],
+    mouth: [...PLAYER_MOUTH],
+    accessoriesProbability: 0,
   }).toDataUri();
-  playerCache.set(seed, uri);
+  playerCache.set(cacheKey, uri);
   return uri;
 }
 
