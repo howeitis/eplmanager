@@ -65,14 +65,22 @@ const HAIR_COLORFUL = ['ecdcbf', 'f59797', 'b25b3b', 'b58143', 'c93305'];
 const HAIR_PASTEL = ['F59797']; // pastel pink — keep rare
 
 // ─── Skin tones ───
-// avataaars built-in skin colors: 'tanned', 'yellow', 'pale', 'light',
-// 'brown', 'darkBrown', 'black'
-const SKIN_FULL_RANGE = ['pale', 'light', 'tanned', 'brown', 'darkBrown', 'black'];
-const SKIN_LATIN = ['light', 'tanned', 'brown', 'darkBrown'];
-const SKIN_AFRICAN = ['brown', 'darkBrown', 'black'];
-const SKIN_EAST_ASIAN = ['yellow', 'pale', 'light'];
-const SKIN_MENA = ['light', 'tanned', 'brown'];
-const SKIN_DEFAULT = ['pale', 'light', 'tanned', 'brown'];
+// avataaars v9 expects hex strings (without #). Names → hex below match
+// the DiceBear preset palette so portraits read consistently.
+const SKIN_PALE = 'ffdbb4';
+const SKIN_LIGHT = 'edb98a';
+const SKIN_TANNED = 'fd9841';
+const SKIN_YELLOW = 'f8d25c';
+const SKIN_BROWN = 'd08b5b';
+const SKIN_DARK_BROWN = 'ae5d29';
+const SKIN_BLACK = '614335';
+
+const SKIN_FULL_RANGE = [SKIN_PALE, SKIN_LIGHT, SKIN_TANNED, SKIN_BROWN, SKIN_DARK_BROWN, SKIN_BLACK];
+const SKIN_LATIN = [SKIN_LIGHT, SKIN_TANNED, SKIN_BROWN, SKIN_DARK_BROWN];
+const SKIN_AFRICAN = [SKIN_BROWN, SKIN_DARK_BROWN, SKIN_BLACK];
+const SKIN_EAST_ASIAN = [SKIN_YELLOW, SKIN_PALE, SKIN_LIGHT];
+const SKIN_MENA = [SKIN_LIGHT, SKIN_TANNED, SKIN_BROWN];
+const SKIN_DEFAULT = [SKIN_PALE, SKIN_LIGHT, SKIN_TANNED, SKIN_BROWN];
 
 interface NationalityBucket {
   skin: string[];
@@ -160,23 +168,28 @@ function hashSeed(s: string): number {
 }
 
 // Facial hair gets more likely with age. Young pros mostly clean-shaven;
-// veterans mostly bearded.
+// veterans more often bearded but not overwhelmingly so.
 function facialHairProbabilityForAge(age?: number): number {
-  if (age == null) return 35;
+  if (age == null) return 30;
   if (age <= 21) return 10;
-  if (age <= 25) return 25;
-  if (age <= 30) return 50;
-  return 75;
+  if (age <= 25) return 20;
+  if (age <= 30) return 45;
+  return 55;
 }
 
-// Under-26s rarely get streetwear/colorful hair — ~12% land in the
-// colorful bucket, with pastel pink as a sub-bucket within that.
+// Hair color pick. Default-bucket young players (<26) get an occasional
+// colorful pop. Dark-hair buckets (African / East Asian / MENA) stay
+// overwhelmingly black/dark brown — but allow a small ~7% dye rate
+// since real players do bleach/dye their hair.
 function pickHairColors(age: number | undefined, bucket: NationalityBucket, seed: string): string[] {
+  if (bucket.hair === HAIR_DARK) {
+    const dye = hashSeed(`${seed}|dye`) % 100;
+    if (dye < 2) return HAIR_PASTEL;
+    if (dye < 7) return HAIR_COLORFUL;
+    return bucket.hair;
+  }
   const isYoung = age != null && age < 26;
   if (!isYoung) return bucket.hair;
-  // Only nationality buckets that allow varied hair (i.e. not the
-  // dark-only buckets) can land in the colorful pool.
-  if (bucket.hair === HAIR_DARK) return bucket.hair;
   const r = hashSeed(`${seed}|colorful`) % 100;
   if (r < 3) return HAIR_PASTEL;
   if (r < 12) return HAIR_COLORFUL;
@@ -211,7 +224,7 @@ export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): strin
     facialHair: [...PLAYER_FACIAL_HAIR],
     facialHairProbability: facialHairProbabilityForAge(age),
     hairColor: hairColors,
-    skinColor: bucket.skin as never,
+    skinColor: bucket.skin,
     clothing: [...PLAYER_CLOTHES],
     ...(colorKey ? { clothesColor: [colorKey] } : {}),
     eyes: [...PLAYER_EYES],
