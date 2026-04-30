@@ -11,9 +11,17 @@ import { CLUBS } from '../../data/clubs';
 
 describe('Board Meeting Engine', () => {
   describe('classifyStanding', () => {
-    it('returns on_track when position meets expectation', () => {
+    it('returns on_track when position meets expectation within 2 places', () => {
+      // "Exceeded" was carved out as its own tier for being 3+ places better
+      // than the target — so meeting the bar exactly or being 1-2 places
+      // better is still just "on_track".
       expect(classifyStanding(4, { minPosition: 4, description: '' })).toBe('on_track');
-      expect(classifyStanding(1, { minPosition: 4, description: '' })).toBe('on_track');
+      expect(classifyStanding(2, { minPosition: 4, description: '' })).toBe('on_track');
+    });
+
+    it('returns exceeded when position is 3+ places above expectation', () => {
+      expect(classifyStanding(1, { minPosition: 4, description: '' })).toBe('exceeded');
+      expect(classifyStanding(2, { minPosition: 8, description: '' })).toBe('exceeded');
     });
 
     it('returns at_risk when position is slightly worse', () => {

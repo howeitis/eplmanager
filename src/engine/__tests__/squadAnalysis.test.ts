@@ -63,11 +63,11 @@ function makeClub(roster: Player[], tier: 1 | 2 | 3 | 4 | 5 = 3): Club {
 describe('Squad Analysis', () => {
   describe('getTierMedian', () => {
     it('returns midpoint of tier rating range', () => {
-      expect(getTierMedian(1)).toBe(78); // (76+80)/2
-      expect(getTierMedian(2)).toBe(71.5); // (69+74)/2
-      expect(getTierMedian(3)).toBe(68.5); // (66+71)/2
-      expect(getTierMedian(4)).toBe(65.5); // (63+68)/2
-      expect(getTierMedian(5)).toBe(63); // (60+66)/2
+      expect(getTierMedian(1)).toBe(79.5); // (77+82)/2
+      expect(getTierMedian(2)).toBe(74.5); // (72+77)/2
+      expect(getTierMedian(3)).toBe(71.5); // (69+74)/2
+      expect(getTierMedian(4)).toBe(68.5); // (66+71)/2
+      expect(getTierMedian(5)).toBe(65.5); // (63+68)/2
     });
   });
 
@@ -184,27 +184,27 @@ describe('Squad Analysis', () => {
   describe('analyzeSquad — depth', () => {
     it('flags weak depth when fewer than 3 positions have quality backup', () => {
       const clubs = buildClubs('test-depth-1');
-      // For tier 3, floor = 66, depth threshold = 71.
-      // Starters are strong (above tier median) so no position-quality weakness,
-      // but backup/3rd-choice players are all weak (below depth threshold).
-      // For 2-starter positions (CB, FB, MF, WG), the top 2 are good but #3 is weak.
-      // For 1-starter positions (GK, ST), #2 is weak.
+      // For tier 3, floor = 69, depth threshold = 74. Starters are pitched at
+      // the actual tier-3 position-group median (~76) so no position-quality
+      // flag fires; backups (the *3rd* player at 2-starter positions, the 2nd
+      // at 1-starter positions) are well below the depth threshold so no
+      // position is "deep" and the depth weakness surfaces.
       const roster: Player[] = [
-        makePlayer({ name: 'GK1', position: 'GK', overall: 70 }),
-        makePlayer({ name: 'GK2', position: 'GK', overall: 60 }), // backup < 71
-        makePlayer({ name: 'CB1', position: 'CB', overall: 70 }),
-        makePlayer({ name: 'CB2', position: 'CB', overall: 69 }),
-        makePlayer({ name: 'CB3', position: 'CB', overall: 60 }), // backup < 71
-        makePlayer({ name: 'FB1', position: 'FB', overall: 70 }),
-        makePlayer({ name: 'FB2', position: 'FB', overall: 69 }),
-        makePlayer({ name: 'MF1', position: 'MF', overall: 70 }),
-        makePlayer({ name: 'MF2', position: 'MF', overall: 69 }),
-        makePlayer({ name: 'MF3', position: 'MF', overall: 60 }), // backup < 71
+        makePlayer({ name: 'GK1', position: 'GK', overall: 76 }),
+        makePlayer({ name: 'GK2', position: 'GK', overall: 60 }), // backup < 74
+        makePlayer({ name: 'CB1', position: 'CB', overall: 76 }),
+        makePlayer({ name: 'CB2', position: 'CB', overall: 76 }),
+        makePlayer({ name: 'CB3', position: 'CB', overall: 60 }), // backup < 74
+        makePlayer({ name: 'FB1', position: 'FB', overall: 76 }),
+        makePlayer({ name: 'FB2', position: 'FB', overall: 76 }),
+        makePlayer({ name: 'MF1', position: 'MF', overall: 76 }),
+        makePlayer({ name: 'MF2', position: 'MF', overall: 76 }),
+        makePlayer({ name: 'MF3', position: 'MF', overall: 60 }), // backup < 74
         makePlayer({ name: 'MF4', position: 'MF', overall: 58 }),
-        makePlayer({ name: 'WG1', position: 'WG', overall: 70 }),
-        makePlayer({ name: 'WG2', position: 'WG', overall: 69 }),
-        makePlayer({ name: 'ST1', position: 'ST', overall: 70 }),
-        makePlayer({ name: 'ST2', position: 'ST', overall: 60 }), // backup < 71
+        makePlayer({ name: 'WG1', position: 'WG', overall: 76 }),
+        makePlayer({ name: 'WG2', position: 'WG', overall: 76 }),
+        makePlayer({ name: 'ST1', position: 'ST', overall: 76 }),
+        makePlayer({ name: 'ST2', position: 'ST', overall: 60 }), // backup < 74
         makePlayer({ name: 'ST3', position: 'ST', overall: 58 }),
       ];
       const club = makeClub(roster, 3);
@@ -223,22 +223,22 @@ describe('Squad Analysis', () => {
       // All players at tier-median ratings to avoid position-quality or shape flags,
       // but with very old ages so ageing is the primary weakness
       const roster: Player[] = [
-        makePlayer({ name: 'GK1', position: 'GK', overall: 69, age: 34 }),
-        makePlayer({ name: 'GK2', position: 'GK', overall: 68, age: 33 }),
-        makePlayer({ name: 'CB1', position: 'CB', overall: 69, age: 33 }),
-        makePlayer({ name: 'CB2', position: 'CB', overall: 68, age: 32 }),
-        makePlayer({ name: 'CB3', position: 'CB', overall: 68, age: 31 }),
-        makePlayer({ name: 'FB1', position: 'FB', overall: 69, age: 32 }),
-        makePlayer({ name: 'FB2', position: 'FB', overall: 68, age: 31 }),
-        makePlayer({ name: 'MF1', position: 'MF', overall: 69, age: 32 }),
-        makePlayer({ name: 'MF2', position: 'MF', overall: 68, age: 31 }),
-        makePlayer({ name: 'MF3', position: 'MF', overall: 68, age: 30 }),
-        makePlayer({ name: 'MF4', position: 'MF', overall: 67, age: 30 }),
-        makePlayer({ name: 'WG1', position: 'WG', overall: 69, age: 31 }),
-        makePlayer({ name: 'WG2', position: 'WG', overall: 68, age: 30 }),
-        makePlayer({ name: 'ST1', position: 'ST', overall: 69, age: 32 }),
-        makePlayer({ name: 'ST2', position: 'ST', overall: 68, age: 31 }),
-        makePlayer({ name: 'ST3', position: 'ST', overall: 67, age: 30 }),
+        makePlayer({ name: 'GK1', position: 'GK', overall: 76, age: 34 }),
+        makePlayer({ name: 'GK2', position: 'GK', overall: 75, age: 33 }),
+        makePlayer({ name: 'CB1', position: 'CB', overall: 76, age: 33 }),
+        makePlayer({ name: 'CB2', position: 'CB', overall: 75, age: 32 }),
+        makePlayer({ name: 'CB3', position: 'CB', overall: 75, age: 31 }),
+        makePlayer({ name: 'FB1', position: 'FB', overall: 76, age: 32 }),
+        makePlayer({ name: 'FB2', position: 'FB', overall: 75, age: 31 }),
+        makePlayer({ name: 'MF1', position: 'MF', overall: 76, age: 32 }),
+        makePlayer({ name: 'MF2', position: 'MF', overall: 75, age: 31 }),
+        makePlayer({ name: 'MF3', position: 'MF', overall: 75, age: 30 }),
+        makePlayer({ name: 'MF4', position: 'MF', overall: 74, age: 30 }),
+        makePlayer({ name: 'WG1', position: 'WG', overall: 76, age: 31 }),
+        makePlayer({ name: 'WG2', position: 'WG', overall: 75, age: 30 }),
+        makePlayer({ name: 'ST1', position: 'ST', overall: 76, age: 32 }),
+        makePlayer({ name: 'ST2', position: 'ST', overall: 75, age: 31 }),
+        makePlayer({ name: 'ST3', position: 'ST', overall: 74, age: 30 }),
       ];
       const club = makeClub(roster, 3);
       const assessment = analyzeSquad(club, clubs, 'pragmatic', 1);

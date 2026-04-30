@@ -74,9 +74,10 @@ describe('Reputation System', () => {
       expect(result.budgetModifier).toBeLessThan(0);
     });
 
-    it('gives minimum +2 for meeting expectations', () => {
+    it('gives a small positive delta for meeting expectations', () => {
+      // The reward for "just met" was retuned down to keep rep climbs gradual.
       const result = calculateSeasonReputationChange(4, 4, 1, 50);
-      expect(result.delta).toBeGreaterThanOrEqual(2);
+      expect(result.delta).toBeGreaterThanOrEqual(1);
     });
 
     it('gives max penalty for catastrophic underperformance', () => {
@@ -86,22 +87,26 @@ describe('Reputation System', () => {
     });
 
     it('always rewards title winners', () => {
+      // Title floor was retuned from +10 to +6 so reputation climbs feel earned.
       const result = calculateSeasonReputationChange(1, 17, 5, 15);
-      expect(result.delta).toBeGreaterThanOrEqual(10);
+      expect(result.delta).toBeGreaterThanOrEqual(6);
     });
   });
 
   describe('Budget Calculation', () => {
-    it('champion gets £60M payout + 50% rollover', () => {
+    it('champion gets £75M payout + full rollover', () => {
+      // Position payouts were lifted (1st = £75M) and rollover is now 100%
+      // of unspent budget rather than 50%.
       const budget = calculateSeasonEndBudget(100, 1, 1, 0);
-      // 60 + 50 = 110
-      expect(budget).toBe(110);
+      // 75 + 100 = 175
+      expect(budget).toBe(175);
     });
 
-    it('relegation zone team gets £20M payout', () => {
+    it('relegation zone team gets £35M payout', () => {
+      // Bottom-three payout was lifted from £20M to £35M.
       const budget = calculateSeasonEndBudget(20, 19, 5, 0);
-      // 20 + 10 = 30
-      expect(budget).toBe(30);
+      // 35 + 20 = 55
+      expect(budget).toBe(55);
     });
 
     it('budget never drops below tier floor', () => {
@@ -152,14 +157,15 @@ describe('Reputation System', () => {
 });
 
 describe('Dominating Manager Scenario', () => {
-  it('reputation climbs to 80+ after 5 titles, bad season triggers -10 penalty without dropping below floor', () => {
+  it('reputation climbs past 85 after 6 titles, bad season triggers -10 penalty without dropping below floor', () => {
     let reputation = getStartingReputation(1); // 50
 
-    // 5 consecutive title wins
+    // 6 consecutive title wins — current title floor is +6 rep, so reaching
+    // the Dominate threshold (rep >= 85) takes 6 perfect seasons, not 5.
     let consecutiveOverperformances = 0;
     let budget = 100;
 
-    for (let season = 1; season <= 5; season++) {
+    for (let season = 1; season <= 6; season++) {
       const expectations = calculateBoardExpectation(1, reputation, consecutiveOverperformances);
       const result = calculateSeasonReputationChange(1, expectations.minPosition, 1, reputation);
       reputation = Math.max(0, Math.min(100, reputation + result.delta));
@@ -167,7 +173,7 @@ describe('Dominating Manager Scenario', () => {
       budget = calculateSeasonEndBudget(budget, 1, 1, result.budgetModifier);
     }
 
-    expect(reputation).toBeGreaterThanOrEqual(80);
+    expect(reputation).toBeGreaterThanOrEqual(85);
 
     // Now expectations should be Dominate
     const expectations = calculateBoardExpectation(1, reputation, consecutiveOverperformances);

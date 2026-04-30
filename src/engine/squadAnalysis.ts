@@ -38,11 +38,11 @@ const STARTER_COUNT: Record<Position, number> = {
 
 /** Tier rating ranges from playerGen — midpoint is our tier median */
 const TIER_RATING_RANGES: Record<number, [number, number]> = {
-  1: [76, 80],
-  2: [69, 74],
-  3: [66, 71],
-  4: [63, 68],
-  5: [60, 66],
+  1: [77, 82],
+  2: [72, 77],
+  3: [69, 74],
+  4: [66, 71],
+  5: [63, 68],
 };
 
 const POSITIONS: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
@@ -185,13 +185,18 @@ export function analyzeSquad(
   }
 
   // ─── 2. Depth ───
+  // A position is "deep" when there's a quality player BEYOND the starters —
+  // i.e. for 2-starter positions, the 3rd-best player must clear the bar; for
+  // 1-starter positions, the 2nd-best. Looking at players[1] for everything
+  // misclassified the 2nd starter as a backup at 2-starter positions.
   const tierFloorRating = getTierFloorRating(tier);
   let deepPositions = 0;
   for (const pos of POSITIONS) {
     const players = roster
       .filter((p) => p.position === pos)
       .sort((a, b) => b.overall - a.overall);
-    if (players.length >= 2 && players[1].overall >= tierFloorRating + 5) {
+    const backupIdx = STARTER_COUNT[pos];
+    if (players.length > backupIdx && players[backupIdx].overall >= tierFloorRating + 5) {
       deepPositions++;
     }
   }
@@ -378,11 +383,11 @@ function tierMedianLabel(tier: number): string {
 
 function getTierFloorRating(tier: number): number {
   const floors: Record<number, number> = {
-    1: 76,
-    2: 69,
-    3: 66,
-    4: 63,
-    5: 60,
+    1: 77,
+    2: 72,
+    3: 69,
+    4: 66,
+    5: 63,
   };
-  return floors[tier] || 63;
+  return floors[tier] || 66;
 }

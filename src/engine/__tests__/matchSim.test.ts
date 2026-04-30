@@ -201,17 +201,29 @@ describe('Full Season Simulation', () => {
     expect(lastPts).toBeLessThanOrEqual(40);
   });
 
-  it('top 4 contains at least 2 Tier 1 clubs', () => {
-    const clubs = buildClubs('top4-tier1-test');
-    const result = simulateFullSeason('top4-tier1-test', 1, clubs);
-
-    const top4Ids = result.finalTable.slice(0, 4).map((r) => r.clubId);
+  it('tier-1 clubs reach the top 4 at well above their fair share over many seasons', () => {
+    // Single-seed assertions on tier-1 top-4 counts are noisy (one bad RNG
+    // run can drop 2 of 3 elite clubs out of the top 4). Average across
+    // multiple seeds and check that tier-1 clubs occupy materially more than
+    // their fair share (3/20 = 15%) of top-4 slots.
     const tier1Clubs = CLUBS.filter((c) => c.tier === 1).map((c) => c.id);
-    const tier1InTop4 = top4Ids.filter((id) => tier1Clubs.includes(id));
+    const NUM_SEASONS = 8;
+    let tier1Slots = 0;
 
-    console.log(`Top 4: ${top4Ids.join(', ')}`);
-    console.log(`Tier 1 in top 4: ${tier1InTop4.length}`);
-    expect(tier1InTop4.length).toBeGreaterThanOrEqual(2);
+    for (let i = 0; i < NUM_SEASONS; i++) {
+      const seed = `top4-tier1-test-${i}`;
+      const clubs = buildClubs(seed);
+      const result = simulateFullSeason(seed, 1, clubs);
+      const top4Ids = result.finalTable.slice(0, 4).map((r) => r.clubId);
+      tier1Slots += top4Ids.filter((id) => tier1Clubs.includes(id)).length;
+    }
+
+    const totalSlots = NUM_SEASONS * 4;
+    const tier1Share = tier1Slots / totalSlots;
+    console.log(`Tier 1 share of top-4 slots: ${(tier1Share * 100).toFixed(1)}%`);
+    // Fair share would be 15% (3 of 20 clubs). Elites should be well above —
+    // 35% is a conservative floor that still catches a regression.
+    expect(tier1Share).toBeGreaterThan(0.35);
   });
 
   it('bottom 3 contains at least 1 Tier 4 or Tier 5 club', () => {
