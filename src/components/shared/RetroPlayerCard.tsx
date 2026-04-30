@@ -2,55 +2,7 @@ import { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
 import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '../../data/assets';
 import { generateScoutSummaryParts } from '../../engine/scoutSummary';
-
-// ─── Emoji pool ───
-
-const PLAYER_EMOJIS: string[] = [
-  // Standard man — 5 skin tones
-  '\u{1F468}\u{1F3FB}', '\u{1F468}\u{1F3FC}', '\u{1F468}\u{1F3FD}',
-  '\u{1F468}\u{1F3FE}', '\u{1F468}\u{1F3FF}',
-  // Man curly hair — 5 skin tones
-  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B1}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B1}',
-  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B1}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B1}',
-  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B1}',
-  // Man bald — 5 skin tones
-  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B2}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B2}',
-  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B2}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B2}',
-  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B2}',
-  // Man red hair — 5 skin tones
-  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B0}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B0}',
-  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B0}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B0}',
-  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B0}',
-  // Man white/grey hair — 5 skin tones
-  '\u{1F468}\u{1F3FB}\u{200D}\u{1F9B3}', '\u{1F468}\u{1F3FC}\u{200D}\u{1F9B3}',
-  '\u{1F468}\u{1F3FD}\u{200D}\u{1F9B3}', '\u{1F468}\u{1F3FE}\u{200D}\u{1F9B3}',
-  '\u{1F468}\u{1F3FF}\u{200D}\u{1F9B3}',
-  // Beard (🧔) — 5 skin tones
-  '\u{1F9D4}\u{1F3FB}', '\u{1F9D4}\u{1F3FC}', '\u{1F9D4}\u{1F3FD}',
-  '\u{1F9D4}\u{1F3FE}', '\u{1F9D4}\u{1F3FF}',
-  // Blond man (👱‍♂️) — 5 skin tones
-  '\u{1F471}\u{1F3FB}\u{200D}\u{2642}\u{FE0F}', '\u{1F471}\u{1F3FC}\u{200D}\u{2642}\u{FE0F}',
-  '\u{1F471}\u{1F3FD}\u{200D}\u{2642}\u{FE0F}', '\u{1F471}\u{1F3FE}\u{200D}\u{2642}\u{FE0F}',
-  '\u{1F471}\u{1F3FF}\u{200D}\u{2642}\u{FE0F}',
-  // Standard woman — 2 skin tones
-  '\u{1F469}\u{1F3FB}', '\u{1F469}\u{1F3FF}',
-  // Woman curly hair — 5 skin tones
-  '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B1}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B1}',
-  '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B1}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B1}',
-  '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B1}',
-  // Woman red hair — 2 skin tones
-  '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B0}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B0}',
-  // Woman white/grey hair — 5 skin tones
-  '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B3}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B3}',
-  '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B3}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B3}',
-  '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B3}',
-  // Woman bald — 5 skin tones
-  '\u{1F469}\u{1F3FB}\u{200D}\u{1F9B2}', '\u{1F469}\u{1F3FC}\u{200D}\u{1F9B2}',
-  '\u{1F469}\u{1F3FD}\u{200D}\u{1F9B2}', '\u{1F469}\u{1F3FE}\u{200D}\u{1F9B2}',
-  '\u{1F469}\u{1F3FF}\u{200D}\u{1F9B2}',
-  // Blond woman (👱‍♀️) — 2 skin tones
-  '\u{1F471}\u{1F3FB}\u{200D}\u{2640}\u{FE0F}', '\u{1F471}\u{1F3FF}\u{200D}\u{2640}\u{FE0F}',
-];
+import { getPlayerFaceUri } from '../../utils/avatarFace';
 
 function hashPlayerId(id: string): number {
   let h = 0;
@@ -58,10 +10,6 @@ function hashPlayerId(id: string): number {
     h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
   }
   return Math.abs(h);
-}
-
-function getPlayerEmoji(id: string): string {
-  return PLAYER_EMOJIS[hashPlayerId(id) % PLAYER_EMOJIS.length];
 }
 
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
@@ -310,11 +258,8 @@ export function RetroPlayerCard({
 
   const fs = fontSizes[size];
 
-  // Emoji sizing — 25% bigger than the default Tailwind text-*xl ramp,
-  // with a further 15% bump on top so the face stays the visual anchor as
-  // crests grow alongside it. The box height is tight against the glyph so
-  // the bio paragraph below has more breathing room.
-  const emojiFontPx: Record<string, number> = { sm: 44, md: 52, lg: 69, xl: 104 };
+  // Portrait box height — kept tight against the avatar so the bio paragraph
+  // below has more breathing room.
   const emojiBoxPx: Record<string, number> = { sm: 50, md: 66, lg: 86, xl: 116 };
 
   // Reserved vertical space at the bottom of the card so the bio centers
@@ -646,22 +591,24 @@ export function RetroPlayerCard({
         </div>
       </div>
 
-      {/* Face emoji — fixed-height container so the name plate below never
-          drifts up into the emoji glyph's descent. Sized 25% larger than the
-          default Tailwind text-ramp so the emoji reads as the visual anchor. */}
+      {/* Player portrait — DiceBear avataaars SVG seeded by player.id.
+          Fixed-height container so the name plate below never drifts up. */}
       <div
         className="plm-flex plm-justify-center plm-items-end plm-relative plm-z-[5] plm-flex-shrink-0"
         style={{ height: emojiBoxPx[size] }}
       >
-        <div
-          className="plm-leading-none"
+        <img
+          src={getPlayerFaceUri(player.id)}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
           style={{
-            fontSize: emojiFontPx[size],
+            height: emojiBoxPx[size],
+            width: emojiBoxPx[size],
+            objectFit: 'contain',
             filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
           }}
-        >
-          {getPlayerEmoji(player.id)}
-        </div>
+        />
       </div>
 
       {/* Name plate — subtle linear gradient (darker edges → brighter center)

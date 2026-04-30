@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import { getClubLogoUrl } from '../../data/assets';
 import { ManagerCard } from '../shared/ManagerCard';
+import { getManagerFaceUri } from '../../utils/avatarFace';
 import { saveGame } from '../../utils/save';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 
@@ -90,13 +91,19 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
         <div className="plm-flex plm-items-start plm-gap-4">
           <div className="plm-relative plm-flex-shrink-0">
             <div
-              className="plm-w-16 plm-h-16 plm-rounded-full plm-flex plm-items-center plm-justify-center plm-text-3xl plm-border-2"
+              className="plm-w-16 plm-h-16 plm-rounded-full plm-flex plm-items-center plm-justify-center plm-overflow-hidden plm-border-2"
               style={{
                 backgroundColor: currentClub?.colors.primary || '#f3f4f6',
                 borderColor: currentClub?.colors.secondary || '#d1d5db',
               }}
             >
-              {manager.avatar}
+              <img
+                src={getManagerFaceUri(manager.avatar)}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className="plm-w-full plm-h-full plm-object-contain"
+              />
             </div>
             {/* Club crest badge */}
             {currentClub && getClubLogoUrl(currentClub.id) && (

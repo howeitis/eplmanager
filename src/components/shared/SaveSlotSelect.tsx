@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { SaveMetadata } from '../../types/entities';
 import { getAllSaveMetadata, deleteSave } from '../../utils/save';
+import { getManagerFaceUri } from '../../utils/avatarFace';
 
 interface SaveSlotSelectProps {
   onSelectSlot: (slot: number, isExisting: boolean) => void;
@@ -108,7 +109,13 @@ export function SaveSlotSelect({ onSelectSlot }: SaveSlotSelectProps) {
                       <>
                         {save.managerAvatar && save.managerName && (
                           <div className="plm-flex plm-items-center plm-gap-1.5 plm-mb-1">
-                            <span className="plm-text-base">{save.managerAvatar}</span>
+                            <img
+                              src={getManagerFaceUri(save.managerAvatar)}
+                              alt=""
+                              aria-hidden="true"
+                              draggable={false}
+                              className="plm-w-6 plm-h-6 plm-rounded-full plm-object-contain plm-bg-white/10"
+                            />
                             <span className="plm-text-sm plm-font-medium plm-text-white">{save.managerName}</span>
                           </div>
                         )}

@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { PlayingBackground, ManagerPhilosophy } from '../../types/entities';
+import { getManagerFaceUri } from '../../utils/avatarFace';
+import { createRNG } from '../../utils/rng';
 
 const NATIONALITIES = [
   'American', 'Argentine', 'Australian', 'Belgian', 'Brazilian',
@@ -29,20 +31,16 @@ const PHILOSOPHIES: { value: ManagerPhilosophy; label: string; bonus: string }[]
   { value: 'rotation-heavy', label: 'Rotation-Heavy', bonus: 'Extra player (random position) in starting squad' },
 ];
 
-const AVATAR_EMOJIS = [
-  // Women
-  '👩🏻', '👩🏼', '👩🏽', '👩🏾', '👩🏿', '👩',
-  // Men
-  '👨🏻', '👨🏼', '👨🏽', '👨🏾', '👨🏿', '👨',
-  // Person (gender-neutral)
-  '🧑🏻', '🧑🏼', '🧑🏽', '🧑🏾', '🧑🏿', '🧑',
-  // Older women
-  '👵🏻', '👵🏼', '👵🏽', '👵🏾', '👵🏿', '👵',
-  // Older men
-  '👴🏻', '👴🏼', '👴🏽', '👴🏾', '👴🏿', '👴',
-  // Bearded
-  '🧔🏻', '🧔🏼', '🧔🏽', '🧔🏾', '🧔🏿', '🧔',
-];
+const AVATAR_TILE_COUNT = 6;
+
+function generateAvatarSeeds(batchKey: number): string[] {
+  const rng = createRNG(`manager-avatar-${batchKey}`);
+  const seeds: string[] = [];
+  for (let i = 0; i < AVATAR_TILE_COUNT; i++) {
+    seeds.push(`mgr-${batchKey}-${rng.randomInt(0, 1_000_000)}`);
+  }
+  return seeds;
+}
 
 export interface ManagerCreationData {
   name: string;
@@ -69,8 +67,11 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
   const [preferredFormation, setPreferredFormation] = useState('');
   const [philosophy, setPhilosophy] = useState<ManagerPhilosophy | ''>('');
   const [avatar, setAvatar] = useState('');
+  const [avatarBatchKey, setAvatarBatchKey] = useState(() => Date.now());
   const [bio, setBio] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const avatarSeeds = useMemo(() => generateAvatarSeeds(avatarBatchKey), [avatarBatchKey]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -126,20 +127,38 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
         <form onSubmit={handleSubmit} className="plm-space-y-4">
           {/* Avatar */}
           <div>
-            <label className={labelClass}>Avatar</label>
+            <div className="plm-flex plm-items-center plm-justify-between plm-mb-1">
+              <label className={labelClass} style={{ marginBottom: 0 }}>Avatar</label>
+              <button
+                type="button"
+                onClick={() => {
+                  setAvatarBatchKey(Date.now());
+                  setAvatar('');
+                }}
+                className="plm-text-xs plm-text-gray-500 hover:plm-text-gray-800 plm-underline plm-min-h-[32px]"
+              >
+                Shuffle
+              </button>
+            </div>
             <div className="plm-grid plm-grid-cols-6 plm-gap-2">
-              {AVATAR_EMOJIS.map((emoji) => (
+              {avatarSeeds.map((seed) => (
                 <button
-                  key={emoji}
+                  key={seed}
                   type="button"
-                  onClick={() => setAvatar(emoji)}
-                  className={`plm-w-full plm-aspect-square plm-flex plm-items-center plm-justify-center plm-text-xl plm-rounded-lg plm-border plm-transition-colors ${
-                    avatar === emoji
+                  onClick={() => setAvatar(seed)}
+                  className={`plm-w-full plm-aspect-square plm-flex plm-items-center plm-justify-center plm-rounded-lg plm-border plm-transition-colors plm-overflow-hidden ${
+                    avatar === seed
                       ? 'plm-border-gray-900 plm-bg-gray-100 plm-ring-2 plm-ring-gray-400'
                       : 'plm-border-gray-200 hover:plm-border-gray-300 plm-bg-white'
                   }`}
                 >
-                  {emoji}
+                  <img
+                    src={getManagerFaceUri(seed)}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    className="plm-w-full plm-h-full plm-object-contain"
+                  />
                 </button>
               ))}
             </div>

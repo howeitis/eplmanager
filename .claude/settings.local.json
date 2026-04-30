@@ -34,7 +34,8 @@
       "Bash(grep -rn \"status.*accepted\\\\|'accepted'\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\store\\\\\\\\marketSlice.ts\")",
       "Bash(grep -rn \"direction.*incoming\\\\|direction: 'incoming'\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\components\")",
       "Bash(grep -rn \"acceptIncoming\\\\|respondIncoming\\\\|handleAcceptOffer\\\\|onAcceptOffer\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\components\")",
-      "Bash(grep -n \"updateTransferOffer\\\\|recordTransfer\\\\|accepted\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\components\\\\\\\\transfers\\\\\\\\TransferCenter.tsx\")"
+      "Bash(grep -n \"updateTransferOffer\\\\|recordTransfer\\\\|accepted\" \"C:\\\\\\\\Users\\\\\\\\omhhe\\\\\\\\.gemini\\\\\\\\antigravity\\\\\\\\workspace\\\\\\\\Howe to Manage\\\\\\\\src\\\\\\\\components\\\\\\\\transfers\\\\\\\\TransferCenter.tsx\")",
+      "Bash(npm test *)"
     ]
   }
 }

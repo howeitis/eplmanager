@@ -1,5 +1,6 @@
 import type { ManagerProfile } from '../../types/entities';
 import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '../../data/assets';
+import { getManagerFaceUri } from '../../utils/avatarFace';
 
 const PHILOSOPHY_LABELS: Record<string, string> = {
   attacking: 'Attacking',
@@ -217,14 +218,17 @@ export function ManagerCard({
         </div>
       </div>
 
-      {/* Avatar — tight to the top section so the bio below has room */}
+      {/* Avatar — DiceBear avataaars SVG seeded by manager.avatar string.
+          Legacy saves stored an emoji glyph here; DiceBear hashes any string
+          to a deterministic portrait, so old avatars still render. */}
       <div className="plm-flex plm-justify-center plm-relative plm-z-[5] plm-flex-shrink-0" style={{ height: 50 }}>
-        <div
-          className="plm-leading-none"
-          style={{ fontSize: 44, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.18))' }}
-        >
-          {manager.avatar}
-        </div>
+        <img
+          src={getManagerFaceUri(manager.avatar)}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          style={{ height: 50, width: 50, objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.18))' }}
+        />
       </div>
 
       {/* Name plate */}
