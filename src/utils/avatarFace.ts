@@ -5,18 +5,25 @@ const playerCache = new Map<string, string>();
 const managerCache = new Map<string, string>();
 
 // Hairstyles only — no headwear (pro-headshot look). theCaesar covers
-// the "rare shaved head" case without going fully bald.
+// the "rare shaved head" case without going fully bald. `sides` is
+// excluded because it renders as a bald top with hair only on the sides.
 const PLAYER_TOPS = [
   'shortCurly',
   'shortFlat',
   'shortRound',
   'shortWaved',
-  'sides',
   'theCaesar',
   'theCaesarAndSidePart',
   'dreads01',
   'dreads02',
   'frizzle',
+] as const;
+
+// Rare masc long-hair pool, used for ~6% of players via a seed-stable roll.
+const PLAYER_LONG_TOPS = [
+  'longButNotTooLong',
+  'shaggyMullet',
+  'straight01',
 ] as const;
 
 const PLAYER_FACIAL_HAIR = [
@@ -217,10 +224,15 @@ export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): strin
   const bucket = getBucket(nationality);
   const hairColors = pickHairColors(age, bucket, seed);
 
+  // ~6% of players get a long-hair silhouette. Roll is seed-stable so the
+  // same player keeps the same look across re-renders.
+  const longRoll = hashSeed(`${seed}|long`) % 100;
+  const tops = longRoll < 6 ? PLAYER_LONG_TOPS : PLAYER_TOPS;
+
   const uri = createAvatar(avataaars, {
     seed,
     backgroundColor: ['transparent'],
-    top: [...PLAYER_TOPS],
+    top: [...tops],
     facialHair: [...PLAYER_FACIAL_HAIR],
     facialHairProbability: facialHairProbabilityForAge(age),
     hairColor: hairColors,

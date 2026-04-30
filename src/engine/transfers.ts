@@ -175,9 +175,9 @@ export function checkPlayerRefusal(
 
 // --- Continent sale ---
 
-export function getContinentSalePrice(player: Player): number {
+export function getContinentSalePrice(player: Player, saleFeeMultiplier = 1): number {
   const marketValue = refreshPlayerValue(player);
-  return Math.round(marketValue * CONTINENT_SALE_DISCOUNT * 10) / 10;
+  return Math.round(marketValue * CONTINENT_SALE_DISCOUNT * saleFeeMultiplier * 10) / 10;
 }
 
 export function canSellToContinent(player: Player): boolean {
@@ -187,8 +187,9 @@ export function canSellToContinent(player: Player): boolean {
 export function executeContinentSale(
   rng: SeededRNG,
   player: Player,
+  saleFeeMultiplier = 1,
 ): ContinentSaleResult {
-  const fee = getContinentSalePrice(player);
+  const fee = getContinentSalePrice(player, saleFeeMultiplier);
   const league = rng.weightedPick(CONTINENT_LEAGUES, [1, 1, 1, 1]);
   const clubPool = CONTINENT_CLUBS[league];
   const destination = clubPool[rng.randomInt(0, clubPool.length - 1)];
@@ -316,7 +317,11 @@ export function simulateAITransferWindow(
   playerClubId: string,
   seasonNumber: number,
   windowType: 'summer' | 'january',
+  saleFeeMultiplier = 1,
 ): TransferWindowResult {
+  // Manager-background hook: scale fees on offers TO the user.
+  const userOfferBoost = (rawFee: number): number =>
+    Math.round(rawFee * saleFeeMultiplier * 10) / 10;
   const completedTransfers: TransferRecord[] = [];
   const incomingOffers: TransferOffer[] = [];
   const tickerMessages: string[] = [];
@@ -414,7 +419,7 @@ export function simulateAITransferWindow(
             playerAge: player.age,
             fromClubId: sellerClub.id,
             toClubId: club.id,
-            fee,
+            fee: userOfferBoost(fee),
             status: 'pending',
             direction: 'incoming',
           });
@@ -547,7 +552,7 @@ export function simulateAITransferWindow(
               playerAge: upgPlayer.age,
               fromClubId: upgSeller.id,
               toClubId: club.id,
-              fee: upgFee,
+              fee: userOfferBoost(upgFee),
               status: 'pending',
               direction: 'incoming',
             });
@@ -644,7 +649,7 @@ export function simulateAITransferWindow(
         playerAge: player.age,
         fromClubId: playerClubId,
         toClubId: buyer.id,
-        fee: offerFee,
+        fee: userOfferBoost(offerFee),
         status: 'pending',
         direction: 'incoming',
       });

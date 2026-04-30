@@ -13,6 +13,7 @@ import {
   refillFeaturedSlot,
 } from '../../engine/transfers';
 import { resetProgressionForTransfer } from '../../engine/playerGen';
+import { getBackgroundEffects } from '../../engine/managerBackground';
 import { countActiveFilters } from './MarketBoard';
 import type {
   Player,
@@ -104,6 +105,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
     setMarketListings(listings);
 
     // Simulate AI transfer activity
+    const saleFeeMultiplier = getBackgroundEffects(manager?.playingBackground).saleFeeMultiplier;
     const aiResult = simulateAITransferWindow(
       rng,
       clubs,
@@ -111,6 +113,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
       playerClubId,
       seasonNumber,
       windowType,
+      saleFeeMultiplier,
     );
 
     // Apply AI-to-AI transfers to the store
@@ -163,6 +166,7 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
 
     setInitialized(true);
   }, [initialized, gameSeed, seasonNumber, windowType, monthNumber, clubs, budgets, playerClubId,
+    manager?.playingBackground,
     setMarketListings, removePlayerFromClub, addPlayerToClub, adjustBudget,
     recordTransfer, addTransferOffer, setTickerMessages, setFeaturedSlots, setFeaturedRefillIndex,
     addShortlistNotification]);
@@ -413,7 +417,8 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
       if (!canSellToContinent(player)) return;
 
       const rng = new SeededRNG(`continent-${player.id}-${Date.now()}`);
-      const sale = executeContinentSale(rng, player);
+      const saleFeeMultiplier = getBackgroundEffects(manager?.playingBackground).saleFeeMultiplier;
+      const sale = executeContinentSale(rng, player, saleFeeMultiplier);
 
       removePlayerFromClub(playerClubId, player.id);
       adjustBudget(playerClubId, sale.fee);
@@ -437,8 +442,8 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         `${player.name} (${player.position}, ${player.overall}) sold to ${sale.destination} for £${sale.fee}M.`,
       );
     },
-    [playerClubId, seasonNumber, windowType, removePlayerFromClub, adjustBudget,
-      recordTransfer, addTickerMessage],
+    [playerClubId, seasonNumber, windowType, manager?.playingBackground,
+      removePlayerFromClub, adjustBudget, recordTransfer, addTickerMessage],
   );
 
   // Handle responding to incoming AI offers

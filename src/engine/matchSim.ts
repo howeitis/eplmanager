@@ -7,6 +7,7 @@ import type {
   LeagueTableRow,
   GamePhase,
   StartingXIMap,
+  PlayingBackground,
 } from '../types/entities';
 import { SeededRNG } from '../utils/rng';
 import { matchSeed } from '../utils/rng';
@@ -17,6 +18,7 @@ import {
   getBenchPlayers,
   calculateSquadDepthBonus,
 } from './startingXI';
+import { getBackgroundEffects } from './managerBackground';
 
 // ─── Formation & Mentality Types ───
 
@@ -302,6 +304,9 @@ export interface TSSConfig {
   narrativeModifier?: number;
   preferredFormation?: string;
   captainId?: string;
+  // Additive fraction of the Starting XI base rating, applied once.
+  // Used by manager-background match perks (former-pro, never-played).
+  userTSSBoostPct?: number;
 }
 
 /**
@@ -395,8 +400,10 @@ export function calculateTSS(
     startingXIPlayers.some((p) => p.id === config.captainId)
     ? 2 : 0;
 
+  const userBackgroundBonus = baseRating * (config.userTSSBoostPct ?? 0);
+
   return baseRating + formationBonus + mentalityBonus + homeBonus +
-    formBonus + derbyBonus + fortuneBonus + repBonus + narrativeBonus + leaderBonus + preferredFormationBonus + captainBonus;
+    formBonus + derbyBonus + fortuneBonus + repBonus + narrativeBonus + leaderBonus + preferredFormationBonus + captainBonus + userBackgroundBonus;
 }
 
 /**
@@ -653,6 +660,10 @@ export interface MatchContext {
   homeCaptainId?: string;
   awayCaptainId?: string;
   seasonSeed: string;
+  // User-club identity for manager-background match perks. Optional so
+  // headless tests and AI-only sims keep their existing call shape.
+  userClubId?: string;
+  userBackground?: PlayingBackground;
 }
 
 export function simulateMatch(
@@ -678,6 +689,16 @@ export function simulateMatch(
   const homeBenchPlayers = getBenchPlayers(homeXI, homeSquad.available);
   const awayBenchPlayers = getBenchPlayers(awayXI, awaySquad.available);
 
+  // Manager-background match boost — applied only to the user's side.
+  const sameTier = context.homeClub.tier === context.awayClub.tier;
+  const bgEffects = getBackgroundEffects(context.userBackground);
+  const homeUserBoost = context.userClubId === context.homeClub.id
+    ? bgEffects.matchTSSPct({ isRival: isDerby, sameTier, rng })
+    : 0;
+  const awayUserBoost = context.userClubId === context.awayClub.id
+    ? bgEffects.matchTSSPct({ isRival: isDerby, sameTier, rng })
+    : 0;
+
   // Calculate TSS with Starting XI + depth
   const homeTSS = calculateTSS(
     homeXIPlayers,
@@ -691,6 +712,7 @@ export function simulateMatch(
       narrativeModifier: context.homeNarrativeMod,
       preferredFormation: context.homePreferredFormation,
       captainId: context.homeCaptainId,
+      userTSSBoostPct: homeUserBoost,
     },
     isDerby,
     rng,
@@ -708,6 +730,7 @@ export function simulateMatch(
       narrativeModifier: context.awayNarrativeMod,
       preferredFormation: context.awayPreferredFormation,
       captainId: context.awayCaptainId,
+      userTSSBoostPct: awayUserBoost,
     },
     isDerby,
     rng,

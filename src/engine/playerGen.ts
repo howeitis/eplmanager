@@ -269,6 +269,7 @@ function boostPlayerOverall(player: Player, targetOverall: number): void {
 export function generateSquad(
   rng: SeededRNG,
   club: ClubData,
+  extraWonderkids: number = 0,
 ): Player[] {
   const targetOveralls = generateTargetOveralls(rng, club.tier, 16);
   const players: Player[] = [];
@@ -315,18 +316,29 @@ export function generateSquad(
 
   // Wonderkid guarantee: ensure at least 1 young (≤21) talented player
   const wonderkidThreshold = club.tier <= 3 ? 80 : 75;
-  const hasWonderkid = outfield.some((p) => p.age <= 21 && p.overall >= wonderkidThreshold);
-  if (!hasWonderkid) {
-    // Find the youngest outfield player and give them a boost
-    const sorted = [...outfield].sort((a, b) => a.age - b.age);
-    const youngest = sorted[0];
-    if (youngest) {
-      if (youngest.age > 21) youngest.age = rng.randomInt(17, 20);
-      if (youngest.overall < wonderkidThreshold) {
-        boostPlayerOverall(youngest, wonderkidThreshold);
-      }
-      youngest.highPotential = true;
+  const youngestSorted = [...outfield].sort((a, b) => a.age - b.age);
+  const promoteWonderkid = (player: Player | undefined) => {
+    if (!player) return;
+    if (player.age > 21) player.age = rng.randomInt(17, 20);
+    if (player.overall < wonderkidThreshold) {
+      boostPlayerOverall(player, wonderkidThreshold);
     }
+    player.highPotential = true;
+  };
+
+  const hasWonderkid = outfield.some((p) => p.age <= 21 && p.overall >= wonderkidThreshold);
+  let promotedFromYoungest = 0;
+  if (!hasWonderkid) {
+    promoteWonderkid(youngestSorted[0]);
+    promotedFromYoungest = 1;
+  }
+
+  // Academy-coach background: promote additional youngsters as wonderkids.
+  for (let i = 0; i < extraWonderkids; i++) {
+    const candidate = youngestSorted[promotedFromYoungest + i];
+    if (!candidate) break;
+    if (candidate.age <= 21 && candidate.overall >= wonderkidThreshold && candidate.highPotential) continue;
+    promoteWonderkid(candidate);
   }
 
   // Age caps at save start: no more than 2 over 33, no more than 4 over 30.
@@ -428,12 +440,14 @@ export function generatePhilosophyBonusPlayer(
 export function generateAllSquads(
   seed: string,
   clubs: ClubData[],
+  options: { userClubId?: string; userExtraWonderkids?: number } = {},
 ): Map<string, Player[]> {
   const squads = new Map<string, Player[]>();
 
   for (const club of clubs) {
     const rng = new SeededRNG(`${seed}-club-${club.id}`);
-    squads.set(club.id, generateSquad(rng, club));
+    const extras = club.id === options.userClubId ? (options.userExtraWonderkids ?? 0) : 0;
+    squads.set(club.id, generateSquad(rng, club, extras));
   }
 
   return squads;

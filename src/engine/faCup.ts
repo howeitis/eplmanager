@@ -1,10 +1,15 @@
-import type { Club, LeagueTableRow, MatchResult } from '../types/entities';
+import type { Club, LeagueTableRow, MatchResult, PlayingBackground } from '../types/entities';
 import { SeededRNG } from '../utils/rng';
 import {
   simulateMatch,
   selectAIFormation,
   selectAIMentality,
 } from './matchSim';
+
+interface UserContext {
+  userClubId?: string;
+  userBackground?: PlayingBackground;
+}
 
 // ─── FA Cup Types ───
 
@@ -119,8 +124,9 @@ export function simulateFACup(
   leagueTable: LeagueTableRow[],
   fortuneMap: Map<string, number>,
   seasonSeed: string,
+  userContext: UserContext = {},
 ): FACupState {
-  return simulateFACupClean(rng, clubs, leagueTable, fortuneMap, seasonSeed);
+  return simulateFACupClean(rng, clubs, leagueTable, fortuneMap, seasonSeed, userContext);
 }
 
 function simulateFACupClean(
@@ -129,6 +135,7 @@ function simulateFACupClean(
   leagueTable: LeagueTableRow[],
   fortuneMap: Map<string, number>,
   seasonSeed: string,
+  userContext: UserContext,
 ): FACupState {
   const clubMap = new Map<string, Club>();
   for (const club of clubs) {
@@ -147,7 +154,7 @@ function simulateFACupClean(
   for (let i = 0; i < prelimTeams.length; i += 2) {
     const homeId = prelimTeams[i];
     const awayId = prelimTeams[i + 1];
-    const result = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, `cup-prelim-${i / 2}`);
+    const result = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, userContext, `cup-prelim-${i / 2}`);
     fixtures.push({ homeClubId: homeId, awayClubId: awayId, round: 'R16', result });
 
     const winner = pickCupWinner(rng, result, homeId, awayId);
@@ -168,7 +175,7 @@ function simulateFACupClean(
   for (let i = 0; i < 8; i++) {
     const homeId = seeded[i];
     const awayId = unseeded[i];
-    const result = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, `cup-r16-${i}`);
+    const result = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, userContext, `cup-r16-${i}`);
     fixtures.push({ homeClubId: homeId, awayClubId: awayId, round: 'R16', result });
 
     const winner = pickCupWinner(rng, result, homeId, awayId);
@@ -182,7 +189,7 @@ function simulateFACupClean(
   for (let i = 0; i < r16Winners.length; i += 2) {
     const homeId = r16Winners[i];
     const awayId = r16Winners[i + 1];
-    const result = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, `cup-qf-${i / 2}`);
+    const result = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, userContext, `cup-qf-${i / 2}`);
     fixtures.push({ homeClubId: homeId, awayClubId: awayId, round: 'QF', result });
 
     const winner = pickCupWinner(rng, result, homeId, awayId);
@@ -196,7 +203,7 @@ function simulateFACupClean(
   for (let i = 0; i < qfWinners.length; i += 2) {
     const homeId = qfWinners[i];
     const awayId = qfWinners[i + 1];
-    const result = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, `cup-sf-${i / 2}`);
+    const result = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, userContext, `cup-sf-${i / 2}`);
     fixtures.push({ homeClubId: homeId, awayClubId: awayId, round: 'SF', result });
 
     const winner = pickCupWinner(rng, result, homeId, awayId);
@@ -207,7 +214,7 @@ function simulateFACupClean(
   // Final: 2 → 1 (May)
   const homeId = sfWinners[0];
   const awayId = sfWinners[1];
-  const finalResult = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, 'cup-final');
+  const finalResult = simulateCupMatch(rng, clubMap, homeId, awayId, fortuneMap, seasonSeed, userContext, 'cup-final');
   fixtures.push({ homeClubId: homeId, awayClubId: awayId, round: 'F', result: finalResult });
 
   const cupWinner = pickCupWinner(rng, finalResult, homeId, awayId);
@@ -227,6 +234,7 @@ function simulateCupMatch(
   awayId: string,
   fortuneMap: Map<string, number>,
   seasonSeed: string,
+  userContext: UserContext,
   fixtureId: string,
 ): MatchResult {
   const homeClub = clubMap.get(homeId)!;
@@ -256,6 +264,8 @@ function simulateCupMatch(
     homeFortune: fortuneMap.get(homeId) || 0,
     awayFortune: fortuneMap.get(awayId) || 0,
     seasonSeed,
+    userClubId: userContext.userClubId,
+    userBackground: userContext.userBackground,
   });
 }
 

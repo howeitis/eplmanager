@@ -170,8 +170,9 @@ export function annualYouthIntake(
   club: Club,
   seasonNumber: number,
   retireCount: number = 0,
+  extraCount: number = 0,
 ): Player[] {
-  const intakeCount = 1 + Math.max(0, retireCount);
+  const intakeCount = 1 + Math.max(0, retireCount) + Math.max(0, extraCount);
   const positions: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
   const newPlayers: Player[] = [];
 

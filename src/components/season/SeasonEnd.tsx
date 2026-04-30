@@ -5,7 +5,7 @@ import { LeagueTable } from '../shared/LeagueTable';
 import { AgingReport } from './AgingReport';
 import { Confetti } from '../shared/Confetti';
 import type { AgingResult } from '../../engine/aging';
-import type { LeagueTableRow, Player, Club } from '../../types/entities';
+import type { LeagueTableRow, Player, Club, PlayingBackground } from '../../types/entities';
 
 import { CLUB_MANAGERS, TIER_EXPECTED_POSITION } from '../../data/managers';
 
@@ -393,17 +393,32 @@ function generateInterview(
   playerPosition: number,
   _playerRow: LeagueTableRow | undefined,
   boardExpectation: { minPosition: number; description: string } | null,
-  manager: { name: string; clubId: string; reputation: number } | null,
+  manager: { name: string; clubId: string; reputation: number; playingBackground?: PlayingBackground } | null,
   _seasonNumber: number,
   events: { description: string; type: string; category: string }[],
   _clubs: Club[],
 ): InterviewQA[] {
   const interview: InterviewQA[] = [];
   const clubName = playerClubData?.name || 'the club';
+  const isJournalist = manager?.playingBackground === 'journalist';
 
-  // Q1: Final position vs expectations
+  // Q1: Final position vs expectations — journalists get a cheekier framing
+  // since the interviewers know the manager's old beat.
   const met = boardExpectation && playerPosition <= boardExpectation.minPosition;
-  if (met) {
+  if (isJournalist) {
+    const ordinal = `${playerPosition}${getOrdinal(playerPosition)}`;
+    if (met) {
+      interview.push({
+        question: `Off the record, between us — ${clubName} finished ${ordinal}. How would you have headlined this one if you were still writing?`,
+        answer: `"Quiet revolution at ${clubName}" — something like that. Targets met, dressing room intact, plenty of room to grow. I'd have buried the lede, mind you.`,
+      });
+    } else {
+      interview.push({
+        question: `Your old colleagues at The Athletic are circling after a ${ordinal}-place finish. Anything you'd like to brief them on first?`,
+        answer: `Tell them the take's not as spicy as they think. The season had context — injuries, fixture pile-ups, decisions that didn't break our way. I'd write it straighter than they will.`,
+      });
+    }
+  } else if (met) {
     interview.push({
       question: `${clubName} finish ${playerPosition}${getOrdinal(playerPosition)} — above the board's target. How do you reflect on the season?`,
       answer: `It's been a tremendous campaign. The target was ${boardExpectation?.description.toLowerCase()}, and we've exceeded that. The players have been exceptional, and I couldn't be prouder of the squad's commitment this season.`,

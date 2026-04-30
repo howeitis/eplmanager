@@ -55,6 +55,7 @@ import {
   calculateSeasonEndBudget,
   calculateBoardExpectation,
 } from './engine/reputation';
+import { getBackgroundEffects } from './engine/managerBackground';
 import type {
   Club,
   ClubData,
@@ -387,7 +388,8 @@ function App() {
     });
 
     // Reset board expectation for the new club
-    const newExpectation = calculateBoardExpectation(club.tier, manager.reputation, 0);
+    const hireLeniency = getBackgroundEffects(manager.playingBackground).boardLeniency;
+    const newExpectation = calculateBoardExpectation(club.tier, manager.reputation, 0, hireLeniency);
     state.setBoardExpectation({ minPosition: newExpectation.minPosition, description: newExpectation.description });
 
     // Update save metadata to reflect the new club
@@ -420,7 +422,11 @@ function App() {
     const gameSeed = `plm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     state.setGameSeed(gameSeed);
 
-    const squads = generateAllSquads(gameSeed, CLUBS);
+    const startEffects = getBackgroundEffects(data.playingBackground);
+    const squads = generateAllSquads(gameSeed, CLUBS, {
+      userClubId: club.id,
+      userExtraWonderkids: startEffects.extraStartWonderkids,
+    });
 
     // Philosophy bonus: add an extra 17th player to the user's squad
     const userSquad = squads.get(club.id)!;
@@ -767,6 +773,8 @@ function App() {
         homeCaptainId: isPlayerHome ? captainIdForMatch ?? undefined : undefined,
         awayCaptainId: isPlayerAway ? captainIdForMatch ?? undefined : undefined,
         seasonSeed: sSeed,
+        userClubId: playerClubId,
+        userBackground: state.manager?.playingBackground,
       });
 
       results.push(result);
@@ -1021,7 +1029,10 @@ function App() {
     const cupRng = new SeededRNG(`${sSeed}-facup`);
     const fortuneMap = new Map<string, number>();
     for (const f of fortunes) fortuneMap.set(f.clubId, f.fortune);
-    const cupResult = simulateFACup(cupRng, clubs, sorted, fortuneMap, sSeed);
+    const cupResult = simulateFACup(cupRng, clubs, sorted, fortuneMap, sSeed, {
+      userClubId: playerClubId,
+      userBackground: store.getState().manager?.playingBackground,
+    });
     setFaCupWinner(cupResult.winner);
 
     // Reputation change
@@ -1152,12 +1163,14 @@ function App() {
     // Annual youth intake: every club gets 1 + (retiring players) academy
     // graduates, so there's always at least one prospect in the start-of-season
     // pack and the intake scales with squad turnover.
+    const annualEffects = getBackgroundEffects(store.getState().manager?.playingBackground);
     let playerYouthIntake: import('./types/entities').Player[] = [];
     for (const club of clubs) {
       const youthRng = new SeededRNG(`${sSeed}-youth-${club.id}`);
       const clubAging = agingResults_.find((r) => r.clubId === club.id);
       const retireCount = clubAging?.retired.length ?? 0;
-      const youthPlayers = annualYouthIntake(youthRng, club, seasonNumber, retireCount);
+      const extraYouth = club.id === playerClubId ? annualEffects.extraAnnualYouth : 0;
+      const youthPlayers = annualYouthIntake(youthRng, club, seasonNumber, retireCount, extraYouth);
       if (club.id === playerClubId) {
         playerYouthIntake = youthPlayers;
       }
@@ -1188,7 +1201,8 @@ function App() {
       const currentBudget = budgets[club.id] || 0;
       const clubTier = clubDataMap.get(club.id)?.tier || 3;
       const budgetMod = club.id === playerClubId ? repResult.budgetModifier : 0;
-      const newBudget = calculateSeasonEndBudget(currentBudget, position, clubTier, budgetMod);
+      const extraMult = club.id === playerClubId ? annualEffects.budgetMultiplier : 1;
+      const newBudget = calculateSeasonEndBudget(currentBudget, position, clubTier, budgetMod, extraMult);
       state.setBudget(club.id, newBudget);
     }
 
@@ -1223,6 +1237,7 @@ function App() {
       clubDataMap.get(playerClubId)!.tier,
       updatedManager.reputation,
       consecutiveOver,
+      annualEffects.boardLeniency,
     );
     state.setBoardExpectation({ minPosition: newExpectation.minPosition, description: newExpectation.description });
 

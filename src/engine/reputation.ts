@@ -47,6 +47,7 @@ export function calculateBoardExpectation(
   clubTier: number,
   reputation: number,
   consecutiveOverperformances: number,
+  leniency = 0,
 ): BoardExpectationConfig {
   // Base expectations by tier
   const baseExpectations: Record<number, BoardExpectationConfig> = {
@@ -76,6 +77,10 @@ export function calculateBoardExpectation(
     if (config.minPosition > 4) {
       config = { ...config, minPosition: config.minPosition - 2 };
     }
+  }
+
+  if (leniency > 0) {
+    config = { ...config, minPosition: Math.min(20, config.minPosition + leniency) };
   }
 
   return config;
@@ -166,6 +171,7 @@ export function calculateSeasonEndBudget(
   finishPosition: number,
   clubOriginalTier: number,
   budgetModifier: number,
+  extraMultiplier = 1,
 ): number {
   const payout = getPositionBudgetPayout(finishPosition);
 
@@ -175,6 +181,7 @@ export function calculateSeasonEndBudget(
   // New budget = payout + rollover, then apply modifier
   let newBudget = payout + rollover;
   newBudget *= (1 + budgetModifier);
+  newBudget *= extraMultiplier;
 
   // Apply budget floor
   const floor = BUDGET_FLOOR[clubOriginalTier] || 10;
