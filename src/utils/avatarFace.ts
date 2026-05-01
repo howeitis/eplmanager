@@ -16,17 +16,23 @@ const SHORT_TOPS_UNIVERSAL = [
   'theCaesar',
   'theCaesarAndSidePart',
   'frizzle',
-] as const;
-
-// Rare masc long-hair pool, used for ~6% of players via a seed-stable roll.
-const LONG_TOPS_UNIVERSAL = [
-  'longButNotTooLong',
   'shaggyMullet',
 ] as const;
 
 // Dreads / fro pool — only shown to darker-skinned players, and only on a
 // ~10% roll so it stays a distinctive look rather than the default.
 const DARK_DREADS_FRO_POOL = ['dreads01', 'dreads02', 'dreads', 'fro'] as const;
+
+// For dark-brown / black skin players, lean heavily toward theCaesar cuts
+// or dreads/fro rather than the random short-hair pool.
+const VERY_DARK_PRIMARY_POOL = [
+  'theCaesar',
+  'theCaesarAndSidePart',
+  'dreads01',
+  'dreads02',
+  'dreads',
+  'fro',
+] as const;
 
 // Facial hair is weighted: clean light/medium beards and the magnum
 // moustache dominate; the majestic beard and fancy moustache are rare.
@@ -226,6 +232,10 @@ const DARK_SKIN_TONES = new Set([SKIN_BROWN, SKIN_DARK_BROWN, SKIN_BLACK]);
 function isDarkSkin(tone: string): boolean {
   return DARK_SKIN_TONES.has(tone);
 }
+const VERY_DARK_SKIN_TONES = new Set([SKIN_DARK_BROWN, SKIN_BLACK]);
+function isVeryDarkSkin(tone: string): boolean {
+  return VERY_DARK_SKIN_TONES.has(tone);
+}
 
 function weightedPickFromSeed<T extends string>(
   items: readonly T[],
@@ -263,18 +273,18 @@ export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): strin
   const bucket = getBucket(nationality);
   const skinTone = pickSkinTone(bucket, seed);
   const dark = isDarkSkin(skinTone);
+  const veryDark = isVeryDarkSkin(skinTone);
   const hairColor = pickHairColor(age, bucket, seed);
 
-  // Top selection uses two independent rolls: dreads/fro for darker-skinned
-  // players (~10%) take precedence, otherwise a ~6% long-hair roll, else
-  // the default short pool. Both rolls are seed-stable.
+  // Top selection: dark-brown / black players strongly favour theCaesar cuts
+  // or dreads/fro (~70%); brown skin players get the dreads/fro pool on a
+  // ~10% roll; everyone else lands in the universal short pool.
   const dreadsRoll = hashSeed(`${seed}|dreads`) % 100;
-  const longRoll = hashSeed(`${seed}|long`) % 100;
   let tops: readonly string[];
-  if (dark && dreadsRoll < 10) {
+  if (veryDark && dreadsRoll < 70) {
+    tops = VERY_DARK_PRIMARY_POOL;
+  } else if (dark && !veryDark && dreadsRoll < 10) {
     tops = DARK_DREADS_FRO_POOL;
-  } else if (longRoll < 6) {
-    tops = LONG_TOPS_UNIVERSAL;
   } else {
     tops = SHORT_TOPS_UNIVERSAL;
   }
