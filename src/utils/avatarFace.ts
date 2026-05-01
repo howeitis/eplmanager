@@ -17,15 +17,16 @@ const SHORT_TOPS_UNIVERSAL = [
   'theCaesarAndSidePart',
   'frizzle',
 ] as const;
-const SHORT_TOPS_DARK_EXTRA = ['dreads01', 'dreads02'] as const;
 
 // Rare masc long-hair pool, used for ~6% of players via a seed-stable roll.
 const LONG_TOPS_UNIVERSAL = [
   'longButNotTooLong',
   'shaggyMullet',
-  'straight01',
 ] as const;
-const LONG_TOPS_DARK_EXTRA = ['dreads', 'fro'] as const;
+
+// Dreads / fro pool — only shown to darker-skinned players, and only on a
+// ~10% roll so it stays a distinctive look rather than the default.
+const DARK_DREADS_FRO_POOL = ['dreads01', 'dreads02', 'dreads', 'fro'] as const;
 
 // Facial hair is weighted: clean light/medium beards and the magnum
 // moustache dominate; the majestic beard and fancy moustache are rare.
@@ -57,9 +58,9 @@ const PLAYER_EYEBROWS = [
 
 // Mouth pools — neutral expressions for most players; Flair-trait players
 // sometimes get the cheeky tongue.
-const MOUTH_DEFAULT = ['default', 'serious', 'twinkle'] as const;
-const MOUTH_FLAIR = ['default', 'serious', 'twinkle', 'tongue'] as const;
-const MOUTH_FLAIR_WEIGHTS = [30, 25, 25, 20];
+const MOUTH_DEFAULT = ['default', 'serious', 'twinkle', 'smile'] as const;
+const MOUTH_FLAIR = ['default', 'serious', 'twinkle', 'smile', 'tongue'] as const;
+const MOUTH_FLAIR_WEIGHTS = [25, 22, 22, 16, 15];
 
 // ─── Hair color palettes ───
 // Default hair colors — naturally varied browns/blondes/reds, no greying.
@@ -264,14 +265,19 @@ export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): strin
   const dark = isDarkSkin(skinTone);
   const hairColor = pickHairColor(age, bucket, seed);
 
-  // ~6% of players get a long-hair silhouette. Roll is seed-stable so the
-  // same player keeps the same look across re-renders. Dreads/fro variants
-  // are added to the pool only for darker skin tones.
+  // Top selection uses two independent rolls: dreads/fro for darker-skinned
+  // players (~10%) take precedence, otherwise a ~6% long-hair roll, else
+  // the default short pool. Both rolls are seed-stable.
+  const dreadsRoll = hashSeed(`${seed}|dreads`) % 100;
   const longRoll = hashSeed(`${seed}|long`) % 100;
-  const useLong = longRoll < 6;
-  const tops: string[] = useLong
-    ? [...LONG_TOPS_UNIVERSAL, ...(dark ? LONG_TOPS_DARK_EXTRA : [])]
-    : [...SHORT_TOPS_UNIVERSAL, ...(dark ? SHORT_TOPS_DARK_EXTRA : [])];
+  let tops: readonly string[];
+  if (dark && dreadsRoll < 10) {
+    tops = DARK_DREADS_FRO_POOL;
+  } else if (longRoll < 6) {
+    tops = LONG_TOPS_UNIVERSAL;
+  } else {
+    tops = SHORT_TOPS_UNIVERSAL;
+  }
 
   const facialHair = weightedPickFromSeed(FACIAL_HAIR_OPTIONS, FACIAL_HAIR_WEIGHTS, `${seed}|fh`);
   const eyes = weightedPickFromSeed(EYES_OPTIONS, EYES_WEIGHTS, `${seed}|eye`);
@@ -282,7 +288,7 @@ export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): strin
   const uri = createAvatar(avataaars, {
     seed,
     backgroundColor: ['transparent'],
-    top: tops,
+    top: [...tops],
     facialHair: [facialHair],
     facialHairProbability: facialHairProbabilityForAge(age),
     hairColor: [hairColor],
