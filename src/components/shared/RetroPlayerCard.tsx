@@ -602,6 +602,7 @@ export function RetroPlayerCard({
             shirtColor: clubColors?.primary,
             age: player.age,
             nationality: player.nationality,
+            trait: player.trait,
           })}
           alt=""
           aria-hidden="true"

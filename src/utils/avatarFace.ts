@@ -7,51 +7,59 @@ const managerCache = new Map<string, string>();
 // Hairstyles only — no headwear (pro-headshot look). theCaesar covers
 // the "rare shaved head" case without going fully bald. `sides` is
 // excluded because it renders as a bald top with hair only on the sides.
-const PLAYER_TOPS = [
+// Dreads and fro variants are restricted to darker skin tones below.
+const SHORT_TOPS_UNIVERSAL = [
   'shortCurly',
   'shortFlat',
   'shortRound',
   'shortWaved',
   'theCaesar',
   'theCaesarAndSidePart',
-  'dreads01',
-  'dreads02',
   'frizzle',
 ] as const;
+const SHORT_TOPS_DARK_EXTRA = ['dreads01', 'dreads02'] as const;
 
 // Rare masc long-hair pool, used for ~6% of players via a seed-stable roll.
-const PLAYER_LONG_TOPS = [
+const LONG_TOPS_UNIVERSAL = [
   'longButNotTooLong',
   'shaggyMullet',
   'straight01',
 ] as const;
+const LONG_TOPS_DARK_EXTRA = ['dreads', 'fro'] as const;
 
-const PLAYER_FACIAL_HAIR = [
+// Facial hair is weighted: clean light/medium beards and the magnum
+// moustache dominate; the majestic beard and fancy moustache are rare.
+const FACIAL_HAIR_OPTIONS = [
   'beardLight',
   'beardMedium',
+  'moustacheMagnum',
   'beardMajestic',
   'moustacheFancy',
 ] as const;
+const FACIAL_HAIR_WEIGHTS = [30, 30, 25, 8, 7];
 
-const PLAYER_CLOTHES = [
-  'shirtCrewNeck',
-  'shirtScoopNeck',
-  'shirtVNeck',
-  'hoodie',
-  'collarAndSweater',
-] as const;
+// Crew-neck shirts only — keeps the kit-graphic clean and consistent.
+const PLAYER_CLOTHES = ['shirtCrewNeck'] as const;
 
-// Composed/neutral expressions — pro-headshot vibe with a touch of
-// personality, not goofy.
-const PLAYER_EYES = ['default', 'happy', 'side', 'wink'] as const;
+// Eyes are weighted: wink shows up on roughly 1 in 10 cards, not 1 in 4.
+const EYES_OPTIONS = ['default', 'happy', 'side', 'wink'] as const;
+const EYES_WEIGHTS = [35, 30, 25, 10];
+
 const PLAYER_EYEBROWS = [
   'default',
   'defaultNatural',
   'flatNatural',
   'raisedExcited',
   'upDown',
+  'angry',
+  'angryNatural',
 ] as const;
-const PLAYER_MOUTH = ['default', 'serious', 'smile', 'twinkle'] as const;
+
+// Mouth pools — neutral expressions for most players; Flair-trait players
+// sometimes get the cheeky tongue.
+const MOUTH_DEFAULT = ['default', 'serious', 'twinkle'] as const;
+const MOUTH_FLAIR = ['default', 'serious', 'twinkle', 'tongue'] as const;
+const MOUTH_FLAIR_WEIGHTS = [30, 25, 25, 20];
 
 // ─── Hair color palettes ───
 // Default hair colors — naturally varied browns/blondes/reds, no greying.
@@ -184,11 +192,10 @@ function facialHairProbabilityForAge(age?: number): number {
   return 55;
 }
 
-// Hair color pick. Default-bucket young players (<26) get an occasional
-// colorful pop. Dark-hair buckets (African / East Asian / MENA) stay
-// overwhelmingly black/dark brown — but allow a small ~7% dye rate
-// since real players do bleach/dye their hair.
-function pickHairColors(age: number | undefined, bucket: NationalityBucket, seed: string): string[] {
+// Hair color palette pick. Default-bucket young players (<26) get an
+// occasional colorful pop. Dark-hair buckets stay overwhelmingly
+// black/dark brown but allow a small ~7% dye rate.
+function pickHairPalette(age: number | undefined, bucket: NationalityBucket, seed: string): string[] {
   if (bucket.hair === HAIR_DARK) {
     const dye = hashSeed(`${seed}|dye`) % 100;
     if (dye < 2) return HAIR_PASTEL;
@@ -203,6 +210,36 @@ function pickHairColors(age: number | undefined, bucket: NationalityBucket, seed
   return bucket.hair;
 }
 
+// Pick a single hair color from the palette, deterministically per seed.
+// Locking it to one value lets us match facial-hair color to head-hair.
+function pickHairColor(age: number | undefined, bucket: NationalityBucket, seed: string): string {
+  const palette = pickHairPalette(age, bucket, seed);
+  return palette[hashSeed(`${seed}|haircolor`) % palette.length];
+}
+
+function pickSkinTone(bucket: NationalityBucket, seed: string): string {
+  return bucket.skin[hashSeed(`${seed}|skin`) % bucket.skin.length];
+}
+
+const DARK_SKIN_TONES = new Set([SKIN_BROWN, SKIN_DARK_BROWN, SKIN_BLACK]);
+function isDarkSkin(tone: string): boolean {
+  return DARK_SKIN_TONES.has(tone);
+}
+
+function weightedPickFromSeed<T extends string>(
+  items: readonly T[],
+  weights: readonly number[],
+  seed: string,
+): T {
+  const total = weights.reduce((s, w) => s + w, 0);
+  let r = hashSeed(seed) % total;
+  for (let i = 0; i < items.length; i++) {
+    if (r < weights[i]) return items[i];
+    r -= weights[i];
+  }
+  return items[items.length - 1];
+}
+
 function stripHash(hex?: string): string | undefined {
   if (!hex) return undefined;
   return hex.startsWith('#') ? hex.slice(1) : hex;
@@ -212,36 +249,50 @@ interface PlayerFaceOpts {
   shirtColor?: string;
   age?: number;
   nationality?: string;
+  trait?: string;
 }
 
 export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): string {
-  const { shirtColor, age, nationality } = opts;
+  const { shirtColor, age, nationality, trait } = opts;
   const colorKey = stripHash(shirtColor) ?? '';
-  const cacheKey = `${seed}|${colorKey}|${age ?? ''}|${nationality ?? ''}`;
+  const cacheKey = `${seed}|${colorKey}|${age ?? ''}|${nationality ?? ''}|${trait ?? ''}`;
   const cached = playerCache.get(cacheKey);
   if (cached) return cached;
 
   const bucket = getBucket(nationality);
-  const hairColors = pickHairColors(age, bucket, seed);
+  const skinTone = pickSkinTone(bucket, seed);
+  const dark = isDarkSkin(skinTone);
+  const hairColor = pickHairColor(age, bucket, seed);
 
   // ~6% of players get a long-hair silhouette. Roll is seed-stable so the
-  // same player keeps the same look across re-renders.
+  // same player keeps the same look across re-renders. Dreads/fro variants
+  // are added to the pool only for darker skin tones.
   const longRoll = hashSeed(`${seed}|long`) % 100;
-  const tops = longRoll < 6 ? PLAYER_LONG_TOPS : PLAYER_TOPS;
+  const useLong = longRoll < 6;
+  const tops: string[] = useLong
+    ? [...LONG_TOPS_UNIVERSAL, ...(dark ? LONG_TOPS_DARK_EXTRA : [])]
+    : [...SHORT_TOPS_UNIVERSAL, ...(dark ? SHORT_TOPS_DARK_EXTRA : [])];
+
+  const facialHair = weightedPickFromSeed(FACIAL_HAIR_OPTIONS, FACIAL_HAIR_WEIGHTS, `${seed}|fh`);
+  const eyes = weightedPickFromSeed(EYES_OPTIONS, EYES_WEIGHTS, `${seed}|eye`);
+  const mouth = trait === 'Flair'
+    ? weightedPickFromSeed(MOUTH_FLAIR, MOUTH_FLAIR_WEIGHTS, `${seed}|mouth`)
+    : MOUTH_DEFAULT[hashSeed(`${seed}|mouth`) % MOUTH_DEFAULT.length];
 
   const uri = createAvatar(avataaars, {
     seed,
     backgroundColor: ['transparent'],
-    top: [...tops],
-    facialHair: [...PLAYER_FACIAL_HAIR],
+    top: tops,
+    facialHair: [facialHair],
     facialHairProbability: facialHairProbabilityForAge(age),
-    hairColor: hairColors,
-    skinColor: bucket.skin,
+    hairColor: [hairColor],
+    facialHairColor: [hairColor],
+    skinColor: [skinTone],
     clothing: [...PLAYER_CLOTHES],
     ...(colorKey ? { clothesColor: [colorKey] } : {}),
-    eyes: [...PLAYER_EYES],
+    eyes: [eyes],
     eyebrows: [...PLAYER_EYEBROWS],
-    mouth: [...PLAYER_MOUTH],
+    mouth: [mouth],
     accessoriesProbability: 0,
   }).toDataUri();
   playerCache.set(cacheKey, uri);
