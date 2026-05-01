@@ -277,13 +277,13 @@ export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): strin
   const hairColor = pickHairColor(age, bucket, seed);
 
   // Top selection: dark-brown / black players strongly favour theCaesar cuts
-  // or dreads/fro (~70%); brown skin players get the dreads/fro pool on a
-  // ~10% roll; everyone else lands in the universal short pool.
+  // or dreads/fro (~85%); brown skin players get the dreads/fro pool on a
+  // ~20% roll; everyone else lands in the universal short pool.
   const dreadsRoll = hashSeed(`${seed}|dreads`) % 100;
   let tops: readonly string[];
-  if (veryDark && dreadsRoll < 70) {
+  if (veryDark && dreadsRoll < 85) {
     tops = VERY_DARK_PRIMARY_POOL;
-  } else if (dark && !veryDark && dreadsRoll < 10) {
+  } else if (dark && !veryDark && dreadsRoll < 20) {
     tops = DARK_DREADS_FRO_POOL;
   } else {
     tops = SHORT_TOPS_UNIVERSAL;

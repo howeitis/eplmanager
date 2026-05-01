@@ -11,13 +11,13 @@ const NATIONALITIES = [
   'South African', 'South Korean', 'Spanish', 'Swedish', 'Welsh',
 ];
 
-const PLAYING_BACKGROUNDS: { value: PlayingBackground; label: string }[] = [
-  { value: 'former-pro', label: 'Former Professional' },
-  { value: 'lower-league-pro', label: 'Lower League Pro' },
-  { value: 'academy-coach', label: 'Academy Coach' },
-  { value: 'journalist', label: 'Journalist' },
-  { value: 'analyst', label: 'Analyst' },
-  { value: 'never-played', label: 'Never Played' },
+const PLAYING_BACKGROUNDS: { value: PlayingBackground; label: string; bonus: string }[] = [
+  { value: 'former-pro', label: 'Former Professional', bonus: '+5% TSS in derbies and against same-tier sides' },
+  { value: 'lower-league-pro', label: 'Lower League Pro', bonus: '+10% on player sale fees' },
+  { value: 'academy-coach', label: 'Academy Coach', bonus: 'Extra wonderkid at start, +1 youth intake every season' },
+  { value: 'journalist', label: 'Journalist', bonus: 'Kinder board (1-place leniency) + cheeky end-of-season interview' },
+  { value: 'analyst', label: 'Analyst', bonus: '+10% season-end budget' },
+  { value: 'never-played', label: 'Never Played', bonus: 'Wild card — random −2% to +5% TSS swing every match' },
 ];
 
 const FORMATIONS = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '5-3-2', '3-4-3'];
@@ -230,6 +230,11 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
                 <option key={bg.value} value={bg.value}>{bg.label}</option>
               ))}
             </select>
+            {playingBackground && (
+              <p className="plm-text-xs plm-text-gray-400 plm-mt-1">
+                {PLAYING_BACKGROUNDS.find((bg) => bg.value === playingBackground)?.bonus}
+              </p>
+            )}
             {errors.playingBackground && <p className={errorClass}>{errors.playingBackground}</p>}
           </div>
 
