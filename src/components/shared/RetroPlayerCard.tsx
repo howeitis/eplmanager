@@ -493,8 +493,8 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {/* ─── Sparkle overlay for any future star (u21 75+) or elite (90+) ─── */}
-      {(futureStar !== null || player.overall >= 90) && (
+      {/* ─── Sparkle overlay for any future star (u21 75+) or 85+ rating ─── */}
+      {(futureStar !== null || player.overall >= 85) && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[3] plm-overflow-hidden">
           {[...Array(player.overall >= 90 ? 9 : 6)].map((_, i) => (
             <div
