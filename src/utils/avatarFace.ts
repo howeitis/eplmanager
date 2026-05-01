@@ -292,16 +292,15 @@ export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): strin
 
   // Top selection: dark-brown / black players strongly favour theCaesar cuts
   // or dreads/fro (~85%); brown skin players get the dreads/fro pool on a
-  // ~20% roll; everyone else lands in the universal short pool.
+  // ~20% roll; everyone else lands in the universal short pool. Using a
+  // ternary (not `let tops: readonly string[]`) so TS keeps the literal
+  // union — DiceBear's `top` schema rejects `string[]`.
   const dreadsRoll = hashSeed(`${seed}|dreads`) % 100;
-  let tops: readonly string[];
-  if (veryDark && dreadsRoll < 85) {
-    tops = VERY_DARK_PRIMARY_POOL;
-  } else if (dark && !veryDark && dreadsRoll < 20) {
-    tops = DARK_DREADS_FRO_POOL;
-  } else {
-    tops = SHORT_TOPS_UNIVERSAL;
-  }
+  const tops = veryDark && dreadsRoll < 85
+    ? VERY_DARK_PRIMARY_POOL
+    : dark && !veryDark && dreadsRoll < 20
+    ? DARK_DREADS_FRO_POOL
+    : SHORT_TOPS_UNIVERSAL;
 
   const facialHair = weightedPickFromSeed(FACIAL_HAIR_OPTIONS, FACIAL_HAIR_WEIGHTS, `${seed}|fh`);
   const eyes = weightedPickFromSeed(EYES_OPTIONS, EYES_WEIGHTS, `${seed}|eye`);
