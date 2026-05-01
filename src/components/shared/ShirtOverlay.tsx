@@ -7,35 +7,33 @@ interface ShirtOverlayProps {
 }
 
 // Body silhouette in 0–100 fractional viewBox units. The top edge curves
-// downward in the middle to mimic the avataaars shirt collar, so vertical
-// stripes get clipped along the collar curve rather than cutting straight
-// across the neckline.
+// downward in the middle to mimic the avataaars shirt collar — so vertical
+// stripes get clipped along the collar curve, and the plain-kit collar
+// trim follows the same shape.
 //
-// Collar is a shallow dip — top edges sit at y≈78, dipping to y≈86 in the
-// middle. That puts stripes meeting the bottom of the avataaars collar
-// (instead of well below it) while still leaving room for hair to hang in
-// front of the overlay at the shoulder line.
+// Collar sits up at the neckline (y=70) with a 10-unit dip in the middle
+// for a pronounced V/U look. Stripes start at y=70 too and naturally meet
+// the bottom of the curve.
 const COLLAR_LEFT_X = 28;
 const COLLAR_RIGHT_X = 72;
-const COLLAR_TOP_Y = 78;
-const COLLAR_DIP_Y = 86;
+const COLLAR_TOP_Y = 70;
+const COLLAR_DIP_Y = 80;
 
 const SHIRT_BODY_PATH =
   `M ${COLLAR_LEFT_X} ${COLLAR_TOP_Y} ` +
   `Q 50 ${COLLAR_DIP_Y} ${COLLAR_RIGHT_X} ${COLLAR_TOP_Y} ` +
   `L 78 100 L 22 100 Z`;
 
-// Collar-trim path traces the same curve, drawn as a stroke. Plain-pattern
-// clubs use this as a thin neckline accent in their kit's accent colour.
+// The collar trim is just the top arc of the body path, drawn as a stroke.
 const COLLAR_TRIM_PATH =
   `M ${COLLAR_LEFT_X} ${COLLAR_TOP_Y} ` +
   `Q 50 ${COLLAR_DIP_Y} ${COLLAR_RIGHT_X} ${COLLAR_TOP_Y}`;
 
-// Cuff trims — short diagonal strokes at the end of each sleeve, angled
-// outward to follow the avataaars sleeve direction. Tuned to sit on the
-// sleeve fabric, not below it on bare skin.
-const CUFF_LEFT_PATH = 'M 17 85 L 28 82';   // viewer's left, player's right arm
-const CUFF_RIGHT_PATH = 'M 72 82 L 83 85';  // viewer's right, player's left arm
+// Bottom-hem trim — two short horizontal strokes at the very bottom of the
+// visible shirt, just above the name plate. Gap in the middle so they read
+// as hem ends rather than a single belt across the chest.
+const HEM_LEFT_PATH = 'M 24 97 L 44 97';
+const HEM_RIGHT_PATH = 'M 56 97 L 76 97';
 
 // Crest sits on the viewer's right of the chest, sized big enough to read.
 const CREST = { x: 58, y: 84, w: 11, h: 11 };
@@ -90,7 +88,7 @@ export function ShirtOverlay({ kit, logoSrc, sizePx }: ShirtOverlayProps) {
       )}
       {kit.pattern === 'plain' && (
         <>
-          {/* Collar trim — thin curved line following the neckline. */}
+          {/* Collar trim — thin curved line at the neckline. */}
           <path
             d={COLLAR_TRIM_PATH}
             stroke={kit.accent}
@@ -98,16 +96,16 @@ export function ShirtOverlay({ kit, logoSrc, sizePx }: ShirtOverlayProps) {
             strokeLinecap="round"
             fill="none"
           />
-          {/* Sleeve cuff trims — short diagonals at the sleeve ends. */}
+          {/* Bottom-hem trims — two short horizontals just above the name plate. */}
           <path
-            d={CUFF_LEFT_PATH}
+            d={HEM_LEFT_PATH}
             stroke={kit.accent}
             strokeWidth={1.8}
             strokeLinecap="round"
             fill="none"
           />
           <path
-            d={CUFF_RIGHT_PATH}
+            d={HEM_RIGHT_PATH}
             stroke={kit.accent}
             strokeWidth={1.8}
             strokeLinecap="round"
