@@ -6,37 +6,32 @@ interface ShirtOverlayProps {
   sizePx: number;
 }
 
-// Approximate shirt geometry of the DiceBear avataaars body, in 0–100
-// fractional units. Sleeves on avataaars angle outward from the shoulders,
-// so they're rendered as trapezoidal paths rather than rectangles. Hand-
-// tuned against rendered output; if avataaars changes its body silhouette
-// these paths need re-tuning.
+// Body silhouette in 0–100 fractional viewBox units. The top edge curves
+// downward in the middle to mimic the avataaars shirt collar — that way
+// vertical stripes get clipped along the collar curve instead of cutting
+// straight across the neckline.
 //
-// Body silhouette (rough): widens from shoulders (x≈30..70 at y≈75) to
-// hips (x≈22..78 at y≈100).
-const SHIRT_BODY_PATH = 'M 30 75 L 70 75 L 78 100 L 22 100 Z';
+// The whole region starts at y≈82 (well below the shoulder line) so any
+// hair that hangs down from the head sits visibly in front of jersey
+// elements, rather than the overlay painting on top of the hair.
+const SHIRT_BODY_PATH =
+  'M 28 82 Q 50 92 72 82 L 78 100 L 22 100 Z';
 
-// Sleeve trapezoids — wider at shoulder, taper outward toward the elbow.
-// Viewer's left = player's right side.
-const LEFT_SLEEVE_PATH = 'M 30 75 L 22 75 L 14 95 L 24 95 Z';
-const RIGHT_SLEEVE_PATH = 'M 70 75 L 78 75 L 86 95 L 76 95 Z';
+// Crest sits on the viewer's right of the chest, sized big enough to read.
+const CREST = { x: 58, y: 84, w: 11, h: 11 };
 
-// Crest sits on the viewer's right of the shirt, mid-chest.
-const CREST = { x: 60, y: 81, w: 7, h: 7 };
-
-// For stripes we need the body bounds for spacing the rects across.
-const SHIRT_BODY_LEFT = 26;
-const SHIRT_BODY_RIGHT = 74;
-const SHIRT_BODY_TOP = 75;
-const SHIRT_BODY_BOTTOM = 100;
+// Stripe layout — stripes are clipped to the body path above, so they
+// follow the collar curve at the top automatically.
 const STRIPE_COUNT = 5;
+const SHIRT_BODY_LEFT = 22;
+const SHIRT_BODY_RIGHT = 78;
+const SHIRT_BODY_TOP = 80;
+const SHIRT_BODY_BOTTOM = 100;
 
 export function ShirtOverlay({ kit, logoSrc, sizePx }: ShirtOverlayProps) {
   // Note: no mix-blend-mode on the SVG. Multiply makes white pixels
-  // transparent (white × any = any), so white sleeves on a coloured shirt
-  // would vanish entirely — which was the "sleeves disappear behind the
-  // model" bug. Painting the patterns directly gives the cleanest result
-  // for the cartoon avataaars style.
+  // transparent (white × any = any), which made white sleeves vanish
+  // on coloured shirts in the previous iteration.
   return (
     <svg
       viewBox="0 0 100 100"
@@ -50,12 +45,6 @@ export function ShirtOverlay({ kit, logoSrc, sizePx }: ShirtOverlayProps) {
       }}
       aria-hidden="true"
     >
-      {kit.pattern === 'sleeves' && (
-        <>
-          <path d={LEFT_SLEEVE_PATH} fill={kit.accent} />
-          <path d={RIGHT_SLEEVE_PATH} fill={kit.accent} />
-        </>
-      )}
       {kit.pattern === 'vertical-stripes' && (
         <g clipPath="url(#shirt-body-clip)">
           <defs>

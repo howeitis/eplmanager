@@ -66,7 +66,7 @@ export interface NationalityWeight {
   weight: number;
 }
 
-export type KitPattern = 'plain' | 'sleeves' | 'vertical-stripes';
+export type KitPattern = 'plain' | 'vertical-stripes';
 
 export interface ClubKit {
   pattern: KitPattern;
