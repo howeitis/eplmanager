@@ -34,6 +34,20 @@ const VERY_DARK_PRIMARY_POOL = [
   'fro',
 ] as const;
 
+// Manager avatars use a 70/30 masc/fem split. The masc pool mirrors the
+// player short-hair list; the fem pool keeps a clean professional look —
+// no big-hair / curvy / frida silhouettes that read costume-y.
+const MANAGER_MASC_TOPS = SHORT_TOPS_UNIVERSAL;
+const MANAGER_FEM_TOPS = [
+  'bob',
+  'bun',
+  'longButNotTooLong',
+  'miaWallace',
+  'straight01',
+  'straight02',
+  'straightAndStrand',
+] as const;
+
 // Facial hair is weighted: clean light/medium beards and the magnum
 // moustache dominate; the majestic beard and fancy moustache are rare.
 const FACIAL_HAIR_OPTIONS = [
@@ -318,9 +332,25 @@ export function getPlayerFaceUri(seed: string, opts: PlayerFaceOpts = {}): strin
 export function getManagerFaceUri(seed: string): string {
   const cached = managerCache.get(seed);
   if (cached) return cached;
+
+  // 70% masculine, 30% feminine — seeded so the same manager seed always
+  // looks the same on re-render. Without this constraint the avataaars
+  // defaults skewed feminine and pulled in hats / accessories that
+  // clashed with the rest of the UI's professional headshot look.
+  const genderRoll = hashSeed(`${seed}|gender`) % 100;
+  const masc = genderRoll < 70;
+  const tops = masc ? MANAGER_MASC_TOPS : MANAGER_FEM_TOPS;
+  const facialHair = weightedPickFromSeed(FACIAL_HAIR_OPTIONS, FACIAL_HAIR_WEIGHTS, `${seed}|fh`);
+
   const uri = createAvatar(avataaars, {
     seed,
     backgroundColor: ['transparent'],
+    top: [...tops],
+    facialHair: [facialHair],
+    facialHairProbability: masc ? 35 : 0,
+    clothing: [...PLAYER_CLOTHES],
+    eyebrows: [...PLAYER_EYEBROWS],
+    accessoriesProbability: 0,
   }).toDataUri();
   managerCache.set(seed, uri);
   return uri;
