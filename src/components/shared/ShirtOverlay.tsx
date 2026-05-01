@@ -9,11 +9,11 @@ interface ShirtOverlayProps {
 // Approximate shirt geometry of the DiceBear avataaars body, in 0–100
 // fractional units. Hand-tuned against rendered output; if avataaars
 // changes its body silhouette these constants will need re-tuning.
-const SHIRT_BODY = { x: 22, y: 70, w: 56, h: 30 };
-const LEFT_SLEEVE = { x: 13, y: 70, w: 14, h: 12 };   // viewer's left
-const RIGHT_SLEEVE = { x: 73, y: 70, w: 14, h: 12 };  // viewer's right
-// Crest sits on the player's right chest = viewer's left side of shirt.
-const CREST = { x: 28, y: 76, w: 8, h: 8 };
+const SHIRT_BODY = { x: 26, y: 74, w: 48, h: 26 };
+const LEFT_SLEEVE = { x: 16, y: 74, w: 12, h: 14 };   // viewer's left
+const RIGHT_SLEEVE = { x: 72, y: 74, w: 12, h: 14 };  // viewer's right
+// Crest sits on the viewer's right side of the shirt (the user's preference).
+const CREST = { x: 60, y: 78, w: 7, h: 7 };
 
 const STRIPE_COUNT = 5;
 

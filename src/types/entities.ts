@@ -72,6 +72,13 @@ export interface ClubKit {
   pattern: KitPattern;
   /** Hex string used for sleeves / stripes — equal to primary for plain. */
   accent: string;
+  /**
+   * Optional shirt base colour. When set, overrides `colors.primary` for the
+   * avatar shirt only — useful when the team's brand colour (used for UI
+   * accents, league table, etc.) doesn't match the actual shirt colour
+   * (e.g. Tottenham brand = navy, shirt = white).
+   */
+  base?: string;
 }
 
 export interface ClubData {

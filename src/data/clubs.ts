@@ -117,7 +117,7 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'tottenham',
-    kit: { pattern: 'plain', accent: '#FFFFFF' },
+    kit: { pattern: 'plain', accent: '#132257', base: '#FFFFFF' },
     logo: 'spurs.png',
     name: 'Tottenham Hotspur',
     shortName: 'TOT',
@@ -232,7 +232,7 @@ export const CLUBS: ClubData[] = [
   // Tier 4 — Mid-Table
   {
     id: 'fulham',
-    kit: { pattern: 'plain', accent: '#000000' },
+    kit: { pattern: 'sleeves', accent: '#000000' },
     logo: 'fulham.png',
     name: 'Fulham',
     shortName: 'FUL',
@@ -389,7 +389,7 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'leicester',
-    kit: { pattern: 'plain', accent: '#FDBE11' },
+    kit: { pattern: 'plain', accent: '#FDBE11', base: '#FFFFFF' },
     logo: 'leeds.png',
     name: 'Leeds United',
     shortName: 'LEE',
@@ -412,7 +412,7 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'ipswich',
-    kit: { pattern: 'plain', accent: '#FFFFFF' },
+    kit: { pattern: 'vertical-stripes', accent: '#FFFFFF', base: '#EB172B' },
     logo: 'sunderland.png',
     name: 'Sunderland',
     shortName: 'SUN',
@@ -433,7 +433,7 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'southampton',
-    kit: { pattern: 'sleeves', accent: '#1B458F' },
+    kit: { pattern: 'sleeves', accent: '#95BFE5', base: '#6C1D45' },
     logo: 'burnley.png',
     name: 'Burnley',
     shortName: 'BUR',

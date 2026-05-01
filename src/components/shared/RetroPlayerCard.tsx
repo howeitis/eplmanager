@@ -601,35 +601,51 @@ export function RetroPlayerCard({
         className="plm-flex plm-justify-center plm-items-end plm-relative plm-z-[5] plm-flex-shrink-0"
         style={{ height: emojiBoxPx[size] }}
       >
-        <img
-          src={getPlayerFaceUri(player.id, {
-            shirtColor: clubColors?.primary,
-            age: player.age,
-            nationality: player.nationality,
-            trait: player.trait,
-          })}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-          style={{
-            height: emojiBoxPx[size],
-            width: emojiBoxPx[size],
-            objectFit: 'contain',
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
-          }}
-        />
+        {/* Inner box pinned to the avatar's natural size so the kit overlay
+            SVG (which uses inset:0) covers the avatar bounds exactly, not the
+            full flex column. Without this wrapper the SVG stretched to the
+            card width and rendered the crest at full-card size. */}
         {(() => {
           const clubData = clubId ? CLUB_BY_ID.get(clubId) : undefined;
-          if (!clubData?.kit) return null;
-          const logoSrc = clubData.logo
+          // Kit may force a specific shirt base colour (e.g. Tottenham brand
+          // is navy but the shirt is white) — fall back to the team primary.
+          const shirtColor = clubData?.kit?.base ?? clubColors?.primary;
+          const logoSrc = clubData?.logo
             ? `/Premier League Clubs Logos/${clubData.logo}`
             : undefined;
           return (
-            <ShirtOverlay
-              kit={clubData.kit}
-              logoSrc={logoSrc}
-              sizePx={emojiBoxPx[size]}
-            />
+            <div
+              style={{
+                position: 'relative',
+                width: emojiBoxPx[size],
+                height: emojiBoxPx[size],
+              }}
+            >
+              <img
+                src={getPlayerFaceUri(player.id, {
+                  shirtColor,
+                  age: player.age,
+                  nationality: player.nationality,
+                  trait: player.trait,
+                })}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                style={{
+                  height: emojiBoxPx[size],
+                  width: emojiBoxPx[size],
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
+                }}
+              />
+              {clubData?.kit && (
+                <ShirtOverlay
+                  kit={clubData.kit}
+                  logoSrc={logoSrc}
+                  sizePx={emojiBoxPx[size]}
+                />
+              )}
+            </div>
           );
         })()}
       </div>
