@@ -7,17 +7,36 @@ interface ShirtOverlayProps {
 }
 
 // Approximate shirt geometry of the DiceBear avataaars body, in 0–100
-// fractional units. Hand-tuned against rendered output; if avataaars
-// changes its body silhouette these constants will need re-tuning.
-const SHIRT_BODY = { x: 26, y: 74, w: 48, h: 26 };
-const LEFT_SLEEVE = { x: 16, y: 74, w: 12, h: 14 };   // viewer's left
-const RIGHT_SLEEVE = { x: 72, y: 74, w: 12, h: 14 };  // viewer's right
-// Crest sits on the viewer's right side of the shirt (the user's preference).
-const CREST = { x: 60, y: 78, w: 7, h: 7 };
+// fractional units. Sleeves on avataaars angle outward from the shoulders,
+// so they're rendered as trapezoidal paths rather than rectangles. Hand-
+// tuned against rendered output; if avataaars changes its body silhouette
+// these paths need re-tuning.
+//
+// Body silhouette (rough): widens from shoulders (x≈30..70 at y≈75) to
+// hips (x≈22..78 at y≈100).
+const SHIRT_BODY_PATH = 'M 30 75 L 70 75 L 78 100 L 22 100 Z';
 
+// Sleeve trapezoids — wider at shoulder, taper outward toward the elbow.
+// Viewer's left = player's right side.
+const LEFT_SLEEVE_PATH = 'M 30 75 L 22 75 L 14 95 L 24 95 Z';
+const RIGHT_SLEEVE_PATH = 'M 70 75 L 78 75 L 86 95 L 76 95 Z';
+
+// Crest sits on the viewer's right of the shirt, mid-chest.
+const CREST = { x: 60, y: 81, w: 7, h: 7 };
+
+// For stripes we need the body bounds for spacing the rects across.
+const SHIRT_BODY_LEFT = 26;
+const SHIRT_BODY_RIGHT = 74;
+const SHIRT_BODY_TOP = 75;
+const SHIRT_BODY_BOTTOM = 100;
 const STRIPE_COUNT = 5;
 
 export function ShirtOverlay({ kit, logoSrc, sizePx }: ShirtOverlayProps) {
+  // Note: no mix-blend-mode on the SVG. Multiply makes white pixels
+  // transparent (white × any = any), so white sleeves on a coloured shirt
+  // would vanish entirely — which was the "sleeves disappear behind the
+  // model" bug. Painting the patterns directly gives the cleanest result
+  // for the cartoon avataaars style.
   return (
     <svg
       viewBox="0 0 100 100"
@@ -28,53 +47,34 @@ export function ShirtOverlay({ kit, logoSrc, sizePx }: ShirtOverlayProps) {
         width: sizePx,
         height: sizePx,
         pointerEvents: 'none',
-        mixBlendMode: 'multiply',
       }}
       aria-hidden="true"
     >
       {kit.pattern === 'sleeves' && (
         <>
-          <rect
-            x={LEFT_SLEEVE.x}
-            y={LEFT_SLEEVE.y}
-            width={LEFT_SLEEVE.w}
-            height={LEFT_SLEEVE.h}
-            fill={kit.accent}
-            opacity={0.85}
-          />
-          <rect
-            x={RIGHT_SLEEVE.x}
-            y={RIGHT_SLEEVE.y}
-            width={RIGHT_SLEEVE.w}
-            height={RIGHT_SLEEVE.h}
-            fill={kit.accent}
-            opacity={0.85}
-          />
+          <path d={LEFT_SLEEVE_PATH} fill={kit.accent} />
+          <path d={RIGHT_SLEEVE_PATH} fill={kit.accent} />
         </>
       )}
       {kit.pattern === 'vertical-stripes' && (
-        <g
-          // Clip stripes to the shirt body so they don't bleed onto sleeves
-          // or the neckline area.
-          clipPath="url(#shirt-body-clip)"
-        >
+        <g clipPath="url(#shirt-body-clip)">
           <defs>
             <clipPath id="shirt-body-clip">
-              <rect x={SHIRT_BODY.x} y={SHIRT_BODY.y} width={SHIRT_BODY.w} height={SHIRT_BODY.h} />
+              <path d={SHIRT_BODY_PATH} />
             </clipPath>
           </defs>
           {Array.from({ length: STRIPE_COUNT }).map((_, i) => {
-            const stripeW = SHIRT_BODY.w / (STRIPE_COUNT * 2 + 1);
-            const x = SHIRT_BODY.x + stripeW + i * stripeW * 2;
+            const bodyW = SHIRT_BODY_RIGHT - SHIRT_BODY_LEFT;
+            const stripeW = bodyW / (STRIPE_COUNT * 2 + 1);
+            const x = SHIRT_BODY_LEFT + stripeW + i * stripeW * 2;
             return (
               <rect
                 key={i}
                 x={x}
-                y={SHIRT_BODY.y}
+                y={SHIRT_BODY_TOP}
                 width={stripeW}
-                height={SHIRT_BODY.h}
+                height={SHIRT_BODY_BOTTOM - SHIRT_BODY_TOP}
                 fill={kit.accent}
-                opacity={0.85}
               />
             );
           })}
@@ -88,7 +88,6 @@ export function ShirtOverlay({ kit, logoSrc, sizePx }: ShirtOverlayProps) {
           width={CREST.w}
           height={CREST.h}
           preserveAspectRatio="xMidYMid meet"
-          style={{ mixBlendMode: 'normal' }}
         />
       )}
     </svg>
