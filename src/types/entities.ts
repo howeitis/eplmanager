@@ -66,6 +66,14 @@ export interface NationalityWeight {
   weight: number;
 }
 
+export type KitPattern = 'plain' | 'sleeves' | 'vertical-stripes';
+
+export interface ClubKit {
+  pattern: KitPattern;
+  /** Hex string used for sleeves / stripes — equal to primary for plain. */
+  accent: string;
+}
+
 export interface ClubData {
   id: string;
   name: string;
@@ -75,6 +83,9 @@ export interface ClubData {
   colors: ClubColors;
   rivalries: string[];
   namePool: NationalityWeight[];
+  kit?: ClubKit;
+  /** Logo filename inside /Premier League Clubs Logos/ — e.g. 'Arsenal.png'. */
+  logo?: string;
 }
 
 export interface Club extends ClubData {

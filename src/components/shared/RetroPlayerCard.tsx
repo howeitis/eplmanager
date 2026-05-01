@@ -3,6 +3,10 @@ import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
 import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '../../data/assets';
 import { generateScoutSummaryParts } from '../../engine/scoutSummary';
 import { getPlayerFaceUri } from '../../utils/avatarFace';
+import { CLUBS } from '../../data/clubs';
+import { ShirtOverlay } from './ShirtOverlay';
+
+const CLUB_BY_ID = new Map(CLUBS.map((c) => [c.id, c]));
 
 function hashPlayerId(id: string): number {
   let h = 0;
@@ -614,6 +618,20 @@ export function RetroPlayerCard({
             filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
           }}
         />
+        {(() => {
+          const clubData = clubId ? CLUB_BY_ID.get(clubId) : undefined;
+          if (!clubData?.kit) return null;
+          const logoSrc = clubData.logo
+            ? `/Premier League Clubs Logos/${clubData.logo}`
+            : undefined;
+          return (
+            <ShirtOverlay
+              kit={clubData.kit}
+              logoSrc={logoSrc}
+              sizePx={emojiBoxPx[size]}
+            />
+          );
+        })()}
       </div>
 
       {/* Name plate — subtle linear gradient (darker edges → brighter center)
