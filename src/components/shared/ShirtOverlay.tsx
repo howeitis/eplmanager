@@ -57,8 +57,8 @@ const COLLAR_TRIM_PATH =
 // the corners with a wide gap in the middle.
 const HEM_Y = 96.5;
 const HEM_HEIGHT = 3;
-const HEM_LEFT = { x: 14, w: 20 };   // x range 14–34
-const HEM_RIGHT = { x: 66, w: 20 };  // x range 66–86
+const HEM_LEFT = { x: 14, w: 16 };   // x range 14–30
+const HEM_RIGHT = { x: 70, w: 16 };  // x range 70–86
 
 // Crest sits on the viewer's right of the chest.
 const CREST = { x: 58, y: 84, w: 11, h: 11 };
