@@ -330,6 +330,17 @@ export function PlayerDetailModal() {
               onDismiss={closeModal}
               onNext={navigation.next ? handleNext : undefined}
               onPrev={navigation.prev ? handlePrev : undefined}
+              cardBack={
+                <RetroPlayerCard
+                  player={player}
+                  clubId={targetClub.id}
+                  clubName={targetClub.name}
+                  clubColors={targetClub.colors}
+                  size="lg"
+                  disableFlip
+                  forceFlipped
+                />
+              }
             >
               <RetroPlayerCard
                 player={player}
@@ -337,6 +348,7 @@ export function PlayerDetailModal() {
                 clubName={targetClub.name}
                 clubColors={targetClub.colors}
                 size="lg"
+                disableFlip
               />
             </InteractiveCard>
             {/* Market value under card */}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { animated, useSpring, config as springConfig } from '@react-spring/web';
 import { useGesture } from '@use-gesture/react';
 import type { Player } from '../../types/entities';
@@ -29,8 +29,11 @@ export interface InteractiveCardProps {
   onPrev?: () => void;
   /** Side the card should enter from (set by parent on navigation). */
   enterFrom?: 'left' | 'right' | null;
-  /** The card itself (typically <RetroPlayerCard />). */
+  /** The card front (typically <RetroPlayerCard />). */
   children: ReactNode;
+  /** Optional card back. When provided, tap-to-flip is enabled with true CSS
+   *  3D (preserve-3d + backface-visibility). */
+  cardBack?: ReactNode;
 }
 
 function prefersReducedMotion(): boolean {
@@ -45,11 +48,13 @@ export function InteractiveCard({
   onPrev,
   enterFrom = null,
   children,
+  cardBack,
 }: InteractiveCardProps) {
   const tier = getCardEffectTier(player);
   const reducedMotion = useRef(prefersReducedMotion()).current;
   const containerRef = useRef<HTMLDivElement>(null);
   const exitingRef = useRef(false);
+  const [isFlipped, setIsFlipped] = useState(false);
 
   // Pointer-driven CSS vars for sheen/holo/cosmic gradients. We bypass spring
   // for these so they track the finger 1:1 (no perceptible lag) while the
@@ -58,22 +63,35 @@ export function InteractiveCard({
 
   const [spring, api] = useSpring(() => {
     if (reducedMotion) {
-      return { x: 0, y: 0, rotX: 0, rotY: 0, scale: 1, opacity: 1 };
+      return { x: 0, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 1, opacity: 1 };
     }
     if (enterFrom === 'left') {
-      return { x: -window.innerWidth, y: 0, rotX: 0, rotY: 0, scale: 0.95, opacity: 0 };
+      return { x: -window.innerWidth, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 0.95, opacity: 0 };
     }
     if (enterFrom === 'right') {
-      return { x: window.innerWidth, y: 0, rotX: 0, rotY: 0, scale: 0.95, opacity: 0 };
+      return { x: window.innerWidth, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 0.95, opacity: 0 };
     }
-    return { x: 0, y: 0, rotX: 0, rotY: 0, scale: 1, opacity: 1 };
+    return { x: 0, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 1, opacity: 1 };
   });
+
+  // Tap-to-flip: toggles the card between front and back via a 180° Y rotation.
+  const handleTapFlip = useCallback(() => {
+    if (!cardBack || reducedMotion || exitingRef.current) return;
+    const next = !isFlipped;
+    setIsFlipped(next);
+    api.start({
+      flipY: next ? 180 : 0,
+      config: { tension: 260, friction: 24 },
+    });
+  }, [cardBack, reducedMotion, isFlipped, api]);
 
   // Spring in from the entry side on mount.
   useEffect(() => {
     if (reducedMotion) return;
     if (enterFrom === 'left' || enterFrom === 'right') {
-      api.start({ x: 0, scale: 1, opacity: 1, config: springConfig.gentle });
+      // Fast, decisive snap-in — high tension so the card arrives quickly,
+      // moderate friction so it doesn't overshoot.
+      api.start({ x: 0, scale: 1, opacity: 1, config: { tension: 320, friction: 30 } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -85,9 +103,13 @@ export function InteractiveCard({
     api.start({
       x: direction === 'left' ? -w : direction === 'right' ? w : 0,
       y: direction === 'down' ? h : 0,
-      opacity: 0,
-      scale: 0.92,
-      config: { tension: 220, friction: 28 },
+      // Keep opacity near-full during exit so the card doesn't look like it
+      // "faded away" — it should feel like it flew off screen.
+      opacity: 0.85,
+      scale: 0.96,
+      // High tension + low friction = fast, decisive exit. The card clears
+      // the viewport quickly so the incoming card doesn't collide visually.
+      config: { tension: 380, friction: 26 },
       onRest: () => {
         then();
       },
@@ -96,7 +118,7 @@ export function InteractiveCard({
 
   const bind = useGesture(
     {
-      onMove: ({ xy: [px, py], hovering, dragging }) => {
+      onMove: ({ xy: [px, py], hovering, dragging }: { xy: [number, number]; hovering?: boolean; dragging?: boolean }) => {
         // Hover-tilt for desktop pointers when not actively dragging.
         if (reducedMotion || dragging || exitingRef.current) return;
         const el = containerRef.current;
@@ -116,7 +138,7 @@ export function InteractiveCard({
           });
         }
       },
-      onHover: ({ hovering }) => {
+      onHover: ({ hovering }: { hovering?: boolean }) => {
         if (reducedMotion) return;
         if (!hovering && !exitingRef.current) {
           api.start({ rotX: 0, rotY: 0, config: springConfig.gentle });
@@ -131,6 +153,14 @@ export function InteractiveCard({
         tap,
         last,
         xy: [px, py],
+      }: {
+        down: boolean;
+        movement: [number, number];
+        velocity: [number, number];
+        direction: [number, number];
+        tap: boolean;
+        last: boolean;
+        xy: [number, number];
       }) => {
         if (reducedMotion || tap || exitingRef.current) return;
 
@@ -208,8 +238,8 @@ export function InteractiveCard({
     },
   );
 
-  // Build the container transform from spring values.
-  const transform = spring.x.to((x) => {
+  // Build the outer container transform (position + tilt from gestures).
+  const outerTransform = spring.x.to((x: number) => {
     const y = spring.y.get();
     const rx = spring.rotX.get();
     const ry = spring.rotY.get();
@@ -217,15 +247,71 @@ export function InteractiveCard({
     return `perspective(900px) translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`;
   });
 
+  // Inner transform handles the tap-to-flip rotation on a separate axis so
+  // it composes cleanly with gesture tilt.
+  const innerTransform = spring.flipY.to((fy: number) => `rotateY(${fy}deg)`);
+
+  // When a cardBack is provided, we use true CSS 3D: both faces render
+  // simultaneously inside a preserve-3d container, each with
+  // backface-visibility: hidden. Tap flips the inner wrapper 180°.
+  if (cardBack) {
+    return (
+      <animated.div
+        {...bind()}
+        ref={containerRef}
+        className="plm-relative plm-touch-none plm-select-none"
+        style={{
+          transform: outerTransform,
+          opacity: spring.opacity,
+          '--plm-glare-x': `${glare.px}%`,
+          '--plm-glare-y': `${glare.py}%`,
+          willChange: 'transform, opacity',
+          perspective: 900,
+        } as unknown as React.CSSProperties}
+      >
+        <animated.div
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: innerTransform,
+            willChange: 'transform',
+          }}
+          onClick={handleTapFlip}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTapFlip(); } }}
+          aria-label={isFlipped ? 'Flip card to front' : 'Flip card to back'}
+        >
+          {/* Front face */}
+          <div
+            className="plm-relative plm-rounded-xl plm-overflow-hidden"
+            style={{ backfaceVisibility: 'hidden' }}
+          >
+            {children}
+            {!reducedMotion && <SheenLayer />}
+            {!reducedMotion && (tier === 'holo' || tier === 'cosmic') && <HoloLayer />}
+            {!reducedMotion && tier === 'cosmic' && <CosmicLayer />}
+          </div>
+          {/* Back face — pre-rotated 180° so it's hidden until flipped */}
+          <div
+            className="plm-absolute plm-inset-0 plm-rounded-xl plm-overflow-hidden"
+            style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+          >
+            {cardBack}
+          </div>
+        </animated.div>
+      </animated.div>
+    );
+  }
+
+  // No cardBack — single-face mode (original behaviour).
   return (
     <animated.div
       {...bind()}
       ref={containerRef}
       className="plm-relative plm-touch-none plm-select-none"
       style={{
-        transform,
+        transform: outerTransform,
         opacity: spring.opacity,
-        // Custom CSS vars consumed by the overlay layers below.
         '--plm-glare-x': `${glare.px}%`,
         '--plm-glare-y': `${glare.py}%`,
         willChange: 'transform, opacity',

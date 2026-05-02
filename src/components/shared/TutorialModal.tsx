@@ -57,6 +57,10 @@ const TUTORIALS: Record<TutorialTab, TutorialCopy> = {
         title: 'Value & budget',
         body: 'Market value is driven by ability, age, and trait (not form). Your budget refreshes each season based on league position and board mood.',
       },
+      {
+        title: 'Finding hidden gems',
+        body: 'The Transfer Market surfaces some players for you, but the best deals come from browsing other clubs\u2019 squads directly. Tap any club in the league table to scout their roster \u2014 you might find an undervalued gem the market overlooked.',
+      },
     ],
   },
   history: {
@@ -110,7 +114,7 @@ const TUTORIALS: Record<TutorialTab, TutorialCopy> = {
       },
       {
         title: 'Transfers',
-        body: 'Two windows — summer and January. Browse, shortlist, bid, and handle incoming offers. Form doesn\'t affect value.',
+        body: 'Two windows \u2014 summer and January. Browse, shortlist, bid, and handle incoming offers. The market has some finds ready, but scout other clubs\u2019 squads for the real gems. Form doesn\u2019t affect value.',
       },
       {
         title: 'Board',

@@ -178,6 +178,8 @@ export interface RetroPlayerCardProps {
   recentTransfers?: TransferRecord[];
   /** Disable the flip interaction */
   disableFlip?: boolean;
+  /** Force the card to render its back face (used by InteractiveCard 3D mode) */
+  forceFlipped?: boolean;
   /** Whether this player is the team captain */
   isCaptain?: boolean;
 }
@@ -192,9 +194,10 @@ export function RetroPlayerCard({
   stamps = [],
   recentTransfers,
   disableFlip = false,
+  forceFlipped = false,
   isCaptain = false,
 }: RetroPlayerCardProps) {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(forceFlipped);
   const [glarePos, setGlarePos] = useState<{ x: number; y: number } | null>(null);
   const [metaScale, setMetaScale] = useState(1);
   const cardRef = useRef<HTMLDivElement>(null);
