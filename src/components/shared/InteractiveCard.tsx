@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { animated, useSpring, config as springConfig } from '@react-spring/web';
+import { animated, useSpring } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
 import type { Player } from '../../types/entities';
 import { getCardEffectTier } from '../../utils/cardTier';
@@ -77,13 +77,16 @@ export function InteractiveCard({
   });
 
   // Tap-to-flip
-  const handleTapFlip = useCallback(() => {
+  const handleTapFlip = useCallback((e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      if ('key' in e && e.key !== 'Enter' && e.key !== ' ') return;
+    }
     if (!cardBack || reducedMotion || exitingRef.current) return;
     const next = !isFlipped;
     setIsFlipped(next);
     api.start({
       flipY: next ? 180 : 0,
-      config: { tension: 260, friction: 24 },
+      config: { mass: 1, tension: 220, friction: 22 },
     });
   }, [cardBack, reducedMotion, isFlipped, api]);
 
@@ -127,13 +130,13 @@ export function InteractiveCard({
     api.start({
       rotX: newRotX,
       rotY: newRotY,
-      config: { tension: 300, friction: 22 },
+      config: { mass: 1, tension: 300, friction: 25 },
     });
   }, [reducedMotion, updateGlareFromTilt, api]);
 
   const handlePointerLeave = useCallback(() => {
     if (reducedMotion || exitingRef.current) return;
-    api.start({ rotX: 0, rotY: 0, config: springConfig.gentle });
+    api.start({ rotX: 0, rotY: 0, config: { mass: 1, tension: 150, friction: 15 } });
     updateGlareFromTilt(0, 0);
   }, [reducedMotion, api, updateGlareFromTilt]);
 
@@ -143,21 +146,10 @@ export function InteractiveCard({
   // side pops forward). On release, velocity/distance checked for swipe.
   const bind = useDrag(
     (state) => {
-      const { down, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy], tap, last, canceled } = state;
+      const { down, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy], last, canceled } = state;
 
       if (reducedMotion || exitingRef.current) return;
 
-      // ── Tap → flip (only on final event, not canceled) ──
-      if (last && !canceled && tap) {
-        handleTapFlip();
-        return;
-      }
-
-      // ── Active drag: tilt based on movement direction ──
-      // Drag down (my>0) → top pops forward (rotX < 0)
-      // Drag up (my<0) → bottom pops forward (rotX > 0)
-      // Drag right (mx>0) → left pops forward (rotY < 0)
-      // Drag left (mx<0) → right pops forward (rotY > 0)
       if (down) {
         const rotX = clamp((-my / TILT_RANGE_PX) * MAX_TILT_DEG, -MAX_TILT_DEG, MAX_TILT_DEG);
         const rotY = clamp((mx / TILT_RANGE_PX) * MAX_TILT_DEG, -MAX_TILT_DEG, MAX_TILT_DEG);
@@ -166,42 +158,49 @@ export function InteractiveCard({
           rotX,
           rotY,
           scale: 1.02,
-          config: { tension: 300, friction: 20 },
+          config: { mass: 1, tension: 250, friction: 25 },
         });
         return;
       }
 
       // ── Release ──
-      if (!last) return; // only act on the final release event
+      if (!last || canceled) return; // only act on the final release event
 
-      // Hard swipe left → next
-      if (onNext && (mx < -SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx < 0))) {
-        animateOff('left', onNext);
-        return;
-      }
-      // Hard swipe right → prev
-      if (onPrev && (mx > SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx > 0))) {
-        animateOff('right', onPrev);
-        return;
-      }
-      // Pull-down dismiss
-      if (onDismiss && (my > 100 || (vy > SWIPE_VELOCITY && dy > 0))) {
-        animateOff('down', onDismiss);
-        return;
+      // Separate horizontal and vertical swipes to prevent diagonal misfires
+      // (e.g. swiping right but slightly down -> accidental dismiss)
+      const isHorizontal = Math.abs(mx) > Math.abs(my) || Math.abs(vx) > Math.abs(vy);
+
+      if (isHorizontal) {
+        // Hard swipe left → next
+        if (onNext && (mx < -SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx < 0))) {
+          animateOff('left', onNext);
+          return;
+        }
+        // Hard swipe right → prev
+        if (onPrev && (mx > SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx > 0))) {
+          animateOff('right', onPrev);
+          return;
+        }
+      } else {
+        // Pull-down dismiss
+        if (onDismiss && (my > 100 || (vy > SWIPE_VELOCITY && dy > 0))) {
+          animateOff('down', onDismiss);
+          return;
+        }
       }
 
-      // No swipe — spring back to neutral.
+      // No swipe — spring back to neutral with smooth drifting physics.
       api.start({
         rotX: 0,
         rotY: 0,
         scale: 1,
-        config: springConfig.wobbly,
+        config: { mass: 1, tension: 150, friction: 15 },
       });
       updateGlareFromTilt(0, 0);
     },
     {
       filterTaps: true,
-      threshold: 3,
+      threshold: 4,
       pointer: { touch: true },
     },
   );
@@ -244,6 +243,11 @@ export function InteractiveCard({
         style={{ ...sharedStyle, transformStyle: 'preserve-3d' as const }}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
+        onClick={handleTapFlip}
+        role="button"
+        tabIndex={0}
+        onKeyDown={handleTapFlip}
+        aria-label={isFlipped ? 'Flip card to front' : 'Flip card to back'}
       >
         <animated.div
           style={{
