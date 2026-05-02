@@ -7,43 +7,57 @@ interface ShirtOverlayProps {
 }
 
 // Shirt geometry derived from the actual DiceBear avataaars SVG output
-// (viewBox 0 0 280 280). The shirtCrewNeck path is rendered with two
-// nested transforms — the outer translate(8) shifts everything 8px right,
-// the inner translate(0 170) drops the shirt below the head. The shirt
-// outline in absolute coords:
+// (viewBox 0 0 280 280, with translate(8) and translate(0,170) on the
+// shirt group). Parsing the shirtCrewNeck path commands gives these
+// outline points in 0–100 space:
 //
-//   Top-left collar corner:   (107, 200.35)  → (38.2, 71.6) in 0–100 space
-//   Top-right collar corner:  (174, 200.35)  → (62.1, 71.6)
-//   Collar dip centre:        (140.5, 221.83) → (50.2, 79.2)
-//   Bottom-left:              (40, 280)       → (14.3, 100)
-//   Bottom-right:              (240, 280)     → (85.7, 100)
+//   Top-left collar corner:   (38.2, 71.6)
+//   Top-right collar corner:  (62.1, 71.6)
+//   Collar dip centre:        (50.2, 79.2)
+//   Bottom-left:              (14.3, 100)
+//   Bottom-right:             (85.7, 100)
 //
-// Use those numbers directly so the trim sits exactly on the shirt edge
-// rather than guessing a curve.
-const COLLAR_LEFT_X = 38;
-const COLLAR_RIGHT_X = 62;
-const COLLAR_TOP_Y = 72;
-const COLLAR_DIP_Y = 79;
+// The collar arc is a *cubic* bezier in the source — control points:
+//   left half:  start (38.2, 71.6), c1 (38.2, 75.8), c2 (43.6, 79.2), end (50.2, 79.2)
+//   right half: start (50.2, 79.2), c1 (56.8, 79.2), c2 (62.1, 75.8), end (62.1, 71.6)
+// (mirror symmetry, with control points at the corner X going straight
+// down before curving inward to the dip).
+//
+// We trace this exact cubic for the trim instead of a Q approximation —
+// the previous Q curve undershot the corners, leaving a visible skin
+// gap above the trim.
+const COLLAR_LEFT_X = 38.2;
+const COLLAR_RIGHT_X = 62.1;
+const COLLAR_TOP_Y = 71.6;
+const COLLAR_DIP_X = 50.2;
+const COLLAR_DIP_Y = 79.2;
 
-// Shirt body silhouette — collar on top, fans outward to the wide bottom.
+// Body / clip path tracks the *actual* cubic curve so vertical stripes
+// also follow the precise neckline.
 const SHIRT_BODY_PATH =
   `M ${COLLAR_LEFT_X} ${COLLAR_TOP_Y} ` +
-  `Q 50 ${COLLAR_DIP_Y} ${COLLAR_RIGHT_X} ${COLLAR_TOP_Y} ` +
+  `C ${COLLAR_LEFT_X} 75.8, 43.6 ${COLLAR_DIP_Y}, ${COLLAR_DIP_X} ${COLLAR_DIP_Y} ` +
+  `C 56.8 ${COLLAR_DIP_Y}, ${COLLAR_RIGHT_X} 75.8, ${COLLAR_RIGHT_X} ${COLLAR_TOP_Y} ` +
   `L 86 100 L 14 100 Z`;
 
-// Collar trim is the same arc, drawn as a stroke.
+// Collar trim — the same cubic curve, but shifted DOWN by 1 unit so a
+// strokeWidth-2 trim sits with its top edge flush with the shirt edge
+// (no skin gap above the stroke) and its body entirely on shirt fabric.
+const COLLAR_TRIM_OFFSET = 1;
+const TRIM_TOP_Y = COLLAR_TOP_Y + COLLAR_TRIM_OFFSET;
+const TRIM_DIP_Y = COLLAR_DIP_Y + COLLAR_TRIM_OFFSET;
 const COLLAR_TRIM_PATH =
-  `M ${COLLAR_LEFT_X} ${COLLAR_TOP_Y} ` +
-  `Q 50 ${COLLAR_DIP_Y} ${COLLAR_RIGHT_X} ${COLLAR_TOP_Y}`;
+  `M ${COLLAR_LEFT_X} ${TRIM_TOP_Y} ` +
+  `C ${COLLAR_LEFT_X} 76.8, 43.6 ${TRIM_DIP_Y}, ${COLLAR_DIP_X} ${TRIM_DIP_Y} ` +
+  `C 56.8 ${TRIM_DIP_Y}, ${COLLAR_RIGHT_X} 76.8, ${COLLAR_RIGHT_X} ${TRIM_TOP_Y}`;
 
-// Bottom-hem trim — drawn as filled rects so they read as visible bands,
-// not hairline strokes. Two of them with a gap in the middle so the look
-// reads as hem-on-each-side, not a single belt. Extended to the actual
-// shirt outline edges (x=14 and x=86 in 0–100 space) per "shift outside".
+// Bottom-hem trim — filled rects on each side, narrower than before per
+// the reference image: two short bands sitting at the corners of the
+// shirt hem, not a wide pair stretching across the bottom.
 const HEM_Y = 96.5;
 const HEM_HEIGHT = 3;
-const HEM_LEFT = { x: 14, w: 27 };   // x range 14–41
-const HEM_RIGHT = { x: 59, w: 27 };  // x range 59–86
+const HEM_LEFT = { x: 16, w: 22 };   // x range 16–38
+const HEM_RIGHT = { x: 62, w: 22 };  // x range 62–84
 
 // Crest sits on the viewer's right of the chest.
 const CREST = { x: 58, y: 84, w: 11, h: 11 };
