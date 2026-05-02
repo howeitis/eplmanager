@@ -5,16 +5,12 @@ import type { Player } from '../../types/entities';
 import { getCardEffectTier } from '../../utils/cardTier';
 
 // ─── Gesture thresholds ───
-// Pull-down triggers dismiss when the user drags the card more than ~30% of
-// viewport height OR releases with a strong downward velocity. The same logic
-// applies to horizontal swipes for next/prev.
 const DISMISS_DISTANCE_RATIO = 0.3;
 const SWIPE_DISTANCE_RATIO = 0.25;
 const VELOCITY_TRIGGER = 0.6;
 
-// Maximum tilt in degrees. Subtle enough to feel premium, strong enough to
-// read as 3D parallax.
-const MAX_TILT_DEG = 14;
+// Maximum tilt in degrees for hover/drag. Strong enough to read as 3D.
+const MAX_TILT_DEG = 18;
 
 export type SwipeDirection = 'left' | 'right' | 'down';
 
@@ -56,10 +52,21 @@ export function InteractiveCard({
   const exitingRef = useRef(false);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Pointer-driven CSS vars for sheen/holo/cosmic gradients. We bypass spring
-  // for these so they track the finger 1:1 (no perceptible lag) while the
-  // tilt itself stays springy.
+  // ─── Glare position derived from tilt angles ───
+  // Instead of tracking mouse position directly, we derive the holo/sheen
+  // highlight from the card's current tilt. This simulates light reflecting
+  // off a tilted surface — the highlight shifts opposite to the tilt direction,
+  // just like a real holographic card.
   const [glare, setGlare] = useState({ px: 50, py: 50 });
+
+  // Sync glare to current tilt angles. Called after every tilt change.
+  const updateGlareFromTilt = useCallback((rotX: number, rotY: number) => {
+    // Map tilt angles to glare position. rotY > 0 means tilted right,
+    // so light reflects on the left side (lower px). Same logic for rotX.
+    const px = 50 + (rotY / MAX_TILT_DEG) * 50;
+    const py = 50 - (rotX / MAX_TILT_DEG) * 50;
+    setGlare({ px: Math.max(0, Math.min(100, px)), py: Math.max(0, Math.min(100, py)) });
+  }, []);
 
   const [spring, api] = useSpring(() => {
     if (reducedMotion) {
@@ -89,8 +96,6 @@ export function InteractiveCard({
   useEffect(() => {
     if (reducedMotion) return;
     if (enterFrom === 'left' || enterFrom === 'right') {
-      // Fast, decisive snap-in — high tension so the card arrives quickly,
-      // moderate friction so it doesn't overshoot.
       api.start({ x: 0, scale: 1, opacity: 1, config: { tension: 320, friction: 30 } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,12 +108,8 @@ export function InteractiveCard({
     api.start({
       x: direction === 'left' ? -w : direction === 'right' ? w : 0,
       y: direction === 'down' ? h : 0,
-      // Keep opacity near-full during exit so the card doesn't look like it
-      // "faded away" — it should feel like it flew off screen.
       opacity: 0.85,
       scale: 0.96,
-      // High tension + low friction = fast, decisive exit. The card clears
-      // the viewport quickly so the incoming card doesn't collide visually.
       config: { tension: 380, friction: 26 },
       onRest: () => {
         then();
@@ -129,11 +130,13 @@ export function InteractiveCard({
         const cy = (py - rect.top) / rect.height;
         const clampedX = Math.max(0, Math.min(1, cx));
         const clampedY = Math.max(0, Math.min(1, cy));
-        setGlare({ px: clampedX * 100, py: clampedY * 100 });
         if (hovering !== false) {
+          const newRotX = (0.5 - clampedY) * MAX_TILT_DEG;
+          const newRotY = (clampedX - 0.5) * MAX_TILT_DEG;
+          updateGlareFromTilt(newRotX, newRotY);
           api.start({
-            rotX: (0.5 - clampedY) * MAX_TILT_DEG,
-            rotY: (clampedX - 0.5) * MAX_TILT_DEG,
+            rotX: newRotX,
+            rotY: newRotY,
             config: { tension: 300, friction: 22 },
           });
         }
@@ -142,7 +145,7 @@ export function InteractiveCard({
         if (reducedMotion) return;
         if (!hovering && !exitingRef.current) {
           api.start({ rotX: 0, rotY: 0, config: springConfig.gentle });
-          setGlare({ px: 50, py: 50 });
+          updateGlareFromTilt(0, 0);
         }
       },
       onDrag: ({
@@ -152,7 +155,6 @@ export function InteractiveCard({
         direction: [, dy],
         tap,
         last,
-        xy: [px, py],
       }: {
         down: boolean;
         movement: [number, number];
@@ -160,18 +162,20 @@ export function InteractiveCard({
         direction: [number, number];
         tap: boolean;
         last: boolean;
-        xy: [number, number];
       }) => {
-        if (reducedMotion || tap || exitingRef.current) return;
+        if (reducedMotion || exitingRef.current) return;
 
-        const el = containerRef.current;
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            const cx = Math.max(0, Math.min(1, (px - rect.left) / rect.width));
-            const cy = Math.max(0, Math.min(1, (py - rect.top) / rect.height));
-            setGlare({ px: cx * 100, py: cy * 100 });
-          }
+        // Taps trigger flip (when cardBack is provided).
+        if (tap) {
+          handleTapFlip();
+          return;
+        }
+
+        // During drag, update glare from drag movement (tilt-based).
+        {
+          const touchRotY = Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, mx * 0.08));
+          const touchRotX = Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, -my * 0.08));
+          updateGlareFromTilt(touchRotX, touchRotY);
         }
 
         if (down) {
@@ -180,8 +184,8 @@ export function InteractiveCard({
           api.start({
             x: mx,
             y: my,
-            rotX: Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, -my * 0.05)),
-            rotY: Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, mx * 0.05)),
+            rotX: Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, -my * 0.08)),
+            rotY: Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, mx * 0.08)),
             scale: 1,
             opacity: 1,
             config: springConfig.stiff,
@@ -224,15 +228,13 @@ export function InteractiveCard({
           opacity: 1,
           config: springConfig.wobbly,
         });
+        updateGlareFromTilt(0, 0);
       },
     },
     {
       drag: {
         filterTaps: true,
         threshold: 6,
-        // Touch on iOS needs explicit pointer config to play nicely with
-        // page scroll. The card sits inside a scrollable modal, so we
-        // capture touch on the card surface.
         pointer: { touch: true },
       },
     },
@@ -244,11 +246,10 @@ export function InteractiveCard({
     const rx = spring.rotX.get();
     const ry = spring.rotY.get();
     const s = spring.scale.get();
-    return `perspective(900px) translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`;
+    return `translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`;
   });
 
-  // Inner transform handles the tap-to-flip rotation on a separate axis so
-  // it composes cleanly with gesture tilt.
+  // Inner transform handles the tap-to-flip rotation on a separate axis.
   const innerTransform = spring.flipY.to((fy: number) => `rotateY(${fy}deg)`);
 
   // When a cardBack is provided, we use true CSS 3D: both faces render
@@ -267,6 +268,7 @@ export function InteractiveCard({
           '--plm-glare-y': `${glare.py}%`,
           willChange: 'transform, opacity',
           perspective: 900,
+          transformStyle: 'preserve-3d' as const,
         } as unknown as React.CSSProperties}
       >
         <animated.div
@@ -275,11 +277,6 @@ export function InteractiveCard({
             transform: innerTransform,
             willChange: 'transform',
           }}
-          onClick={handleTapFlip}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTapFlip(); } }}
-          aria-label={isFlipped ? 'Flip card to front' : 'Flip card to back'}
         >
           {/* Front face */}
           <div
@@ -315,6 +312,7 @@ export function InteractiveCard({
         '--plm-glare-x': `${glare.px}%`,
         '--plm-glare-y': `${glare.py}%`,
         willChange: 'transform, opacity',
+        perspective: 900,
       } as unknown as React.CSSProperties}
     >
       <div className="plm-relative plm-rounded-xl plm-overflow-hidden">
@@ -330,7 +328,7 @@ export function InteractiveCard({
 // ─── Overlay layers ───
 // All layers are pointer-events: none and absolutely positioned over the card.
 // They share the parent's CSS vars (--plm-glare-x, --plm-glare-y) so the
-// gradients track the finger.
+// gradients track the tilt angle.
 
 function SheenLayer() {
   return (
@@ -349,7 +347,7 @@ function SheenLayer() {
 function HoloLayer() {
   return (
     <>
-      {/* Rainbow conic foil — rotates with finger via background-position. */}
+      {/* Rainbow conic foil — rotates based on tilt angle. */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[31]"
         style={{
@@ -360,8 +358,7 @@ function HoloLayer() {
         }}
         aria-hidden="true"
       />
-      {/* Diagonal foil hatch — fixed pattern that the conic gradient blends
-          through for that "plastic foil" texture. */}
+      {/* Diagonal foil hatch */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[32]"
         style={{
@@ -379,7 +376,7 @@ function HoloLayer() {
 function CosmicLayer() {
   return (
     <>
-      {/* Galaxy radial — strongest where the finger is, fading to deep purple. */}
+      {/* Galaxy radial — strongest where tilt aims, fading to deep purple. */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[33]"
         style={{
@@ -390,7 +387,7 @@ function CosmicLayer() {
         }}
         aria-hidden="true"
       />
-      {/* Star-field dots — subtle pinpricks of white. */}
+      {/* Star-field dots */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[34]"
         style={{
