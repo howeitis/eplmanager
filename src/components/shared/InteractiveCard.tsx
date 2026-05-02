@@ -1,34 +1,26 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { animated, useSpring, config as springConfig } from '@react-spring/web';
-import { useGesture } from '@use-gesture/react';
+import { useDrag } from '@use-gesture/react';
 import type { Player } from '../../types/entities';
 import { getCardEffectTier } from '../../utils/cardTier';
 
 // ─── Gesture thresholds ───
-const DISMISS_DISTANCE_RATIO = 0.3;
-const SWIPE_DISTANCE_RATIO = 0.25;
-const VELOCITY_TRIGGER = 0.6;
+// Swipe detection on release: distance OR velocity.
+const SWIPE_DISTANCE_PX = 80;
+const SWIPE_VELOCITY = 0.5;
 
-// Maximum tilt in degrees for hover/drag. Strong enough to read as 3D.
-const MAX_TILT_DEG = 18;
+// Maximum tilt in degrees. Dramatic enough to feel like a real card in hand.
+const MAX_TILT_DEG = 30;
 
 export type SwipeDirection = 'left' | 'right' | 'down';
 
 export interface InteractiveCardProps {
-  /** The player being shown — drives the effect tier (sheen/holo/cosmic). */
   player: Player;
-  /** Pull-down to dismiss callback. If absent, dismiss gesture is disabled. */
   onDismiss?: () => void;
-  /** Hard left swipe — next card. If absent, gesture is disabled. */
   onNext?: () => void;
-  /** Hard right swipe — previous card. If absent, gesture is disabled. */
   onPrev?: () => void;
-  /** Side the card should enter from (set by parent on navigation). */
   enterFrom?: 'left' | 'right' | null;
-  /** The card front (typically <RetroPlayerCard />). */
   children: ReactNode;
-  /** Optional card back. When provided, tap-to-flip is enabled with true CSS
-   *  3D (preserve-3d + backface-visibility). */
   cardBack?: ReactNode;
 }
 
@@ -52,20 +44,16 @@ export function InteractiveCard({
   const exitingRef = useRef(false);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // ─── Glare position derived from tilt angles ───
-  // Instead of tracking mouse position directly, we derive the holo/sheen
-  // highlight from the card's current tilt. This simulates light reflecting
-  // off a tilted surface — the highlight shifts opposite to the tilt direction,
-  // just like a real holographic card.
+  // Glare position derived from tilt — simulates light reflecting off surface.
   const [glare, setGlare] = useState({ px: 50, py: 50 });
 
-  // Sync glare to current tilt angles. Called after every tilt change.
   const updateGlareFromTilt = useCallback((rotX: number, rotY: number) => {
-    // Map tilt angles to glare position. rotY > 0 means tilted right,
-    // so light reflects on the left side (lower px). Same logic for rotX.
     const px = 50 + (rotY / MAX_TILT_DEG) * 50;
     const py = 50 - (rotX / MAX_TILT_DEG) * 50;
-    setGlare({ px: Math.max(0, Math.min(100, px)), py: Math.max(0, Math.min(100, py)) });
+    setGlare({
+      px: Math.max(0, Math.min(100, px)),
+      py: Math.max(0, Math.min(100, py)),
+    });
   }, []);
 
   const [spring, api] = useSpring(() => {
@@ -81,7 +69,7 @@ export function InteractiveCard({
     return { x: 0, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 1, opacity: 1 };
   });
 
-  // Tap-to-flip: toggles the card between front and back via a 180° Y rotation.
+  // Tap-to-flip
   const handleTapFlip = useCallback(() => {
     if (!cardBack || reducedMotion || exitingRef.current) return;
     const next = !isFlipped;
@@ -92,7 +80,7 @@ export function InteractiveCard({
     });
   }, [cardBack, reducedMotion, isFlipped, api]);
 
-  // Spring in from the entry side on mount.
+  // Spring in from entry side on mount.
   useEffect(() => {
     if (reducedMotion) return;
     if (enterFrom === 'left' || enterFrom === 'right') {
@@ -101,7 +89,8 @@ export function InteractiveCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const animateOff = (direction: SwipeDirection, then: () => void) => {
+  // Animate off-screen for swipe/dismiss.
+  const animateOff = useCallback((direction: SwipeDirection, then: () => void) => {
     exitingRef.current = true;
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -111,136 +100,128 @@ export function InteractiveCard({
       opacity: 0.85,
       scale: 0.96,
       config: { tension: 380, friction: 26 },
-      onRest: () => {
-        then();
-      },
+      onRest: then,
     });
-  };
+  }, [api]);
 
-  const bind = useGesture(
-    {
-      onMove: ({ xy: [px, py], hovering, dragging }: { xy: [number, number]; hovering?: boolean; dragging?: boolean }) => {
-        // Hover-tilt for desktop pointers when not actively dragging.
-        if (reducedMotion || dragging || exitingRef.current) return;
+  // ─── Hover tilt (desktop only, pointer move without drag) ───
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (reducedMotion || exitingRef.current) return;
+    // Skip if a button is pressed (user is dragging).
+    if (e.buttons !== 0) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const cx = (e.clientX - rect.left) / rect.width;   // 0→1
+    const cy = (e.clientY - rect.top) / rect.height;    // 0→1
+    const clX = Math.max(0, Math.min(1, cx));
+    const clY = Math.max(0, Math.min(1, cy));
+    const newRotX = (0.5 - clY) * MAX_TILT_DEG;
+    const newRotY = (clX - 0.5) * MAX_TILT_DEG;
+    updateGlareFromTilt(newRotX, newRotY);
+    api.start({
+      rotX: newRotX,
+      rotY: newRotY,
+      config: { tension: 300, friction: 22 },
+    });
+  }, [reducedMotion, updateGlareFromTilt, api]);
+
+  const handlePointerLeave = useCallback(() => {
+    if (reducedMotion || exitingRef.current) return;
+    api.start({ rotX: 0, rotY: 0, config: springConfig.gentle });
+    updateGlareFromTilt(0, 0);
+  }, [reducedMotion, api, updateGlareFromTilt]);
+
+  // ─── Drag gesture (touch + mouse) ───
+  // All drag movement is expressed as TILT, not translation.
+  // The card stays in place. On release, velocity/distance is checked for
+  // swipe-to-next or dismiss gestures.
+  const bind = useDrag(
+    ({
+      down,
+      movement: [mx, my],
+      velocity: [vx, vy],
+      direction: [dx, dy],
+      tap,
+      first,
+      xy: [px, py],
+    }: {
+      down: boolean;
+      movement: [number, number];
+      velocity: [number, number];
+      direction: [number, number];
+      tap: boolean;
+      first: boolean;
+      xy: [number, number];
+    }) => {
+      if (reducedMotion || exitingRef.current) return;
+
+      // ── Tap → flip ──
+      if (tap) {
+        handleTapFlip();
+        return;
+      }
+
+      if (down) {
+        // Compute tilt from pointer position relative to card center.
+        // This gives the "tilt where you touch" feel — touching top-right
+        // tilts the card top-right, etc.
         const el = containerRef.current;
         if (!el) return;
         const rect = el.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return;
         const cx = (px - rect.left) / rect.width;
         const cy = (py - rect.top) / rect.height;
-        const clampedX = Math.max(0, Math.min(1, cx));
-        const clampedY = Math.max(0, Math.min(1, cy));
-        if (hovering !== false) {
-          const newRotX = (0.5 - clampedY) * MAX_TILT_DEG;
-          const newRotY = (clampedX - 0.5) * MAX_TILT_DEG;
-          updateGlareFromTilt(newRotX, newRotY);
-          api.start({
-            rotX: newRotX,
-            rotY: newRotY,
-            config: { tension: 300, friction: 22 },
-          });
-        }
-      },
-      onHover: ({ hovering }: { hovering?: boolean }) => {
-        if (reducedMotion) return;
-        if (!hovering && !exitingRef.current) {
-          api.start({ rotX: 0, rotY: 0, config: springConfig.gentle });
-          updateGlareFromTilt(0, 0);
-        }
-      },
-      onDrag: ({
-        down,
-        movement: [mx, my],
-        velocity: [vx, vy],
-        direction: [, dy],
-        tap,
-        last,
-      }: {
-        down: boolean;
-        movement: [number, number];
-        velocity: [number, number];
-        direction: [number, number];
-        tap: boolean;
-        last: boolean;
-      }) => {
-        if (reducedMotion || exitingRef.current) return;
-
-        // Taps trigger flip (when cardBack is provided).
-        if (tap) {
-          handleTapFlip();
-          return;
-        }
-
-        // During drag, update glare from drag movement (tilt-based).
-        {
-          const touchRotY = Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, mx * 0.08));
-          const touchRotX = Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, -my * 0.08));
-          updateGlareFromTilt(touchRotX, touchRotY);
-        }
-
-        if (down) {
-          // Live tilt + position follow during drag. Tilt is exaggerated based
-          // on movement so a hard swipe feels physical.
-          api.start({
-            x: mx,
-            y: my,
-            rotX: Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, -my * 0.08)),
-            rotY: Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, mx * 0.08)),
-            scale: 1,
-            opacity: 1,
-            config: springConfig.stiff,
-          });
-          return;
-        }
-
-        if (!last) return;
-
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        const dismissThresh = h * DISMISS_DISTANCE_RATIO;
-        const swipeThresh = w * SWIPE_DISTANCE_RATIO;
-
-        // Pull-down dismiss
-        if (onDismiss && (my > dismissThresh || (vy > VELOCITY_TRIGGER && dy > 0))) {
-          animateOff('down', onDismiss);
-          return;
-        }
-
-        // Hard swipe left → next
-        if (onNext && (mx < -swipeThresh || (vx > VELOCITY_TRIGGER && mx < 0))) {
-          animateOff('left', onNext);
-          return;
-        }
-
-        // Hard swipe right → prev
-        if (onPrev && (mx > swipeThresh || (vx > VELOCITY_TRIGGER && mx > 0))) {
-          animateOff('right', onPrev);
-          return;
-        }
-
-        // No threshold hit — spring back to neutral.
+        const clX = Math.max(0, Math.min(1, cx));
+        const clY = Math.max(0, Math.min(1, cy));
+        const rotX = (0.5 - clY) * MAX_TILT_DEG;
+        const rotY = (clX - 0.5) * MAX_TILT_DEG;
+        updateGlareFromTilt(rotX, rotY);
         api.start({
-          x: 0,
-          y: 0,
-          rotX: 0,
-          rotY: 0,
-          scale: 1,
-          opacity: 1,
-          config: springConfig.wobbly,
+          rotX,
+          rotY,
+          scale: first ? 1.02 : 1.02,   // subtle lift on touch
+          config: { tension: 300, friction: 20 },
         });
-        updateGlareFromTilt(0, 0);
-      },
+        return;
+      }
+
+      // ── Release — check for swipe ──
+      // Hard swipe left → next
+      if (onNext && (mx < -SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx < 0))) {
+        animateOff('left', onNext);
+        return;
+      }
+      // Hard swipe right → prev
+      if (onPrev && (mx > SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx > 0))) {
+        animateOff('right', onPrev);
+        return;
+      }
+      // Pull-down dismiss
+      if (onDismiss && (my > 120 || (vy > SWIPE_VELOCITY && dy > 0))) {
+        animateOff('down', onDismiss);
+        return;
+      }
+
+      // No swipe — spring back to neutral.
+      api.start({
+        rotX: 0,
+        rotY: 0,
+        scale: 1,
+        config: springConfig.wobbly,
+      });
+      updateGlareFromTilt(0, 0);
     },
     {
-      drag: {
-        filterTaps: true,
-        threshold: 6,
-        pointer: { touch: true },
-      },
+      filterTaps: true,
+      threshold: 4,
+      pointer: { touch: true },
     },
   );
 
-  // Build the outer container transform (position + tilt from gestures).
+  // ─── Transform strings ───
+  // Outer: position (for swipe exit animation) + tilt from gestures.
   const outerTransform = spring.x.to((x: number) => {
     const y = spring.y.get();
     const rx = spring.rotX.get();
@@ -249,27 +230,36 @@ export function InteractiveCard({
     return `translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`;
   });
 
-  // Inner transform handles the tap-to-flip rotation on a separate axis.
+  // Inner: flip rotation (tap-to-flip 180°).
   const innerTransform = spring.flipY.to((fy: number) => `rotateY(${fy}deg)`);
 
-  // When a cardBack is provided, we use true CSS 3D: both faces render
-  // simultaneously inside a preserve-3d container, each with
-  // backface-visibility: hidden. Tap flips the inner wrapper 180°.
+  // ─── Render ───
+  const sharedStyle = {
+    transform: outerTransform,
+    opacity: spring.opacity,
+    '--plm-glare-x': `${glare.px}%`,
+    '--plm-glare-y': `${glare.py}%`,
+    willChange: 'transform, opacity',
+    perspective: 900,
+  } as unknown as React.CSSProperties;
+
+  const overlays = (
+    <>
+      {!reducedMotion && <SheenLayer />}
+      {!reducedMotion && (tier === 'holo' || tier === 'cosmic') && <HoloLayer />}
+      {!reducedMotion && tier === 'cosmic' && <CosmicLayer />}
+    </>
+  );
+
   if (cardBack) {
     return (
       <animated.div
         {...bind()}
         ref={containerRef}
         className="plm-relative plm-touch-none plm-select-none"
-        style={{
-          transform: outerTransform,
-          opacity: spring.opacity,
-          '--plm-glare-x': `${glare.px}%`,
-          '--plm-glare-y': `${glare.py}%`,
-          willChange: 'transform, opacity',
-          perspective: 900,
-          transformStyle: 'preserve-3d' as const,
-        } as unknown as React.CSSProperties}
+        style={{ ...sharedStyle, transformStyle: 'preserve-3d' as const }}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
       >
         <animated.div
           style={{
@@ -284,11 +274,9 @@ export function InteractiveCard({
             style={{ backfaceVisibility: 'hidden' }}
           >
             {children}
-            {!reducedMotion && <SheenLayer />}
-            {!reducedMotion && (tier === 'holo' || tier === 'cosmic') && <HoloLayer />}
-            {!reducedMotion && tier === 'cosmic' && <CosmicLayer />}
+            {overlays}
           </div>
-          {/* Back face — pre-rotated 180° so it's hidden until flipped */}
+          {/* Back face */}
           <div
             className="plm-absolute plm-inset-0 plm-rounded-xl plm-overflow-hidden"
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
@@ -300,35 +288,25 @@ export function InteractiveCard({
     );
   }
 
-  // No cardBack — single-face mode (original behaviour).
   return (
     <animated.div
       {...bind()}
       ref={containerRef}
       className="plm-relative plm-touch-none plm-select-none"
-      style={{
-        transform: outerTransform,
-        opacity: spring.opacity,
-        '--plm-glare-x': `${glare.px}%`,
-        '--plm-glare-y': `${glare.py}%`,
-        willChange: 'transform, opacity',
-        perspective: 900,
-      } as unknown as React.CSSProperties}
+      style={sharedStyle}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
     >
       <div className="plm-relative plm-rounded-xl plm-overflow-hidden">
         {children}
-        {!reducedMotion && <SheenLayer />}
-        {!reducedMotion && (tier === 'holo' || tier === 'cosmic') && <HoloLayer />}
-        {!reducedMotion && tier === 'cosmic' && <CosmicLayer />}
+        {overlays}
       </div>
     </animated.div>
   );
 }
 
 // ─── Overlay layers ───
-// All layers are pointer-events: none and absolutely positioned over the card.
-// They share the parent's CSS vars (--plm-glare-x, --plm-glare-y) so the
-// gradients track the tilt angle.
+// Positioned over the card, driven by CSS vars --plm-glare-x/y from tilt.
 
 function SheenLayer() {
   return (
@@ -336,7 +314,7 @@ function SheenLayer() {
       className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[30]"
       style={{
         background:
-          'radial-gradient(circle at var(--plm-glare-x) var(--plm-glare-y), rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 28%, transparent 55%)',
+          'radial-gradient(circle at var(--plm-glare-x) var(--plm-glare-y), rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.12) 30%, transparent 60%)',
         mixBlendMode: 'overlay',
       }}
       aria-hidden="true"
@@ -354,18 +332,18 @@ function HoloLayer() {
           background:
             'conic-gradient(from calc(var(--plm-glare-x) * 3.6deg) at var(--plm-glare-x) var(--plm-glare-y), #ff5e62, #ffd200, #21d4fd, #b721ff, #ff5e62)',
           mixBlendMode: 'color-dodge',
-          opacity: 0.32,
+          opacity: 0.45,
         }}
         aria-hidden="true"
       />
-      {/* Diagonal foil hatch */}
+      {/* Diagonal foil hatch — plastic foil texture. */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[32]"
         style={{
           background:
-            'repeating-linear-gradient(115deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 6px)',
+            'repeating-linear-gradient(115deg, rgba(255,255,255,0.08) 0 2px, transparent 2px 6px)',
           mixBlendMode: 'overlay',
-          opacity: 0.7,
+          opacity: 0.8,
         }}
         aria-hidden="true"
       />
@@ -376,14 +354,14 @@ function HoloLayer() {
 function CosmicLayer() {
   return (
     <>
-      {/* Galaxy radial — strongest where tilt aims, fading to deep purple. */}
+      {/* Galaxy radial — strongest where tilt aims. */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[33]"
         style={{
           background:
-            'radial-gradient(ellipse 80% 60% at var(--plm-glare-x) var(--plm-glare-y), rgba(255,255,255,0.45) 0%, rgba(168,85,247,0.35) 25%, rgba(59,130,246,0.25) 50%, transparent 75%)',
+            'radial-gradient(ellipse 80% 60% at var(--plm-glare-x) var(--plm-glare-y), rgba(255,255,255,0.55) 0%, rgba(168,85,247,0.4) 25%, rgba(59,130,246,0.3) 50%, transparent 75%)',
           mixBlendMode: 'screen',
-          opacity: 0.55,
+          opacity: 0.6,
         }}
         aria-hidden="true"
       />
@@ -392,11 +370,11 @@ function CosmicLayer() {
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[34]"
         style={{
           backgroundImage:
-            'radial-gradient(rgba(255,255,255,0.85) 0.6px, transparent 0.8px), radial-gradient(rgba(255,255,255,0.65) 0.6px, transparent 0.8px)',
+            'radial-gradient(rgba(255,255,255,0.9) 0.6px, transparent 0.8px), radial-gradient(rgba(255,255,255,0.7) 0.6px, transparent 0.8px)',
           backgroundSize: '40px 40px, 60px 60px',
           backgroundPosition: '0 0, 20px 30px',
           mixBlendMode: 'screen',
-          opacity: 0.45,
+          opacity: 0.5,
         }}
         aria-hidden="true"
       />
