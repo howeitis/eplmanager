@@ -92,6 +92,16 @@ export function ShortlistPanel({ clubs, playerClubId, isTransferWindow, onMakeOf
     return sorted;
   }, [entries, filterPos, sortKey]);
 
+  // Ordered ids for swipe-navigation in the detail modal — exclude retired
+  // entries since their player record is gone and the modal can't render them.
+  const browseList = useMemo(
+    () => visibleEntries.filter((e) => e.player !== null).map((e) => e.playerId),
+    [visibleEntries],
+  );
+
+  const openWithBrowse = (playerId: string, sellerClubId: string) =>
+    openModal(playerId, sellerClubId, browseList);
+
   if (shortlist.length === 0) {
     return (
       <div className="plm-text-center plm-py-12">
@@ -158,7 +168,7 @@ export function ShortlistPanel({ clubs, playerClubId, isTransferWindow, onMakeOf
             isTransferWindow={isTransferWindow}
             marketListings={marketListings}
             budget={budget}
-            onOpenModal={openModal}
+            onOpenModal={openWithBrowse}
             onRemove={removeFromShortlist}
             onMakeOffer={onMakeOffer}
           />
