@@ -48,7 +48,7 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'liverpool',
-    kit: { pattern: 'plain', accent: '#FFFFFF' },
+    kit: { pattern: 'plain', accent: '#00B2A9', crestWhite: true },
     logo: 'liverpool.png',
     name: 'Liverpool',
     shortName: 'LIV',
@@ -95,7 +95,7 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'man-utd',
-    kit: { pattern: 'plain', accent: '#FBE122' },
+    kit: { pattern: 'plain', accent: '#000000' },
     logo: 'manutd.png',
     name: 'Manchester United',
     shortName: 'MUN',
@@ -342,7 +342,7 @@ export const CLUBS: ClubData[] = [
   },
   {
     id: 'nottm-forest',
-    kit: { pattern: 'plain', accent: '#FFFFFF' },
+    kit: { pattern: 'plain', accent: '#FFFFFF', crestWhite: true },
     logo: 'forest.png',
     name: 'Nottingham Forest',
     shortName: 'NFO',

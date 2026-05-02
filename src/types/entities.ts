@@ -79,6 +79,12 @@ export interface ClubKit {
    * (e.g. Tottenham brand = navy, shirt = white).
    */
   base?: string;
+  /**
+   * When true, render the chest crest as pure white instead of its native
+   * colour. For clubs whose red crest disappears against a red shirt
+   * (Liverpool, Forest); the original red logo is still used elsewhere.
+   */
+  crestWhite?: boolean;
 }
 
 export interface ClubData {

@@ -135,6 +135,10 @@ export function ShirtOverlay({ kit, logoSrc, sizePx }: ShirtOverlayProps) {
           width={CREST.w}
           height={CREST.h}
           preserveAspectRatio="xMidYMid meet"
+          // brightness(0) crushes the source to black, invert(1) flips to
+          // pure white. The whole crest renders white so it shows on red
+          // shirts where the native red crest would disappear.
+          style={kit.crestWhite ? { filter: 'brightness(0) invert(1)' } : undefined}
         />
       )}
     </svg>
