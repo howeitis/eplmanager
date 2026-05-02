@@ -55,7 +55,7 @@ const COLLAR_TRIM_PATH =
 // shirt's actual outline (x=14 and x=86); shortened by pulling the
 // inside ends back toward the corners, so the hems read as bands at
 // the corners with a wide gap in the middle.
-const HEM_Y = 96.5;
+const HEM_Y = 97.5;
 const HEM_HEIGHT = 3;
 const HEM_LEFT = { x: 14, w: 16 };   // x range 14–30
 const HEM_RIGHT = { x: 70, w: 16 };  // x range 70–86
