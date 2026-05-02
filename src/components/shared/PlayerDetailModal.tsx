@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
-import { useModalParams } from '../../hooks/useModalParams';
+import { useModalParams, useModalBrowseList, navigateModalTo } from '../../hooks/useModalParams';
 import {
   refreshPlayerValue,
   evaluateOffer,
@@ -11,7 +11,8 @@ import { SeededRNG } from '../../utils/rng';
 import { SigningCelebrationModal } from './SigningCelebrationModal';
 import type { SigningCelebrationData } from './SigningCelebrationModal';
 import { RetroPlayerCard } from './RetroPlayerCard';
-import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
+import { InteractiveCard } from './InteractiveCard';
+import type { Club, Player, PlayerStats, TransferRecord } from '../../types/entities';
 import { getClubLogoUrl } from '../../data/assets';
 
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
@@ -38,8 +39,17 @@ function formatFormValue(form: number): string {
   return `${form}`;
 }
 
+function findPlayerLocation(playerId: string, clubs: Club[]): { player: Player; clubId: string } | null {
+  for (const club of clubs) {
+    const player = club.roster.find((p) => p.id === playerId);
+    if (player) return { player, clubId: club.id };
+  }
+  return null;
+}
+
 export function PlayerDetailModal() {
   const { playerId, clubId, closeModal, isOpen } = useModalParams();
+  const browseList = useModalBrowseList();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -74,6 +84,49 @@ export function PlayerDetailModal() {
   const [celebrationData, setCelebrationData] = useState<SigningCelebrationData | null>(null);
   // Card view toggle
   const [showCardView, setShowCardView] = useState(true);
+  // Direction the next card should slide in from (set when navigating via swipe).
+  const [enterFrom, setEnterFrom] = useState<'left' | 'right' | null>(null);
+
+  // Browse-list navigation: find the next/prev player that still exists in
+  // some club's roster. Players who have retired (gone from all rosters) are
+  // skipped silently so the user can keep swiping through their shortlist.
+  const navigation = useMemo(() => {
+    if (!browseList || !playerId) return { next: null, prev: null };
+    const idx = browseList.indexOf(playerId);
+    if (idx === -1) return { next: null, prev: null };
+
+    let next: { playerId: string; clubId: string } | null = null;
+    for (let i = idx + 1; i < browseList.length; i++) {
+      const found = findPlayerLocation(browseList[i], clubs);
+      if (found) {
+        next = { playerId: found.player.id, clubId: found.clubId };
+        break;
+      }
+    }
+
+    let prev: { playerId: string; clubId: string } | null = null;
+    for (let i = idx - 1; i >= 0; i--) {
+      const found = findPlayerLocation(browseList[i], clubs);
+      if (found) {
+        prev = { playerId: found.player.id, clubId: found.clubId };
+        break;
+      }
+    }
+
+    return { next, prev };
+  }, [browseList, playerId, clubs]);
+
+  const handleNext = useCallback(() => {
+    if (!navigation.next) return;
+    setEnterFrom('right');
+    navigateModalTo(navigation.next.playerId, navigation.next.clubId);
+  }, [navigation.next]);
+
+  const handlePrev = useCallback(() => {
+    if (!navigation.prev) return;
+    setEnterFrom('left');
+    navigateModalTo(navigation.prev.playerId, navigation.prev.clubId);
+  }, [navigation.prev]);
 
   const isOwnClub = clubId === playerClubId;
   const isOnShortlist = playerId ? shortlist.includes(playerId) : false;
@@ -86,6 +139,7 @@ export function PlayerDetailModal() {
       clubIdSnapshotRef.current = null;
       setCelebrationData(null);
       setShowCardView(true);
+      setEnterFrom(null);
     }
   }, [isOpen]);
 
@@ -269,13 +323,22 @@ export function PlayerDetailModal() {
         {showCardView ? (
           /* ──── Card View ──── */
           <div className="plm-px-5 plm-pt-4 plm-pb-2 plm-flex plm-flex-col plm-items-center plm-space-y-4">
-            <RetroPlayerCard
+            <InteractiveCard
+              key={player.id}
               player={player}
-              clubId={targetClub.id}
-              clubName={targetClub.name}
-              clubColors={targetClub.colors}
-              size="lg"
-            />
+              enterFrom={enterFrom}
+              onDismiss={closeModal}
+              onNext={navigation.next ? handleNext : undefined}
+              onPrev={navigation.prev ? handlePrev : undefined}
+            >
+              <RetroPlayerCard
+                player={player}
+                clubId={targetClub.id}
+                clubName={targetClub.name}
+                clubColors={targetClub.colors}
+                size="lg"
+              />
+            </InteractiveCard>
             {/* Market value under card */}
             <div className="plm-flex plm-items-center plm-justify-center plm-gap-2">
               <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-400">

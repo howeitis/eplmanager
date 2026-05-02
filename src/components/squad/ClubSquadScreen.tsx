@@ -70,6 +70,11 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
     return result;
   }, [club, sortKey, filterPos]);
 
+  // Ordered ids passed to the detail modal so the user can swipe between
+  // players in the same filtered/sorted view they're looking at.
+  const browseList = useMemo(() => filteredPlayers.map((p) => p.id), [filteredPlayers]);
+  const openWithBrowse = (playerId: string) => openModal(playerId, clubId, browseList);
+
   if (!club || !clubData) {
     return (
       <div className="plm-text-center plm-py-12 plm-text-warm-500">
@@ -193,7 +198,7 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
               {filteredPlayers.map((player) => (
                 <tr
                   key={player.id}
-                  onClick={() => openModal(player.id, clubId)}
+                  onClick={() => openWithBrowse(player.id)}
                   className={`plm-border-b plm-border-warm-100 plm-transition-colors hover:plm-bg-warm-50 plm-cursor-pointer ${
                     player.injured ? 'plm-bg-red-50/50' : ''
                   }`}
@@ -234,7 +239,7 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
             <MobilePlayerCard
               key={player.id}
               player={player}
-              onOpenModal={() => openModal(player.id, clubId)}
+              onOpenModal={() => openWithBrowse(player.id)}
             />
           ))}
         </div>
