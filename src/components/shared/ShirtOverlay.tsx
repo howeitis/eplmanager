@@ -51,13 +51,14 @@ const COLLAR_TRIM_PATH =
   `C ${COLLAR_LEFT_X} 76.8, 43.6 ${TRIM_DIP_Y}, ${COLLAR_DIP_X} ${TRIM_DIP_Y} ` +
   `C 56.8 ${TRIM_DIP_Y}, ${COLLAR_RIGHT_X} 76.8, ${COLLAR_RIGHT_X} ${TRIM_TOP_Y}`;
 
-// Bottom-hem trim — filled rects on each side, narrower than before per
-// the reference image: two short bands sitting at the corners of the
-// shirt hem, not a wide pair stretching across the bottom.
+// Bottom-hem trim — filled rects on each side. Outer edges sit on the
+// shirt's actual outline (x=14 and x=86); shortened by pulling the
+// inside ends back toward the corners, so the hems read as bands at
+// the corners with a wide gap in the middle.
 const HEM_Y = 96.5;
 const HEM_HEIGHT = 3;
-const HEM_LEFT = { x: 16, w: 22 };   // x range 16–38
-const HEM_RIGHT = { x: 62, w: 22 };  // x range 62–84
+const HEM_LEFT = { x: 14, w: 20 };   // x range 14–34
+const HEM_RIGHT = { x: 66, w: 20 };  // x range 66–86
 
 // Crest sits on the viewer's right of the chest.
 const CREST = { x: 58, y: 84, w: 11, h: 11 };
