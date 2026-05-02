@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { animated, useSpring } from '@react-spring/web';
+import { animated, useSpring, to } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
 import type { Player } from '../../types/entities';
 import { getCardEffectTier } from '../../utils/cardTier';
@@ -146,7 +146,7 @@ export function InteractiveCard({
   // side pops forward). On release, velocity/distance checked for swipe.
   const bind = useDrag(
     (state) => {
-      const { down, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy], last, canceled } = state;
+      const { down, movement: [mx, my], velocity: [vx, vy], direction: [, dy], last, canceled } = state;
 
       if (reducedMotion || exitingRef.current) return;
 
@@ -164,26 +164,34 @@ export function InteractiveCard({
       }
 
       // ── Release ──
-      if (!last || canceled) return; // only act on the final release event
+      if (!last || canceled) return; // only act on final release
 
-      // Separate horizontal and vertical swipes to prevent diagonal misfires
-      // (e.g. swiping right but slightly down -> accidental dismiss)
-      const isHorizontal = Math.abs(mx) > Math.abs(my) || Math.abs(vx) > Math.abs(vy);
+      // ── Tap Detection ──
+      // Reliable tap detection: if total movement is < 5px
+      const isTap = Math.abs(mx) < 5 && Math.abs(my) < 5;
+      if (isTap) {
+        handleTapFlip();
+        return;
+      }
+
+      // Separate horizontal and vertical swipes.
+      // Make horizontal swipe more forgiving (multiply Y by 0.7) to prefer carousel over dismiss.
+      const isHorizontal = Math.abs(mx) > Math.abs(my) * 0.7 || Math.abs(vx) > Math.abs(vy) * 0.7;
 
       if (isHorizontal) {
         // Hard swipe left → next
-        if (onNext && (mx < -SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx < 0))) {
+        if (onNext && (mx < -SWIPE_DISTANCE_PX || (Math.abs(vx) > SWIPE_VELOCITY && mx < 0))) {
           animateOff('left', onNext);
           return;
         }
         // Hard swipe right → prev
-        if (onPrev && (mx > SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx > 0))) {
+        if (onPrev && (mx > SWIPE_DISTANCE_PX || (Math.abs(vx) > SWIPE_VELOCITY && mx > 0))) {
           animateOff('right', onPrev);
           return;
         }
       } else {
-        // Pull-down dismiss
-        if (onDismiss && (my > 100 || (vy > SWIPE_VELOCITY && dy > 0))) {
+        // Pull-down dismiss: require strong deliberate pull (160px) or fast flick (>0.85 vel) with at least 30px movement.
+        if (onDismiss && (my > 160 || (vy > 0.85 && dy > 0 && my > 30))) {
           animateOff('down', onDismiss);
           return;
         }
@@ -199,20 +207,17 @@ export function InteractiveCard({
       updateGlareFromTilt(0, 0);
     },
     {
-      filterTaps: true,
-      threshold: 4,
-      pointer: { touch: true },
+      // No filterTaps needed since we do manual tap detection
     },
   );
 
   // ─── Transform strings ───
-  const outerTransform = spring.x.to((x: number) => {
-    const y = spring.y.get();
-    const rx = spring.rotX.get();
-    const ry = spring.rotY.get();
-    const s = spring.scale.get();
-    return `translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`;
-  });
+  // Use `to` with an array of ALL dependent spring values so it correctly
+  // ticks and re-renders the transform when ANY of them change.
+  const outerTransform = to(
+    [spring.x, spring.y, spring.rotX, spring.rotY, spring.scale],
+    (x, y, rx, ry, s) => `translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`
+  );
 
   const innerTransform = spring.flipY.to((fy: number) => `rotateY(${fy}deg)`);
 
@@ -243,10 +248,6 @@ export function InteractiveCard({
         style={{ ...sharedStyle, transformStyle: 'preserve-3d' as const }}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
-        onClick={handleTapFlip}
-        role="button"
-        tabIndex={0}
-        onKeyDown={handleTapFlip}
         aria-label={isFlipped ? 'Flip card to front' : 'Flip card to back'}
       >
         <animated.div
