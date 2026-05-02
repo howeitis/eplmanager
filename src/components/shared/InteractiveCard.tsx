@@ -5,12 +5,15 @@ import type { Player } from '../../types/entities';
 import { getCardEffectTier } from '../../utils/cardTier';
 
 // ─── Gesture thresholds ───
-// Swipe detection on release: distance OR velocity.
-const SWIPE_DISTANCE_PX = 80;
-const SWIPE_VELOCITY = 0.5;
+const SWIPE_DISTANCE_PX = 60;  // px of cumulative drag movement to count as swipe
+const SWIPE_VELOCITY = 0.35;   // px/ms — a brisk flick
 
-// Maximum tilt in degrees. Dramatic enough to feel like a real card in hand.
-const MAX_TILT_DEG = 30;
+// Maximum tilt in degrees. Very dramatic — like holding a real card.
+const MAX_TILT_DEG = 45;
+
+// How many px of drag movement maps to full tilt. A drag of TILT_RANGE px
+// produces MAX_TILT_DEG degrees of tilt.
+const TILT_RANGE_PX = 120;
 
 export type SwipeDirection = 'left' | 'right' | 'down';
 
@@ -27,6 +30,10 @@ export interface InteractiveCardProps {
 function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined' || !window.matchMedia) return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function clamp(v: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, v));
 }
 
 export function InteractiveCard({
@@ -51,8 +58,8 @@ export function InteractiveCard({
     const px = 50 + (rotY / MAX_TILT_DEG) * 50;
     const py = 50 - (rotX / MAX_TILT_DEG) * 50;
     setGlare({
-      px: Math.max(0, Math.min(100, px)),
-      py: Math.max(0, Math.min(100, py)),
+      px: clamp(px, 0, 100),
+      py: clamp(py, 0, 100),
     });
   }, []);
 
@@ -104,21 +111,18 @@ export function InteractiveCard({
     });
   }, [api]);
 
-  // ─── Hover tilt (desktop only, pointer move without drag) ───
+  // ─── Hover tilt (desktop only) ───
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (reducedMotion || exitingRef.current) return;
-    // Skip if a button is pressed (user is dragging).
-    if (e.buttons !== 0) return;
+    if (e.buttons !== 0) return; // skip while dragging
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    const cx = (e.clientX - rect.left) / rect.width;   // 0→1
-    const cy = (e.clientY - rect.top) / rect.height;    // 0→1
-    const clX = Math.max(0, Math.min(1, cx));
-    const clY = Math.max(0, Math.min(1, cy));
-    const newRotX = (0.5 - clY) * MAX_TILT_DEG;
-    const newRotY = (clX - 0.5) * MAX_TILT_DEG;
+    const cx = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    const cy = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+    const newRotX = (0.5 - cy) * MAX_TILT_DEG;
+    const newRotY = (cx - 0.5) * MAX_TILT_DEG;
     updateGlareFromTilt(newRotX, newRotY);
     api.start({
       rotX: newRotX,
@@ -133,61 +137,43 @@ export function InteractiveCard({
     updateGlareFromTilt(0, 0);
   }, [reducedMotion, api, updateGlareFromTilt]);
 
-  // ─── Drag gesture (touch + mouse) ───
-  // All drag movement is expressed as TILT, not translation.
-  // The card stays in place. On release, velocity/distance is checked for
-  // swipe-to-next or dismiss gestures.
+  // ─── Drag gesture ───
+  // Drag movement = tilt. The card stays in place and tilts in the direction
+  // of the drag (push model: drag down → top pops forward, drag left → right
+  // side pops forward). On release, velocity/distance checked for swipe.
   const bind = useDrag(
-    ({
-      down,
-      movement: [mx, my],
-      velocity: [vx, vy],
-      direction: [dx, dy],
-      tap,
-      first,
-      xy: [px, py],
-    }: {
-      down: boolean;
-      movement: [number, number];
-      velocity: [number, number];
-      direction: [number, number];
-      tap: boolean;
-      first: boolean;
-      xy: [number, number];
-    }) => {
+    (state) => {
+      const { down, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy], tap, last, canceled } = state;
+
       if (reducedMotion || exitingRef.current) return;
 
-      // ── Tap → flip ──
-      if (tap) {
+      // ── Tap → flip (only on final event, not canceled) ──
+      if (last && !canceled && tap) {
         handleTapFlip();
         return;
       }
 
+      // ── Active drag: tilt based on movement direction ──
+      // Drag down (my>0) → top pops forward (rotX < 0)
+      // Drag up (my<0) → bottom pops forward (rotX > 0)
+      // Drag right (mx>0) → left pops forward (rotY < 0)
+      // Drag left (mx<0) → right pops forward (rotY > 0)
       if (down) {
-        // Compute tilt from pointer position relative to card center.
-        // This gives the "tilt where you touch" feel — touching top-right
-        // tilts the card top-right, etc.
-        const el = containerRef.current;
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
-        const cx = (px - rect.left) / rect.width;
-        const cy = (py - rect.top) / rect.height;
-        const clX = Math.max(0, Math.min(1, cx));
-        const clY = Math.max(0, Math.min(1, cy));
-        const rotX = (0.5 - clY) * MAX_TILT_DEG;
-        const rotY = (clX - 0.5) * MAX_TILT_DEG;
+        const rotX = clamp((-my / TILT_RANGE_PX) * MAX_TILT_DEG, -MAX_TILT_DEG, MAX_TILT_DEG);
+        const rotY = clamp((mx / TILT_RANGE_PX) * MAX_TILT_DEG, -MAX_TILT_DEG, MAX_TILT_DEG);
         updateGlareFromTilt(rotX, rotY);
         api.start({
           rotX,
           rotY,
-          scale: first ? 1.02 : 1.02,   // subtle lift on touch
+          scale: 1.02,
           config: { tension: 300, friction: 20 },
         });
         return;
       }
 
-      // ── Release — check for swipe ──
+      // ── Release ──
+      if (!last) return; // only act on the final release event
+
       // Hard swipe left → next
       if (onNext && (mx < -SWIPE_DISTANCE_PX || (vx > SWIPE_VELOCITY && dx < 0))) {
         animateOff('left', onNext);
@@ -199,7 +185,7 @@ export function InteractiveCard({
         return;
       }
       // Pull-down dismiss
-      if (onDismiss && (my > 120 || (vy > SWIPE_VELOCITY && dy > 0))) {
+      if (onDismiss && (my > 100 || (vy > SWIPE_VELOCITY && dy > 0))) {
         animateOff('down', onDismiss);
         return;
       }
@@ -215,13 +201,12 @@ export function InteractiveCard({
     },
     {
       filterTaps: true,
-      threshold: 4,
+      threshold: 3,
       pointer: { touch: true },
     },
   );
 
   // ─── Transform strings ───
-  // Outer: position (for swipe exit animation) + tilt from gestures.
   const outerTransform = spring.x.to((x: number) => {
     const y = spring.y.get();
     const rx = spring.rotX.get();
@@ -230,7 +215,6 @@ export function InteractiveCard({
     return `translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`;
   });
 
-  // Inner: flip rotation (tap-to-flip 180°).
   const innerTransform = spring.flipY.to((fy: number) => `rotateY(${fy}deg)`);
 
   // ─── Render ───
@@ -268,7 +252,6 @@ export function InteractiveCard({
             willChange: 'transform',
           }}
         >
-          {/* Front face */}
           <div
             className="plm-relative plm-rounded-xl plm-overflow-hidden"
             style={{ backfaceVisibility: 'hidden' }}
@@ -276,7 +259,6 @@ export function InteractiveCard({
             {children}
             {overlays}
           </div>
-          {/* Back face */}
           <div
             className="plm-absolute plm-inset-0 plm-rounded-xl plm-overflow-hidden"
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
@@ -306,7 +288,6 @@ export function InteractiveCard({
 }
 
 // ─── Overlay layers ───
-// Positioned over the card, driven by CSS vars --plm-glare-x/y from tilt.
 
 function SheenLayer() {
   return (
@@ -325,7 +306,6 @@ function SheenLayer() {
 function HoloLayer() {
   return (
     <>
-      {/* Rainbow conic foil — rotates based on tilt angle. */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[31]"
         style={{
@@ -336,7 +316,6 @@ function HoloLayer() {
         }}
         aria-hidden="true"
       />
-      {/* Diagonal foil hatch — plastic foil texture. */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[32]"
         style={{
@@ -354,7 +333,6 @@ function HoloLayer() {
 function CosmicLayer() {
   return (
     <>
-      {/* Galaxy radial — strongest where tilt aims. */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[33]"
         style={{
@@ -365,7 +343,6 @@ function CosmicLayer() {
         }}
         aria-hidden="true"
       />
-      {/* Star-field dots */}
       <div
         className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[34]"
         style={{
