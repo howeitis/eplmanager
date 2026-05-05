@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
-import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '../../data/assets';
+import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl, getNationalTeamLogoUrl } from '../../data/assets';
 import { generateScoutSummaryParts } from '../../engine/scoutSummary';
 import { getPlayerFaceUri } from '../../utils/avatarFace';
 import { CLUBS } from '../../data/clubs';
@@ -344,7 +344,7 @@ export function RetroPlayerCard({
         {/* EPL Manager logo — clean, centered */}
         <div className="plm-flex plm-flex-col plm-items-center plm-justify-center plm-h-full plm-gap-3">
           <img
-            src="/epl_manager_logo.webp"
+            src="/eplmanager_logo_clean.png"
             alt="EPL Manager"
             className={`plm-object-contain plm-opacity-90 ${
               size === 'sm' ? 'plm-w-16 plm-h-16' : size === 'xl' ? 'plm-w-36 plm-h-36' : 'plm-w-24 plm-h-24'
@@ -440,22 +440,31 @@ export function RetroPlayerCard({
         </div>
       )}
 
-      {player.overall >= 83 && (
-        <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
-          <img
-            src={getNationalityFlagUrl(player.nationality)}
-            alt=""
-            className="plm-absolute plm-opacity-[0.14]"
-            style={{
-              width: '48%',
-              height: 'auto',
-              top: '10%',
-              left: '3%',
-            }}
-            aria-hidden="true"
-          />
-        </div>
-      )}
+      {player.overall >= 83 && (() => {
+        // Prefer the national team crest when we have one; otherwise fall back
+        // to the country flag.
+        const teamLogo = getNationalTeamLogoUrl(player.nationality);
+        const isCrest = teamLogo !== null;
+        const src = teamLogo || getNationalityFlagUrl(player.nationality);
+        if (!src) return null;
+        return (
+          <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1] plm-overflow-hidden">
+            <img
+              src={src}
+              alt=""
+              className={`plm-absolute ${isCrest ? 'plm-opacity-[0.18]' : 'plm-opacity-[0.14]'}`}
+              style={{
+                width: isCrest ? '42%' : '48%',
+                height: 'auto',
+                top: isCrest ? '8%' : '10%',
+                left: isCrest ? '6%' : '3%',
+                objectFit: 'contain',
+              }}
+              aria-hidden="true"
+            />
+          </div>
+        );
+      })()}
 
       {player.overall >= 83 && clubId && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[2] plm-overflow-hidden">

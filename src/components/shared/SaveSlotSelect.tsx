@@ -58,7 +58,7 @@ export function SaveSlotSelect({ onSelectSlot }: SaveSlotSelectProps) {
         {/* Logo + title */}
         <div className="plm-flex plm-flex-col plm-items-center plm-mb-8 plm-gap-3">
           <img
-            src="/epl_manager_logo.webp"
+            src="/eplmanager_logo_clean.png"
             alt="EPL Manager Logo"
             className="plm-w-16 plm-h-16 plm-object-contain plm-drop-shadow-lg"
           />

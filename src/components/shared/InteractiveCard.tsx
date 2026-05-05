@@ -4,21 +4,24 @@ import { useDrag } from '@use-gesture/react';
 import type { Player } from '../../types/entities';
 import { getCardEffectTier } from '../../utils/cardTier';
 
-// ─── Gesture thresholds ───
-const SWIPE_DISTANCE_PX = 60;  // px of cumulative drag movement to count as swipe
-const SWIPE_VELOCITY = 0.35;   // px/ms — a brisk flick
+// ─── Tilt + gesture model ───
+// Fulcrum at the back-center of the card. Pointer position relative to card
+// center drives rotateX/rotateY. Pointer/drag at the top-right corner →
+// top-right corner pops toward the viewer.
+const MAX_TILT_DEG = 18;
 
-// Maximum tilt in degrees. Very dramatic — like holding a real card.
-const MAX_TILT_DEG = 45;
-
-// How many px of drag movement maps to full tilt. A drag of TILT_RANGE px
-// produces MAX_TILT_DEG degrees of tilt.
-const TILT_RANGE_PX = 120;
+// Tap vs swipe thresholds.
+const TAP_DISTANCE_PX = 8;   // total movement under this counts as tap
+const TAP_DURATION_MS = 250; // and only if released within this window
+const SWIPE_DISTANCE_PX = 70;
+const SWIPE_VELOCITY = 0.4;
 
 export type SwipeDirection = 'left' | 'right' | 'down';
 
 export interface InteractiveCardProps {
   player: Player;
+  // Kept for type compatibility — InteractiveCard no longer uses pull-down
+  // dismiss internally. The host modal owns its own close affordances.
   onDismiss?: () => void;
   onNext?: () => void;
   onPrev?: () => void;
@@ -38,7 +41,6 @@ function clamp(v: number, min: number, max: number) {
 
 export function InteractiveCard({
   player,
-  onDismiss,
   onNext,
   onPrev,
   enterFrom = null,
@@ -49,18 +51,17 @@ export function InteractiveCard({
   const reducedMotion = useRef(prefersReducedMotion()).current;
   const containerRef = useRef<HTMLDivElement>(null);
   const exitingRef = useRef(false);
+  const startTimeRef = useRef(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Glare position derived from tilt — simulates light reflecting off surface.
+  // Glare position derived from current tilt — simulates light reflecting off
+  // the surface. Stored as a percentage [0,100].
   const [glare, setGlare] = useState({ px: 50, py: 50 });
 
   const updateGlareFromTilt = useCallback((rotX: number, rotY: number) => {
     const px = 50 + (rotY / MAX_TILT_DEG) * 50;
     const py = 50 - (rotX / MAX_TILT_DEG) * 50;
-    setGlare({
-      px: clamp(px, 0, 100),
-      py: clamp(py, 0, 100),
-    });
+    setGlare({ px: clamp(px, 0, 100), py: clamp(py, 0, 100) });
   }, []);
 
   const [spring, api] = useSpring(() => {
@@ -76,19 +77,17 @@ export function InteractiveCard({
     return { x: 0, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 1, opacity: 1 };
   });
 
-  // Tap-to-flip
-  const handleTapFlip = useCallback((e?: React.MouseEvent | React.KeyboardEvent) => {
-    if (e) {
-      if ('key' in e && e.key !== 'Enter' && e.key !== ' ') return;
-    }
+  const handleTapFlip = useCallback(() => {
     if (!cardBack || reducedMotion || exitingRef.current) return;
-    const next = !isFlipped;
-    setIsFlipped(next);
-    api.start({
-      flipY: next ? 180 : 0,
-      config: { mass: 1, tension: 220, friction: 22 },
+    setIsFlipped((prev) => {
+      const next = !prev;
+      api.start({
+        flipY: next ? 180 : 0,
+        config: { mass: 1, tension: 220, friction: 24 },
+      });
+      return next;
     });
-  }, [cardBack, reducedMotion, isFlipped, api]);
+  }, [cardBack, reducedMotion, api]);
 
   // Spring in from entry side on mount.
   useEffect(() => {
@@ -99,121 +98,129 @@ export function InteractiveCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Animate off-screen for swipe/dismiss.
+  // Animate off-screen for swipe. Used only by carousel onNext/onPrev.
   const animateOff = useCallback((direction: SwipeDirection, then: () => void) => {
     exitingRef.current = true;
     const w = window.innerWidth;
-    const h = window.innerHeight;
     api.start({
       x: direction === 'left' ? -w : direction === 'right' ? w : 0,
-      y: direction === 'down' ? h : 0,
       opacity: 0.85,
       scale: 0.96,
+      rotX: 0,
+      rotY: 0,
       config: { tension: 380, friction: 26 },
       onRest: then,
     });
   }, [api]);
 
-  // ─── Hover tilt (desktop only) ───
+  // ─── Spring back to neutral on release / pointer-leave ───
+  const settleToNeutral = useCallback(() => {
+    api.start({
+      rotX: 0,
+      rotY: 0,
+      scale: 1,
+      config: { mass: 1, tension: 170, friction: 22 },
+    });
+    updateGlareFromTilt(0, 0);
+  }, [api, updateGlareFromTilt]);
+
+  // ─── Apply tilt from a normalized [0,1] pointer position over the card ───
+  const applyTiltFromNormalized = useCallback((cx: number, cy: number, scale = 1) => {
+    const rotX = (0.5 - clamp(cy, 0, 1)) * MAX_TILT_DEG;
+    const rotY = (clamp(cx, 0, 1) - 0.5) * MAX_TILT_DEG;
+    updateGlareFromTilt(rotX, rotY);
+    api.start({
+      rotX,
+      rotY,
+      scale,
+      config: { mass: 1, tension: 280, friction: 28 },
+    });
+  }, [api, updateGlareFromTilt]);
+
+  // ─── Hover tilt (mouse / pen, no drag) ───
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (reducedMotion || exitingRef.current) return;
-    if (e.buttons !== 0) return; // skip while dragging
+    if (e.pointerType === 'touch') return; // touch is handled by useDrag
+    if (e.buttons !== 0) return;             // skip while dragging
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    const cx = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-    const cy = clamp((e.clientY - rect.top) / rect.height, 0, 1);
-    const newRotX = (0.5 - cy) * MAX_TILT_DEG;
-    const newRotY = (cx - 0.5) * MAX_TILT_DEG;
-    updateGlareFromTilt(newRotX, newRotY);
-    api.start({
-      rotX: newRotX,
-      rotY: newRotY,
-      config: { mass: 1, tension: 300, friction: 25 },
-    });
-  }, [reducedMotion, updateGlareFromTilt, api]);
+    const cx = (e.clientX - rect.left) / rect.width;
+    const cy = (e.clientY - rect.top) / rect.height;
+    applyTiltFromNormalized(cx, cy, 1);
+  }, [reducedMotion, applyTiltFromNormalized]);
 
   const handlePointerLeave = useCallback(() => {
     if (reducedMotion || exitingRef.current) return;
-    api.start({ rotX: 0, rotY: 0, config: { mass: 1, tension: 150, friction: 15 } });
-    updateGlareFromTilt(0, 0);
-  }, [reducedMotion, api, updateGlareFromTilt]);
+    settleToNeutral();
+  }, [reducedMotion, settleToNeutral]);
 
-  // ─── Drag gesture ───
-  // Drag movement = tilt. The card stays in place and tilts in the direction
-  // of the drag (push model: drag down → top pops forward, drag left → right
-  // side pops forward). On release, velocity/distance checked for swipe.
+  // ─── Drag gesture (touch + active mouse drag) ───
   const bind = useDrag(
     (state) => {
-      const { down, movement: [mx, my], velocity: [vx, vy], direction: [, dy], last, canceled } = state;
-
+      const { down, first, last, canceled, movement: [mx, my], velocity: [vx, vy], event } = state;
       if (reducedMotion || exitingRef.current) return;
 
+      // Stop the modal backdrop / siblings from also seeing the gesture.
+      if (event && 'stopPropagation' in event) {
+        try { (event as Event).stopPropagation(); } catch { /* noop */ }
+      }
+
+      if (first) {
+        startTimeRef.current = performance.now();
+      }
+
       if (down) {
-        const rotX = clamp((-my / TILT_RANGE_PX) * MAX_TILT_DEG, -MAX_TILT_DEG, MAX_TILT_DEG);
-        const rotY = clamp((mx / TILT_RANGE_PX) * MAX_TILT_DEG, -MAX_TILT_DEG, MAX_TILT_DEG);
-        updateGlareFromTilt(rotX, rotY);
-        api.start({
-          rotX,
-          rotY,
-          scale: 1.02,
-          config: { mass: 1, tension: 250, friction: 25 },
-        });
+        // Live tilt — drag movement maps to a fraction of the card size so the
+        // tilt feels consistent across card sizes.
+        const el = containerRef.current;
+        const w = el?.clientWidth || 220;
+        const h = el?.clientHeight || 320;
+        const cx = 0.5 + clamp(mx / w, -0.5, 0.5);
+        const cy = 0.5 + clamp(my / h, -0.5, 0.5);
+        applyTiltFromNormalized(cx, cy, 1.02);
         return;
       }
 
-      // ── Release ──
-      if (!last || canceled) return; // only act on final release
+      if (!last || canceled) return;
 
-      // ── Tap Detection ──
-      // Reliable tap detection: if total movement is < 5px
-      const isTap = Math.abs(mx) < 5 && Math.abs(my) < 5;
-      if (isTap) {
+      const duration = performance.now() - startTimeRef.current;
+
+      // 1. Tap — small movement + short duration → flip the card.
+      if (Math.abs(mx) < TAP_DISTANCE_PX && Math.abs(my) < TAP_DISTANCE_PX && duration < TAP_DURATION_MS) {
+        settleToNeutral();
         handleTapFlip();
         return;
       }
 
-      // Separate horizontal and vertical swipes.
-      // Make horizontal swipe more forgiving (multiply Y by 0.7) to prefer carousel over dismiss.
-      const isHorizontal = Math.abs(mx) > Math.abs(my) * 0.7 || Math.abs(vx) > Math.abs(vy) * 0.7;
-
-      if (isHorizontal) {
-        // Hard swipe left → next
-        if (onNext && (mx < -SWIPE_DISTANCE_PX || (Math.abs(vx) > SWIPE_VELOCITY && mx < 0))) {
+      // 2. Horizontal swipe → carousel navigation.
+      const horizontalIntent = Math.abs(mx) > Math.abs(my) * 1.4;
+      const horizontalCommit = Math.abs(mx) > SWIPE_DISTANCE_PX || Math.abs(vx) > SWIPE_VELOCITY;
+      if (horizontalIntent && horizontalCommit) {
+        if (mx < 0 && onNext) {
           animateOff('left', onNext);
           return;
         }
-        // Hard swipe right → prev
-        if (onPrev && (mx > SWIPE_DISTANCE_PX || (Math.abs(vx) > SWIPE_VELOCITY && mx > 0))) {
+        if (mx > 0 && onPrev) {
           animateOff('right', onPrev);
-          return;
-        }
-      } else {
-        // Pull-down dismiss: require strong deliberate pull (160px) or fast flick (>0.85 vel) with at least 30px movement.
-        if (onDismiss && (my > 160 || (vy > 0.85 && dy > 0 && my > 30))) {
-          animateOff('down', onDismiss);
           return;
         }
       }
 
-      // No swipe — spring back to neutral with smooth drifting physics.
-      api.start({
-        rotX: 0,
-        rotY: 0,
-        scale: 1,
-        config: { mass: 1, tension: 150, friction: 15 },
-      });
-      updateGlareFromTilt(0, 0);
+      // 3. Otherwise — drift back to neutral. Pull-down dismiss is gone; the
+      //    modal owns close via its X button / Esc / backdrop tap.
+      void vy;
+      settleToNeutral();
     },
     {
-      // No filterTaps needed since we do manual tap detection
+      filterTaps: false,
+      pointer: { touch: true },
+      eventOptions: { passive: false },
     },
   );
 
   // ─── Transform strings ───
-  // Use `to` with an array of ALL dependent spring values so it correctly
-  // ticks and re-renders the transform when ANY of them change.
   const outerTransform = to(
     [spring.x, spring.y, spring.rotX, spring.rotY, spring.scale],
     (x, y, rx, ry, s) => `translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`
@@ -221,14 +228,14 @@ export function InteractiveCard({
 
   const innerTransform = spring.flipY.to((fy: number) => `rotateY(${fy}deg)`);
 
-  // ─── Render ───
   const sharedStyle = {
     transform: outerTransform,
     opacity: spring.opacity,
     '--plm-glare-x': `${glare.px}%`,
     '--plm-glare-y': `${glare.py}%`,
     willChange: 'transform, opacity',
-    perspective: 900,
+    perspective: 1000,
+    touchAction: 'none' as const,
   } as unknown as React.CSSProperties;
 
   const overlays = (
@@ -239,15 +246,20 @@ export function InteractiveCard({
     </>
   );
 
+  // Block stray click bubbling so it never reaches the modal backdrop on
+  // browsers that synthesize click after a touch drag.
+  const stopClick = (e: React.MouseEvent) => e.stopPropagation();
+
   if (cardBack) {
     return (
       <animated.div
         {...bind()}
         ref={containerRef}
-        className="plm-relative plm-touch-none plm-select-none"
+        className="plm-relative plm-select-none"
         style={{ ...sharedStyle, transformStyle: 'preserve-3d' as const }}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
+        onClick={stopClick}
         aria-label={isFlipped ? 'Flip card to front' : 'Flip card to back'}
       >
         <animated.div
@@ -279,10 +291,11 @@ export function InteractiveCard({
     <animated.div
       {...bind()}
       ref={containerRef}
-      className="plm-relative plm-touch-none plm-select-none"
+      className="plm-relative plm-select-none"
       style={sharedStyle}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
+      onClick={stopClick}
     >
       <div className="plm-relative plm-rounded-xl plm-overflow-hidden">
         {children}

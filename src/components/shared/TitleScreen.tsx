@@ -25,7 +25,7 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
       <div className="plm-relative plm-z-10 plm-flex plm-flex-col plm-items-center plm-gap-6 plm-px-6 plm-text-center plm-animate-fade-in">
         {/* Logo */}
         <img
-          src="/epl_manager_logo.webp"
+          src="/eplmanager_logo_clean.png"
           alt="EPL Manager Logo"
           className="plm-w-32 plm-h-32 md:plm-w-40 md:plm-h-40 plm-object-contain plm-drop-shadow-lg"
         />

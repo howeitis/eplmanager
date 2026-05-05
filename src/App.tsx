@@ -1591,6 +1591,8 @@ function App() {
                 } else {
                   setGameView('hub');
                 }
+                // Always land at the top of whatever screen comes next.
+                window.scrollTo(0, 0);
               }}
             />
           );

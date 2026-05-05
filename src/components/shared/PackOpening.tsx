@@ -181,54 +181,56 @@ export function PackOpening({
               borderColor: clubColors.secondary || '#FFD700',
             }}
           >
+            {/* Foil top strip */}
+            <FoilStrip position="top" accentColor={clubColors.secondary || '#FFD700'} />
+
             {/* Inner decorative border */}
             <div
-              className="plm-absolute plm-inset-3 plm-border-2 plm-rounded-lg plm-pointer-events-none"
+              className="plm-absolute plm-inset-3 plm-border-2 plm-rounded-lg plm-pointer-events-none plm-z-[2]"
               style={{ borderColor: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)' }}
             />
 
-            {/* EPL Manager logo — top anchor */}
-            <div className="plm-flex plm-flex-col plm-items-center plm-mt-10 plm-gap-1.5 plm-relative plm-z-[2]">
-              <img
-                src="/epl_manager_logo.webp"
-                alt="EPL Manager"
-                className="plm-w-28 plm-h-28 plm-object-contain plm-drop-shadow-lg"
-              />
-              <div
-                className="plm-font-display plm-text-[11px] plm-font-bold plm-uppercase plm-tracking-[0.18em] plm-opacity-80"
-                style={{ color: isLight ? '#1A1A1A' : '#FFFFFF' }}
-              >
-                Premier League Manager
-              </div>
-            </div>
+            {/* Cellophane diagonal sheen */}
+            <div
+              className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1]"
+              style={{
+                background:
+                  'repeating-linear-gradient(20deg, transparent 0 14px, rgba(255,255,255,0.06) 14px 16px)',
+                mixBlendMode: 'overlay',
+              }}
+              aria-hidden="true"
+            />
 
             {/* Club crest — center anchor, large */}
-            <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-w-full plm-px-8 plm-relative plm-z-[2]">
+            <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-w-full plm-px-8 plm-relative plm-z-[3] plm-mt-12">
               {clubId ? (
                 <img
                   src={getClubLogoUrl(clubId)}
                   alt={clubName}
-                  className="plm-w-44 plm-h-44 plm-object-contain plm-drop-shadow-xl"
+                  className="plm-w-52 plm-h-52 plm-object-contain"
+                  style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.45))' }}
                 />
               ) : (
-                <div className="plm-text-6xl" aria-hidden="true">{'\u26BD'}</div>
+                <div className="plm-text-7xl" aria-hidden="true">{'\u26BD'}</div>
               )}
             </div>
 
-            {/* Pack title + subtitle — bottom anchor */}
-            <div className="plm-flex plm-flex-col plm-items-center plm-gap-1 plm-mb-10 plm-px-4 plm-relative plm-z-[2]">
+            {/* Pack title + subtitle — sits above the bottom strip */}
+            <div className="plm-flex plm-flex-col plm-items-center plm-gap-1 plm-mb-12 plm-px-4 plm-relative plm-z-[3]">
               <div
-                className="plm-font-display plm-text-2xl plm-font-black plm-uppercase plm-tracking-wider plm-text-center plm-leading-tight"
+                className="plm-font-display plm-text-3xl plm-font-black plm-uppercase plm-tracking-[0.12em] plm-text-center plm-leading-none"
                 style={{
                   color: isLight ? '#1A1A1A' : '#FFFFFF',
-                  textShadow: isLight ? '0 1px 0 rgba(255,255,255,0.3)' : '0 1px 2px rgba(0,0,0,0.45)',
+                  textShadow: isLight
+                    ? '0 1px 0 rgba(255,255,255,0.4), 0 0 14px rgba(255,255,255,0.2)'
+                    : '0 1px 2px rgba(0,0,0,0.55), 0 0 14px rgba(255,255,255,0.15)',
                 }}
               >
                 {packTitle}
               </div>
               {packSubtitle && (
                 <div
-                  className="plm-text-[11px] plm-font-body plm-uppercase plm-tracking-[0.16em] plm-opacity-75"
+                  className="plm-text-[11px] plm-font-body plm-uppercase plm-tracking-[0.22em] plm-opacity-85 plm-mt-1"
                   style={{ color: isLight ? '#1A1A1A' : '#FFFFFF' }}
                 >
                   {packSubtitle}
@@ -236,12 +238,14 @@ export function PackOpening({
               )}
             </div>
 
-            {/* Card count badge */}
-            <div className="plm-absolute plm-bottom-4 plm-right-4 plm-bg-black/30 plm-rounded-full plm-px-3 plm-py-1">
-              <span className="plm-text-[11px] plm-font-bold plm-text-white plm-tabular-nums">
-                {players.length} cards
-              </span>
-            </div>
+            {/* Foil bottom strip with the card-count badge inset */}
+            <FoilStrip position="bottom" accentColor={clubColors.secondary || '#FFD700'}>
+              <div className="plm-absolute plm-bottom-2.5 plm-right-3 plm-bg-black/45 plm-rounded-full plm-px-3 plm-py-1 plm-backdrop-blur-sm plm-border plm-border-white/10">
+                <span className="plm-text-[10px] plm-font-bold plm-uppercase plm-tracking-widest plm-text-white plm-tabular-nums">
+                  {players.length} cards
+                </span>
+              </div>
+            </FoilStrip>
           </div>
 
           {/* Tap prompt */}
@@ -357,4 +361,86 @@ function isLightColor(hex: string): boolean {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return (r * 299 + g * 587 + b * 114) / 1000 > 160;
+}
+
+// ─── Foil strip — metallic crinkle band like a real Topps/Panini wrapper ───
+// Renders as a 38px tall band with a metallic gradient + repeating ridge
+// pattern. The bottom strip can host a child element (the card-count badge).
+function FoilStrip({
+  position,
+  accentColor,
+  children,
+}: {
+  position: 'top' | 'bottom';
+  accentColor: string;
+  children?: React.ReactNode;
+}) {
+  const STRIP_H = 38;
+  const positionStyle =
+    position === 'top'
+      ? { top: 0, left: 0, right: 0 }
+      : { bottom: 0, left: 0, right: 0 };
+
+  return (
+    <div
+      className="plm-absolute plm-pointer-events-none plm-z-[4] plm-overflow-hidden"
+      style={{ ...positionStyle, height: STRIP_H }}
+      aria-hidden="true"
+    >
+      {/* Base metallic gradient */}
+      <div
+        className="plm-absolute plm-inset-0"
+        style={{
+          background: `linear-gradient(${position === 'top' ? '180deg' : '0deg'},
+            rgba(255,255,255,0.85) 0%,
+            ${accentColor} 30%,
+            rgba(255,255,255,0.6) 50%,
+            ${accentColor} 70%,
+            rgba(0,0,0,0.25) 100%)`,
+          mixBlendMode: 'overlay',
+          opacity: 0.95,
+        }}
+      />
+      {/* Crinkle / rivet pattern — fine vertical ridges */}
+      <div
+        className="plm-absolute plm-inset-0"
+        style={{
+          background:
+            'repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 4px, rgba(255,255,255,0.18) 4px 5px, transparent 5px 8px)',
+          mixBlendMode: 'overlay',
+        }}
+      />
+      {/* Tear edge — zigzag along the inner edge */}
+      <div
+        className="plm-absolute plm-left-0 plm-right-0"
+        style={{
+          height: 6,
+          [position === 'top' ? 'bottom' : 'top']: 0,
+          background: `linear-gradient(${position === 'top' ? '180deg' : '0deg'},
+            rgba(0,0,0,0.35), transparent)`,
+          maskImage:
+            'linear-gradient(90deg, transparent, black 4px, black calc(100% - 4px), transparent)',
+        }}
+      />
+      {/* Notched edge — small triangular cuts along the inner side */}
+      <svg
+        className="plm-absolute plm-left-0 plm-right-0"
+        style={{
+          [position === 'top' ? 'bottom' : 'top']: -1,
+          height: 6,
+          width: '100%',
+          transform: position === 'top' ? 'none' : 'scaleY(-1)',
+        }}
+        preserveAspectRatio="none"
+        viewBox="0 0 100 6"
+      >
+        <path
+          d="M0 0 L100 0 L100 4 L96 6 L92 4 L88 6 L84 4 L80 6 L76 4 L72 6 L68 4 L64 6 L60 4 L56 6 L52 4 L48 6 L44 4 L40 6 L36 4 L32 6 L28 4 L24 6 L20 4 L16 6 L12 4 L8 6 L4 4 L0 6 Z"
+          fill={accentColor}
+          opacity="0.8"
+        />
+      </svg>
+      {children}
+    </div>
+  );
 }

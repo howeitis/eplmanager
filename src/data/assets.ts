@@ -103,3 +103,42 @@ export function getNationalityFlagUrl(nationality: string): string {
 export function getNationalityLabel(nationality: string): string {
   return nationality.charAt(0).toUpperCase() + nationality.slice(1).replace(/-/g, ' ');
 }
+
+/**
+ * Maps in-game nationality strings to the national team logo files in
+ * /public/National team logos/. Falls back to the country flag when no
+ * matching team logo exists (see getNationalityFlagUrl).
+ */
+export const NATIONALITY_TEAM_LOGOS: Record<string, string> = {
+  argentinian: 'argentina_argentina-national-team.football-logos.cc.svg',
+  belgian: 'belgium_belgium-national-team.football-logos.cc.svg',
+  brazilian: 'brazil_brazil-national-team.football-logos.cc.svg',
+  colombian: 'colombia_colombia-national-team.football-logos.cc.svg',
+  danish: 'denmark_denmark-national-team.football-logos.cc.svg',
+  dutch: 'netherlands_dutch-national-team.football-logos.cc.svg',
+  ecuadorian: 'ecuador_ecuador-national-team.football-logos.cc.svg',
+  egyptian: 'egypt_egypt-national-team.football-logos.cc.svg',
+  english: 'england_england-national-team.football-logos.cc.svg',
+  finnish: 'finland_finland-national-team.football-logos.cc.svg',
+  french: 'france_france-national-team.football-logos.cc.svg',
+  german: 'germany_germany-national-team.football-logos.cc.svg',
+  ghanaian: 'ghana_ghana-national-team.football-logos.cc.svg',
+  greek: 'greece_greece-national-team.football-logos.cc.svg',
+  hungarian: 'hungary_hungary-national-team.football-logos.cc.svg',
+  italian: 'italy_italy-national-team.football-logos.cc.svg',
+  ivorian: 'cote-d-ivoire_cote-d-ivoire-national-team.football-logos.cc.svg',
+  jamaican: 'jamaica_jamaica-national-team.football-logos.cc.svg',
+  japanese: 'japan_japan-national-team.football-logos.cc.svg',
+  malian: 'mali_mali-national-team.football-logos.cc.svg',
+  portuguese: 'portugal_portuguese-football-federation.football-logos.cc.svg',
+  scottish: 'scotland_scotland-national-team.football-logos.cc.svg',
+  spanish: 'spain_spain-national-team.football-logos.cc.svg',
+  turkish: 'turkey_turkey-national-team.football-logos.cc.svg',
+};
+
+export function getNationalTeamLogoUrl(nationality: string): string | null {
+  const key = nationality.toLowerCase().trim().replace(/\s+/g, '-');
+  const fn = NATIONALITY_TEAM_LOGOS[key];
+  if (!fn) return null;
+  return `/National team logos/${fn}`;
+}
