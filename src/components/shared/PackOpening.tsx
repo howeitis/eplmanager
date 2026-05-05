@@ -173,24 +173,33 @@ export function PackOpening({
         >
           {/* Pack visual — same footprint as an xl player card (w-[21rem] h-[31rem]) */}
           <div
-            className={`plm-relative plm-w-[21rem] plm-h-[31rem] plm-rounded-xl plm-shadow-2xl plm-flex plm-flex-col plm-items-center plm-border-4 plm-transition-all plm-overflow-hidden ${
+            className={`plm-relative plm-w-[21rem] plm-h-[31rem] plm-rounded-xl plm-flex plm-flex-col plm-items-center plm-border-[3px] plm-transition-all plm-overflow-hidden ${
               packState === 'shaking' ? 'plm-animate-pack-shake' : ''
             } ${packState === 'opening' ? 'plm-animate-pack-burst' : ''}`}
             style={{
               background: `linear-gradient(145deg, ${clubColors.primary}, ${clubColors.secondary || clubColors.primary}dd, ${clubColors.primary})`,
-              borderColor: clubColors.secondary || '#FFD700',
+              // Silver trim — subtle gradient so the edge catches light.
+              borderImage:
+                'linear-gradient(135deg, #f4f6f8 0%, #c8cdd2 25%, #ffffff 50%, #aab0b6 75%, #e6e9ec 100%) 1',
+              borderColor: '#c8cdd2',
+              boxShadow:
+                '0 30px 60px -12px rgba(0,0,0,0.55), 0 18px 36px -18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -2px 0 rgba(0,0,0,0.25)',
             }}
           >
-            {/* Foil top strip */}
-            <FoilStrip position="top" accentColor={clubColors.secondary || '#FFD700'} />
+            {/* Silver foil top strip */}
+            <FoilStrip position="top" />
 
             {/* Inner decorative border */}
             <div
-              className="plm-absolute plm-inset-3 plm-border-2 plm-rounded-lg plm-pointer-events-none plm-z-[2]"
-              style={{ borderColor: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)' }}
+              className="plm-absolute plm-inset-3 plm-rounded-lg plm-pointer-events-none plm-z-[2]"
+              style={{
+                border: '1.5px solid rgba(255,255,255,0.55)',
+                boxShadow:
+                  'inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.25)',
+              }}
             />
 
-            {/* Cellophane diagonal sheen */}
+            {/* Cellophane diagonal pinstripe */}
             <div
               className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[1]"
               style={{
@@ -201,6 +210,32 @@ export function PackOpening({
               aria-hidden="true"
             />
 
+            {/* Specular highlight — soft sweep across the upper-left quadrant */}
+            <div
+              className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[2]"
+              style={{
+                background:
+                  'radial-gradient(ellipse 60% 50% at 25% 20%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 35%, transparent 65%)',
+                mixBlendMode: 'screen',
+              }}
+              aria-hidden="true"
+            />
+
+            {/* Slow diagonal sheen sweep — polished foil shimmer */}
+            <div
+              className="plm-absolute plm-inset-0 plm-pointer-events-none plm-overflow-hidden plm-z-[2]"
+              aria-hidden="true"
+            >
+              <div
+                className="plm-absolute plm-top-0 plm-h-full plm-w-1/3 plm-animate-shimmer"
+                style={{
+                  background:
+                    'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%)',
+                  filter: 'blur(2px)',
+                }}
+              />
+            </div>
+
             {/* Club crest — center anchor, large */}
             <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-w-full plm-px-8 plm-relative plm-z-[3] plm-mt-12">
               {clubId ? (
@@ -208,7 +243,10 @@ export function PackOpening({
                   src={getClubLogoUrl(clubId)}
                   alt={clubName}
                   className="plm-w-52 plm-h-52 plm-object-contain"
-                  style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.45))' }}
+                  style={{
+                    filter:
+                      'drop-shadow(0 10px 22px rgba(0,0,0,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+                  }}
                 />
               ) : (
                 <div className="plm-text-7xl" aria-hidden="true">{'\u26BD'}</div>
@@ -238,8 +276,8 @@ export function PackOpening({
               )}
             </div>
 
-            {/* Foil bottom strip with the card-count badge inset */}
-            <FoilStrip position="bottom" accentColor={clubColors.secondary || '#FFD700'}>
+            {/* Silver foil bottom strip with the card-count badge inset */}
+            <FoilStrip position="bottom">
               <div className="plm-absolute plm-bottom-2.5 plm-right-3 plm-bg-black/45 plm-rounded-full plm-px-3 plm-py-1 plm-backdrop-blur-sm plm-border plm-border-white/10">
                 <span className="plm-text-[10px] plm-font-bold plm-uppercase plm-tracking-widest plm-text-white plm-tabular-nums">
                   {players.length} cards
@@ -363,66 +401,89 @@ function isLightColor(hex: string): boolean {
   return (r * 299 + g * 587 + b * 114) / 1000 > 160;
 }
 
-// ─── Foil strip — metallic crinkle band like a real Topps/Panini wrapper ───
-// Renders as a 38px tall band with a metallic gradient + repeating ridge
-// pattern. The bottom strip can host a child element (the card-count badge).
+// ─── Silver foil strip — metallic crinkle band like a real Topps/Panini wrapper ───
+// Renders as a 42px tall band with a true silver palette: bright highlight
+// running through the middle, darker shoulders, vertical crinkle ridges, and
+// a soft inner shadow that gives the strip a slight 3D bevel. The bottom strip
+// can host a child element (the card-count badge).
 function FoilStrip({
   position,
-  accentColor,
   children,
 }: {
   position: 'top' | 'bottom';
-  accentColor: string;
   children?: React.ReactNode;
 }) {
-  const STRIP_H = 38;
+  const STRIP_H = 42;
   const positionStyle =
     position === 'top'
       ? { top: 0, left: 0, right: 0 }
       : { bottom: 0, left: 0, right: 0 };
 
+  // Inner-edge shading direction: top strip shadows on its bottom edge so it
+  // reads as a raised lip; bottom strip shadows on its top edge for symmetry.
+  const innerShadow =
+    position === 'top'
+      ? 'inset 0 -3px 6px -2px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.65)'
+      : 'inset 0 3px 6px -2px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(255,255,255,0.5)';
+
   return (
     <div
       className="plm-absolute plm-pointer-events-none plm-z-[4] plm-overflow-hidden"
-      style={{ ...positionStyle, height: STRIP_H }}
+      style={{
+        ...positionStyle,
+        height: STRIP_H,
+        boxShadow: innerShadow,
+      }}
       aria-hidden="true"
     >
-      {/* Base metallic gradient */}
+      {/* Base silver gradient — bright center band, darker shoulders. */}
       <div
         className="plm-absolute plm-inset-0"
         style={{
           background: `linear-gradient(${position === 'top' ? '180deg' : '0deg'},
-            rgba(255,255,255,0.85) 0%,
-            ${accentColor} 30%,
-            rgba(255,255,255,0.6) 50%,
-            ${accentColor} 70%,
-            rgba(0,0,0,0.25) 100%)`,
-          mixBlendMode: 'overlay',
-          opacity: 0.95,
+            #8a8e92 0%,
+            #c0c4c8 18%,
+            #f4f6f8 42%,
+            #ffffff 52%,
+            #d4d8dc 70%,
+            #8a8e92 100%)`,
         }}
       />
-      {/* Crinkle / rivet pattern — fine vertical ridges */}
+      {/* Brushed-metal vertical ridges — fine repeating ticks for the crinkle. */}
       <div
         className="plm-absolute plm-inset-0"
         style={{
           background:
-            'repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 4px, rgba(255,255,255,0.18) 4px 5px, transparent 5px 8px)',
+            'repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 4px, rgba(255,255,255,0.32) 4px 5px, transparent 5px 9px)',
           mixBlendMode: 'overlay',
         }}
       />
-      {/* Tear edge — zigzag along the inner edge */}
+      {/* Subtle horizontal bands — adds variation so it reads as foil, not paint. */}
+      <div
+        className="plm-absolute plm-inset-0"
+        style={{
+          background: `linear-gradient(${position === 'top' ? '180deg' : '0deg'},
+            rgba(255,255,255,0.18) 0%,
+            transparent 30%,
+            rgba(255,255,255,0.28) 48%,
+            transparent 70%,
+            rgba(0,0,0,0.18) 100%)`,
+          mixBlendMode: 'overlay',
+        }}
+      />
+      {/* Tear edge — gradient fade along the inner edge for a clean transition. */}
       <div
         className="plm-absolute plm-left-0 plm-right-0"
         style={{
-          height: 6,
+          height: 7,
           [position === 'top' ? 'bottom' : 'top']: 0,
           background: `linear-gradient(${position === 'top' ? '180deg' : '0deg'},
-            rgba(0,0,0,0.35), transparent)`,
+            rgba(0,0,0,0.4), transparent)`,
           maskImage:
             'linear-gradient(90deg, transparent, black 4px, black calc(100% - 4px), transparent)',
         }}
       />
-      {/* Notched edge — small triangular cuts along the inner side */}
+      {/* Notched zigzag — small triangular cuts for the perforated tear feel. */}
       <svg
         className="plm-absolute plm-left-0 plm-right-0"
         style={{
@@ -436,8 +497,8 @@ function FoilStrip({
       >
         <path
           d="M0 0 L100 0 L100 4 L96 6 L92 4 L88 6 L84 4 L80 6 L76 4 L72 6 L68 4 L64 6 L60 4 L56 6 L52 4 L48 6 L44 4 L40 6 L36 4 L32 6 L28 4 L24 6 L20 4 L16 6 L12 4 L8 6 L4 4 L0 6 Z"
-          fill={accentColor}
-          opacity="0.8"
+          fill="#c8cdd2"
+          opacity="0.9"
         />
       </svg>
       {children}
