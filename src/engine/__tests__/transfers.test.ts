@@ -104,14 +104,25 @@ describe('Willingness Formula', () => {
     expect(w).toBe(50);
   });
 
-  it('offer > 1.2x adds +25', () => {
+  it('30% premium adds +27 via continuous curve', () => {
+    // premium 0.3 * curve 90 = 27, capped at 45 → 50 + 27 = 77
     const w = calculateWillingness(13, 10, 'Engine', 3, 3, false, false, 25);
-    expect(w).toBe(75);
+    expect(w).toBe(77);
   });
 
-  it('offer > 1.5x adds +25 and +20 (stacks)', () => {
+  it('60% premium hits the +45 cap (95 total)', () => {
+    // premium 0.6 * 90 = 54, capped at 45 → 50 + 45 = 95
     const w = calculateWillingness(16, 10, 'Engine', 3, 3, false, false, 25);
     expect(w).toBe(95);
+  });
+
+  it('willingness scales smoothly between thresholds', () => {
+    // No more discontinuous jumps: a 19% premium should be > 0% but < 30%
+    const noPremium = calculateWillingness(10, 10, 'Engine', 3, 3, false, false, 25);
+    const small = calculateWillingness(11.9, 10, 'Engine', 3, 3, false, false, 25);
+    const big = calculateWillingness(13, 10, 'Engine', 3, 3, false, false, 25);
+    expect(small).toBeGreaterThan(noPremium);
+    expect(small).toBeLessThan(big);
   });
 
   it('Loyal trait reduces by -20', () => {

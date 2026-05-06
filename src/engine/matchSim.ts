@@ -19,30 +19,17 @@ import {
   calculateSquadDepthBonus,
 } from './startingXI';
 import { getBackgroundEffects } from './managerBackground';
+import { BALANCE } from '../data/balance';
 
 // ─── Formation & Mentality Types ───
 
 export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '5-3-2' | '3-4-3';
 export type Mentality = 'defensive' | 'balanced' | 'attacking';
 
-// ─── Formation Modifiers ───
+// ─── Formation & Mentality Modifiers (sourced from balance config) ───
 
-const FORMATION_MODIFIERS: Record<Formation, { atk: number; def: number }> = {
-  '4-4-2': { atk: 0, def: 0 },
-  '4-3-3': { atk: 3, def: -1 },
-  '3-5-2': { atk: 1, def: 2 },
-  '4-2-3-1': { atk: 2, def: 1 },
-  '5-3-2': { atk: -1, def: 4 },
-  '3-4-3': { atk: 4, def: -2 },
-};
-
-// ─── Mentality Modifiers ───
-
-const MENTALITY_MODIFIERS: Record<Mentality, { atk: number; def: number }> = {
-  defensive: { atk: -3, def: 4 },
-  balanced: { atk: 0, def: 0 },
-  attacking: { atk: 4, def: -3 },
-};
+const FORMATION_MODIFIERS = BALANCE.formationModifiers;
+const MENTALITY_MODIFIERS = BALANCE.mentalityModifiers;
 
 // ─── Position weights for goal scoring ───
 
@@ -81,11 +68,11 @@ const MONTHLY_GAMEWEEK_RANGES: Record<string, [number, number]> = {
   may: [35, 38],
 };
 
-// ─── Injury Constants ───
+// ─── Injury Constants (sourced from balance config) ───
 
-const BASE_INJURY_CHANCE = 0.05;
-const FRAGILE_INJURY_CHANCE = 0.10;
-const DURABLE_INJURY_CHANCE = 0.02;
+const BASE_INJURY_CHANCE: number = BALANCE.injury.base;
+const FRAGILE_INJURY_CHANCE: number = BALANCE.injury.fragile;
+const DURABLE_INJURY_CHANCE: number = BALANCE.injury.durable;
 
 // ─── AI Formation/Mentality Selection ───
 
@@ -369,36 +356,41 @@ export function calculateTSS(
   const mentalityBonus = (mentMod.atk + mentMod.def) / 2;
 
   // Home advantage
-  const homeBonus = config.isHome ? 3 : 0;
+  const homeBonus = config.isHome ? BALANCE.match.homeBonus : 0;
 
   // Form modifier (average of Starting XI form values, -5 to +5)
   const formBonus = avgForm;
 
   // Derby chaos
-  const derbyBonus = isDerby ? rng.randomFloat(0, 3) : 0;
+  const derbyBonus = isDerby ? rng.randomFloat(0, BALANCE.match.derbyBonusMax) : 0;
 
   // Fortune (season-long modifier)
   const fortuneBonus = config.fortune;
 
-  // Manager reputation bonus (0 to +3)
+  // Manager reputation bonus — meaningful at high rep, never decisive
   const repBonus = config.managerReputation
-    ? Math.min(3, config.managerReputation / 33)
+    ? Math.min(
+        BALANCE.reputation.matchBonusMax,
+        config.managerReputation / BALANCE.reputation.matchBonusDivisor,
+      )
     : 0;
 
   // Narrative event modifiers
   const narrativeBonus = config.narrativeModifier || 0;
 
-  // Leader trait: +2 MEN equivalent if a Leader is in the Starting XI
+  // Leader trait
   const hasLeader = startingXIPlayers.some((p) => p.trait === 'Leader' && !p.injured);
-  const leaderBonus = hasLeader ? 1 : 0;
+  const leaderBonus = hasLeader ? BALANCE.match.leaderBonus : 0;
 
-  // Preferred formation bonus: +1 ATK, +1 DEF (averages to +1 TSS)
-  const preferredFormationBonus = config.preferredFormation && config.formation === config.preferredFormation ? 1 : 0;
+  // Preferred formation bonus
+  const preferredFormationBonus = config.preferredFormation && config.formation === config.preferredFormation
+    ? BALANCE.match.preferredFormationBonus
+    : 0;
 
-  // Captain bonus: +2 TSS if the captain is in the Starting XI
+  // Captain bonus
   const captainBonus = config.captainId &&
     startingXIPlayers.some((p) => p.id === config.captainId)
-    ? 2 : 0;
+    ? BALANCE.match.captainBonus : 0;
 
   const userBackgroundBonus = baseRating * (config.userTSSBoostPct ?? 0);
 
@@ -428,14 +420,17 @@ export function calculateGoalExpectancy(
   const offensivePower = attackerTSS + atkFormMod + atkMenMod;
   const defensivePower = defenderTSS + defFormMod + defMenMod;
 
-  // Goal expectancy formula
+  // Saturating goal-expectancy curve. Big TSS gaps still matter but plateau,
+  // so the league stays competitive and "magic of the cup" upsets stay alive.
+  // At diff = 10 → +0.35; diff = 25 → +0.6; diff = 50 → +0.9.
   const diff = offensivePower - defensivePower;
-  const baseExp = 1.25 + diff * 0.04;
+  const { baseGoals, diffScale, diffCoeff, noiseRange, minExpectedGoals } = BALANCE.match;
+  const curveBonus = Math.sign(diff) * Math.log1p(Math.abs(diff) / diffScale) * diffCoeff;
+  const baseExp = baseGoals + curveBonus;
 
-  // Add randomness
-  const noise = rng.randomFloat(-0.3, 0.3);
+  const noise = rng.randomFloat(-noiseRange, noiseRange);
 
-  return Math.max(0.2, baseExp + noise);
+  return Math.max(minExpectedGoals, baseExp + noise);
 }
 
 // ─── Injury Processing ───
@@ -461,16 +456,18 @@ export function processInjuries(
     if (player.trait === 'Fragile') chance = FRAGILE_INJURY_CHANCE;
     if (player.trait === 'Durable') chance = DURABLE_INJURY_CHANCE;
 
-    // Goalkeepers are much less prone to injury
-    if (player.position === 'GK') chance *= 0.25;
+    if (player.position === 'GK') chance *= BALANCE.injury.gkMultiplier;
 
     if (rng.random() < chance) {
-      // Duration: 1-3 months, weighted toward shorter
       let duration: number;
       if (player.trait === 'Durable') {
-        duration = 1; // Durable players never get long-term injuries
+        // Durable players never suffer long-term injuries
+        duration = 1;
       } else {
-        duration = rng.weightedPick([1, 2, 3], [60, 30, 10]);
+        // Position-aware duration: wingers/strikers more likely to miss longer
+        const weights = BALANCE.injury.durationWeightsByPosition[player.position];
+        const buckets = [1, 2, 3, BALANCE.injury.seasonEndingMonths];
+        duration = rng.weightedPick(buckets, [...weights]);
       }
 
       injuries.push({

@@ -11,6 +11,7 @@ import type {
 } from '../types/entities';
 import { SeededRNG } from '../utils/rng';
 import { resetProgressionForTransfer } from './playerGen';
+import { BALANCE } from '../data/balance';
 
 // --- Continent sale destinations ---
 
@@ -23,7 +24,7 @@ const CONTINENT_CLUBS: Record<ContinentLeague, string[]> = {
   'Ligue 1': ['PSG', 'Marseille', 'Lyon', 'Monaco', 'Lille', 'Nice', 'Rennes', 'Lens'],
 };
 
-const CONTINENT_SALE_DISCOUNT = 0.70;
+const CONTINENT_SALE_DISCOUNT = BALANCE.transfer.continentSalePriceMult;
 
 // --- Market value calculation (Section 6.4 softened formula) ---
 
@@ -74,16 +75,20 @@ export function calculateWillingness(
   sellerNeedsPosition: boolean,
   playerAge: number,
 ): number {
-  let willingness = 50;
+  const T = BALANCE.transfer;
+  let willingness = T.willingnessBase;
 
-  if (offer > marketValue * 1.2) willingness += 25;
-  if (offer > marketValue * 1.5) willingness += 20; // stacks with above
+  // Smooth premium curve: 0% premium → +0, 20% → +18, 50%+ → +45 (capped).
+  // Replaces the old 1.2x/1.5x step thresholds so each extra £M in the bid
+  // visibly nudges the seller's willingness.
+  const premium = Math.max(0, offer / Math.max(marketValue, 0.1) - 1);
+  willingness += Math.min(T.premiumCapBonus, premium * T.premiumCurve);
 
-  if (playerTrait === 'Ambitious' && buyerTier < sellerTier) willingness -= 30;
-  if (playerTrait === 'Loyal') willingness -= 20;
-  if (isRival) willingness -= 30;
-  if (sellerNeedsPosition) willingness -= 15;
-  if (playerAge > 30) willingness += 15;
+  if (playerTrait === 'Ambitious' && buyerTier < sellerTier) willingness += T.ambitiousDownTier;
+  if (playerTrait === 'Loyal') willingness += T.loyalPenalty;
+  if (isRival) willingness += T.rivalPenalty;
+  if (sellerNeedsPosition) willingness += T.needsPositionPenalty;
+  if (playerAge > 30) willingness += T.olderPlayerBonus;
 
   return willingness;
 }
@@ -138,21 +143,19 @@ export function evaluateOffer(
     player.age,
   );
 
-  // Listed players are easier to sign: seller is motivated
-  const listedBoost = isListed ? 15 : 0;
-  const effectiveWillingness = Math.min(95, willingness + listedBoost);
+  const T = BALANCE.transfer;
+  const listedBoost = isListed ? T.listedBoost : 0;
+  const effectiveWillingness = Math.min(T.maxWillingness, willingness + listedBoost);
 
   if (effectiveWillingness > rng.random() * 100) {
     return { accepted: true, counterFee: null, willingness: effectiveWillingness };
   }
 
-  // Reject outright if effectiveWillingness < 20%
-  if (effectiveWillingness < 20) {
+  if (effectiveWillingness < T.rejectThreshold) {
     return { accepted: false, counterFee: null, willingness: effectiveWillingness };
   }
 
-  // Counter at marketValue * 1.3
-  const counterFee = Math.round(marketValue * 1.3 * 10) / 10;
+  const counterFee = Math.round(marketValue * T.counterMultiplier * 10) / 10;
   return { accepted: false, counterFee, willingness };
 }
 
@@ -164,11 +167,12 @@ export function checkPlayerRefusal(
   buyerTier: number,
   sellerTier: number,
 ): boolean {
-  let refusalChance = 10;
+  const T = BALANCE.transfer;
+  let refusalChance = T.refusalBase;
 
-  if (buyerTier > sellerTier) refusalChance += 20; // moving to lower-tier club
+  if (buyerTier > sellerTier) refusalChance += T.refusalDownTier; // moving down
   if (player.trait === 'Ambitious' && buyerTier <= sellerTier) return false; // always accepts upward/lateral
-  if (player.trait === 'Loyal') refusalChance += 15;
+  if (player.trait === 'Loyal') refusalChance += T.refusalLoyal;
 
   return rng.random() * 100 < refusalChance;
 }
@@ -462,7 +466,7 @@ export function simulateAITransferWindow(
       const agingPlayers = club.roster.filter(
         (p) => p.age > 31 && p.overall < 65 && !p.isTemporary && !p.acquiredThisWindow,
       );
-      if (agingPlayers.length > 0 && rng.random() < 0.3) {
+      if (agingPlayers.length > 0 && rng.random() < BALANCE.transfer.continentSaleChance) {
         const playerToSell = agingPlayers[rng.randomInt(0, agingPlayers.length - 1)];
         const sale = executeContinentSale(rng, playerToSell);
 
