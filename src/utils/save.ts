@@ -11,6 +11,8 @@ export interface SaveData {
   clubs: unknown[];
   fixtures: unknown[];
   leagueTable: unknown[];
+  /** Optional — added in v1.x. Older saves restore with []. */
+  previousLeagueTable?: unknown[];
   budgets: Record<string, number>;
   transferHistory: unknown[];
   currentPhase: string;
@@ -26,6 +28,8 @@ export interface SaveData {
   startingXI: Record<string, string>;
   startingXIHistory: unknown[];
   shortlist: string[];
+  /** Optional — added in v1.x. Older saves rebuild from each club's static tier. */
+  clubReputation?: Record<string, number>;
 }
 
 function getSaveKey(slot: number): string {
@@ -53,6 +57,8 @@ export function extractSaveData(state: SaveableState): SaveData {
     startingXI: (state.startingXI || {}) as Record<string, string>,
     startingXIHistory: (state.startingXIHistory || []) as unknown[],
     shortlist: (state.shortlist || []) as string[],
+    previousLeagueTable: (state.previousLeagueTable || []) as unknown[],
+    clubReputation: (state.clubReputation || {}) as Record<string, number>,
   };
 }
 

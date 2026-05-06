@@ -5,12 +5,21 @@ import type { Fixture, MatchResult, LeagueTableRow } from '../types/entities';
 export interface MatchSlice {
   fixtures: Fixture[];
   leagueTable: LeagueTableRow[];
+  /**
+   * Snapshot of the league table taken before each monthly round of fixtures
+   * is simulated. Used by the LeagueTable UI to show position-change arrows
+   * and reshuffle animation. Survives unmount/remount of the hub (Zustand
+   * persists across navigation), unlike a component-local ref.
+   */
+  previousLeagueTable: LeagueTableRow[];
 
   initializeFixtures: (fixtures: Fixture[]) => void;
   initializeLeagueTable: (clubIds: string[]) => void;
   recordResult: (fixtureId: string, result: MatchResult) => void;
   getFixturesForGameweek: (gameweek: number) => Fixture[];
   resetMatchData: () => void;
+  /** Capture current league table as the "previous" reference. Call before each monthly tick. */
+  snapshotLeagueTable: () => void;
 }
 
 function updateTableWithResult(
@@ -63,6 +72,7 @@ function sortTable(table: LeagueTableRow[]): LeagueTableRow[] {
 export const createMatchSlice: StateCreator<GameState, [], [], MatchSlice> = (set, get) => ({
   fixtures: [],
   leagueTable: [],
+  previousLeagueTable: [],
 
   initializeFixtures: (fixtures) => {
     set({ fixtures });
@@ -80,7 +90,7 @@ export const createMatchSlice: StateCreator<GameState, [], [], MatchSlice> = (se
       goalDifference: 0,
       points: 0,
     }));
-    set({ leagueTable: table });
+    set({ leagueTable: table, previousLeagueTable: table });
   },
 
   recordResult: (fixtureId, result) => {
@@ -98,6 +108,10 @@ export const createMatchSlice: StateCreator<GameState, [], [], MatchSlice> = (se
   },
 
   resetMatchData: () => {
-    set({ fixtures: [], leagueTable: [] });
+    set({ fixtures: [], leagueTable: [], previousLeagueTable: [] });
+  },
+
+  snapshotLeagueTable: () => {
+    set((state) => ({ previousLeagueTable: state.leagueTable.map((r) => ({ ...r })) }));
   },
 });

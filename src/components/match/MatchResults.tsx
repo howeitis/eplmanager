@@ -4,7 +4,7 @@ import { CLUBS } from '../../data/clubs';
 import { getClubLogoUrl } from '../../data/assets';
 import { LeagueTable } from '../shared/LeagueTable';
 import { ClubLink } from '../shared/ClubLink';
-import type { MatchResult, Fixture, SeasonEvent } from '../../types/entities';
+import type { Club, MatchResult, Fixture, Player, SeasonEvent } from '../../types/entities';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
@@ -283,7 +283,7 @@ function MatchScoreCard({
   fixture: Fixture;
   result: MatchResult;
   playerClubId: string | undefined;
-  clubs: { id: string; roster: { id: string; name: string }[] }[];
+  clubs: Club[];
   playerClubData?: ReturnType<typeof clubDataMap.get>;
   isUserSection?: boolean;
 }) {
@@ -291,10 +291,13 @@ function MatchScoreCard({
   const awayClub = clubDataMap.get(result.awayClubId);
   const isPlayerMatch = result.homeClubId === playerClubId || result.awayClubId === playerClubId;
 
-  const findPlayerName = (playerId: string, clubId: string): string => {
+  const findPlayer = (playerId: string, clubId: string): Player | undefined => {
     const club = clubs.find((c) => c.id === clubId);
-    const player = club?.roster.find((p) => p.id === playerId);
-    return player?.name || 'Unknown';
+    return club?.roster.find((p) => p.id === playerId);
+  };
+
+  const findPlayerName = (playerId: string, clubId: string): string => {
+    return findPlayer(playerId, clubId)?.name || 'Unknown';
   };
 
   const homeScorers = result.scorers
@@ -305,15 +308,57 @@ function MatchScoreCard({
     .map((s) => findPlayerName(s.playerId, result.awayClubId));
 
   // Chronological scorers for the user match — used for staggered reveal.
+  // The last chip per scorer carries a narrative tag (hat-trick / brace /
+  // season-milestone / first of the season) so the result tells a story
+  // rather than just listing names.
   const orderedUserScorers = useMemo(() => {
     if (!isPlayerMatch || !isUserSection) return [];
-    return [...result.scorers]
-      .sort((a, b) => a.minute - b.minute)
-      .map((s) => ({
+
+    const sorted = [...result.scorers].sort((a, b) => a.minute - b.minute);
+
+    // Goals scored in *this match* per player.
+    const matchGoals = new Map<string, number>();
+    for (const s of sorted) {
+      matchGoals.set(s.playerId, (matchGoals.get(s.playerId) || 0) + 1);
+    }
+
+    // Track running tally so we can mark the LAST chip per scorer.
+    const seenSoFar = new Map<string, number>();
+
+    return sorted.map((s) => {
+      const clubId = s.isHome ? result.homeClubId : result.awayClubId;
+      const player = findPlayer(s.playerId, clubId);
+      const totalInMatch = matchGoals.get(s.playerId) || 1;
+      const seen = (seenSoFar.get(s.playerId) || 0) + 1;
+      seenSoFar.set(s.playerId, seen);
+      const isLastForScorer = seen === totalInMatch;
+
+      let tag: string | null = null;
+      if (isLastForScorer && player) {
+        // `player.goals` includes goals scored up to and including this match.
+        // First-of-season iff the player's season tally equals their goals
+        // in this match.
+        const isFirstOfSeason = player.goals === totalInMatch;
+
+        if (totalInMatch >= 3) {
+          tag = totalInMatch === 3 ? 'hat-trick' : `${totalInMatch} goals`;
+        } else if (totalInMatch === 2) {
+          tag = 'brace';
+        } else if (isFirstOfSeason) {
+          tag = 'first of the season';
+        } else if (player.goals % 5 === 0) {
+          // Milestone: 5th, 10th, 15th… of the season
+          tag = `${player.goals}${ordinalSuffix(player.goals)} of the season`;
+        }
+      }
+
+      return {
         minute: s.minute,
         isHome: s.isHome,
-        name: findPlayerName(s.playerId, s.isHome ? result.homeClubId : result.awayClubId),
-      }));
+        name: player?.name || 'Unknown',
+        tag,
+      };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result.fixtureId, isPlayerMatch, isUserSection]);
 
@@ -481,6 +526,17 @@ function MatchScoreCard({
       )}
     </div>
   );
+}
+
+function ordinalSuffix(n: number): string {
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 13) return 'th';
+  switch (n % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
 }
 
 function dedupeScorers(names: string[]): string {

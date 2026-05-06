@@ -100,9 +100,35 @@ export const createMarketSlice: StateCreator<GameState, [], [], MarketSlice> = (
   },
 
   addTransferOffer: (offer) => {
-    set((state) => ({
-      transferOffers: [...state.transferOffers, offer],
-    }));
+    set((state) => {
+      // Dedupe: if the same buyer (toClubId) is bidding on the same player
+      // they're already pending/countered on, treat the new offer as a
+      // re-bid. Replace the prior open offer instead of stacking — keeps
+      // the inbox tidy and matches how a real club would handle a higher
+      // counter rather than seeing two parallel bids from the same suitor.
+      const isOpen = (status: TransferOffer['status']) =>
+        status === 'pending' || status === 'countered';
+      const existingIdx = state.transferOffers.findIndex(
+        (o) =>
+          isOpen(o.status) &&
+          o.direction === offer.direction &&
+          o.playerId === offer.playerId &&
+          o.fromClubId === offer.fromClubId &&
+          o.toClubId === offer.toClubId,
+      );
+      if (existingIdx === -1) {
+        return { transferOffers: [...state.transferOffers, offer] };
+      }
+      const existing = state.transferOffers[existingIdx];
+      // Only replace if the new bid is at least as high — incidental
+      // duplicate calls (e.g. retry) shouldn't downgrade an active offer.
+      if (offer.fee < existing.fee) {
+        return state;
+      }
+      const next = state.transferOffers.slice();
+      next[existingIdx] = { ...offer, id: existing.id };
+      return { transferOffers: next };
+    });
   },
 
   updateTransferOffer: (offerId, status, counterFee) => {

@@ -25,6 +25,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
   const clubs = useGameStore((s) => s.clubs);
   const budgets = useGameStore((s) => s.budgets);
   const leagueTable = useGameStore((s) => s.leagueTable);
+  const clubReputation = useGameStore((s) => s.clubReputation);
   const shortlistNotifications = useGameStore((s) => s.shortlistNotifications);
   const clearShortlistNotifications = useGameStore((s) => s.clearShortlistNotifications);
   const saveSlot = useGameStore((s) => s.saveSlot);
@@ -155,6 +156,13 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
                 {manager?.name}
               </p>
               <ReputationGauge reputation={manager?.reputation ?? 0} accent={clubData?.colors.primary} />
+              {playerClub && (
+                <ClubReputationGauge
+                  reputation={clubReputation[playerClub.id] ?? 50}
+                  tier={playerClub.tier}
+                  accent={clubData?.colors.primary}
+                />
+              )}
             </div>
           </div>
           <div className="plm-grid plm-grid-cols-4 plm-gap-2">
@@ -250,7 +258,7 @@ function isLightColor(hex: string): boolean {
 
 function ReputationGauge({ reputation, accent }: { reputation: number; accent?: string }) {
   const pct = Math.max(0, Math.min(100, reputation));
-  const tier =
+  const standing =
     reputation >= 80 ? 'Iconic' :
     reputation >= 60 ? 'Established' :
     reputation >= 40 ? 'Respected' :
@@ -258,14 +266,58 @@ function ReputationGauge({ reputation, accent }: { reputation: number; accent?: 
   return (
     <div className="plm-mt-1.5">
       <div className="plm-flex plm-items-center plm-justify-between plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-wider plm-font-semibold">
-        <span>Reputation</span>
-        <span className="plm-tabular-nums plm-text-charcoal">{reputation} · {tier}</span>
+        <span>Manager Reputation</span>
+        <span className="plm-tabular-nums plm-text-charcoal">{reputation} · {standing}</span>
       </div>
       <div className="plm-mt-1 plm-h-1.5 plm-w-full plm-rounded-full plm-bg-warm-100 plm-overflow-hidden">
         <div
           className="plm-h-full plm-rounded-full plm-transition-all plm-duration-700"
           style={{ width: `${pct}%`, backgroundColor: accent || '#1A1A1A' }}
         />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Club reputation gauge — separate from manager rep. Shows where the club
+ * sits across the five competitive bands (Elite → Struggling) and which
+ * direction it's trending. Climbs/falls organically as the club outperforms
+ * or underperforms its current tier across multiple seasons.
+ */
+function ClubReputationGauge({ reputation, tier, accent }: {
+  reputation: number;
+  tier: number;
+  accent?: string;
+}) {
+  const pct = Math.max(0, Math.min(100, reputation));
+  const label =
+    tier === 1 ? 'Elite' :
+    tier === 2 ? 'Established' :
+    tier === 3 ? 'Mid-table' :
+    tier === 4 ? 'Battling' : 'Struggling';
+  // Tick markers visualize the 5 tier bands so it's clear the bar isn't a
+  // single linear value but a position within a hierarchy.
+  const tickPositions = [38, 55, 72, 88]; // matches TIER_REP_THRESHOLDS in clubReputation.ts
+  return (
+    <div className="plm-mt-3">
+      <div className="plm-flex plm-items-center plm-justify-between plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-wider plm-font-semibold">
+        <span>Club Reputation</span>
+        <span className="plm-tabular-nums plm-text-charcoal">Tier {tier} · {label}</span>
+      </div>
+      <div className="plm-mt-1 plm-relative plm-h-1.5 plm-w-full plm-rounded-full plm-bg-warm-100 plm-overflow-hidden">
+        <div
+          className="plm-h-full plm-rounded-full plm-transition-all plm-duration-700"
+          style={{ width: `${pct}%`, backgroundColor: accent || '#1A1A1A' }}
+        />
+        {tickPositions.map((p) => (
+          <span
+            key={p}
+            className="plm-absolute plm-top-0 plm-h-full plm-w-px plm-bg-warm-300/80"
+            style={{ left: `${p}%` }}
+            aria-hidden
+          />
+        ))}
       </div>
     </div>
   );

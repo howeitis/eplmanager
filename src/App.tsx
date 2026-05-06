@@ -52,6 +52,8 @@ import { generateMonthlyEvents } from './engine/events';
 import { simulateFACup } from './engine/faCup';
 import { processLeagueAging, replenishSquad, annualYouthIntake, type AgingResult } from './engine/aging';
 import { getCalendarYear, generateJulyNarrative } from './engine/seasonNarrative';
+import { validateTransferState } from './engine/transfers';
+import { STARTING_REP_BY_TIER } from './engine/clubReputation';
 import {
   calculateSeasonReputationChange,
   calculateSeasonEndBudget,
@@ -240,6 +242,18 @@ function App() {
           shortlist: (data as unknown as Record<string, unknown>).shortlist as string[] || [],
           shortlistNotifications: [],
           boardMeetingPending: (data as unknown as Record<string, unknown>).boardMeetingPending as boolean || false,
+          // New in v1.x — backfill from migratedClubs.tier so older saves work.
+          previousLeagueTable: (data.previousLeagueTable || []) as typeof state.previousLeagueTable,
+          clubReputation: (() => {
+            const saved = data.clubReputation;
+            if (saved && Object.keys(saved).length > 0) return saved;
+            // Older save without reputation: seed from each club's current tier.
+            const seed: Record<string, number> = {};
+            for (const c of migratedClubs as typeof state.clubs) {
+              seed[c.id] = STARTING_REP_BY_TIER[c.tier] ?? 50;
+            }
+            return seed;
+          })(),
         });
         // Restore formation from manager's preferred formation
         if (migratedManager?.preferredFormation) {
@@ -470,6 +484,22 @@ function App() {
         }
       }
 
+      // Dev-only invariant check: after the window closes the state should be
+      // internally consistent (no negative budgets, no oversized squads).
+      // Stripped from production by Vite — purely a development tripwire so
+      // bugs surface at the moment they're introduced rather than several
+      // saves later.
+      if (import.meta.env.DEV) {
+        const post = store.getState();
+        const validation = validateTransferState(post.clubs, post.budgets);
+        if (!validation.valid) {
+          console.error(
+            `[transfers] state invariants violated after ${currentPhase}:\n` +
+              validation.errors.map((e) => `  • ${e}`).join('\n'),
+          );
+        }
+      }
+
       // august_deadline → september, january_deadline → february
       const phaseIdx = PHASE_ORDER.indexOf(currentPhase);
       state.setPhase(PHASE_ORDER[phaseIdx + 1]);
@@ -603,6 +633,10 @@ function App() {
     const state = store.getState();
     const { clubs, fixtures, leagueTable } = state;
     const monthRng = new SeededRNG(`${sSeed}-month-${phase}`);
+
+    // Snapshot pre-month league positions so the table UI can show
+    // position-change arrows after the round and animate the reshuffle.
+    state.snapshotLeagueTable();
 
     // Snapshot pre-month goals/assists for monthly delta tracking
     const preMonthGoals = new Map<string, Map<string, number>>();
@@ -1040,6 +1074,11 @@ function App() {
       transferLog: state.transferHistory.filter((t) => t.season === seasonNumber),
       events,
     });
+
+    // Update each club's reputation/tier based on this season's finish.
+    // Mobility is small per season — clubs typically need 2–3 strong years
+    // to climb a tier and 2–3 lean ones to fall.
+    state.applyClubReputationsForSeason(sorted);
 
     // Process aging
     const agingRng = new SeededRNG(`${sSeed}-aging`);

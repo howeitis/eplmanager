@@ -249,8 +249,11 @@ function PitchSlot({
 
         {/* Injury badge */}
         {isInjured && (
-          <span className="plm-text-[7px] plm-bg-red-600 plm-text-white plm-px-1 plm-rounded plm-font-bold plm-mt-0.5">
-            INJ
+          <span
+            className="plm-text-[7px] plm-bg-red-600 plm-text-white plm-px-1 plm-rounded plm-font-bold plm-mt-0.5 plm-tabular-nums"
+            title={`Out ${player?.injuryWeeks ?? 0} month${(player?.injuryWeeks ?? 0) === 1 ? '' : 's'}`}
+          >
+            INJ {player?.injuryWeeks ?? 0}m
           </span>
         )}
 

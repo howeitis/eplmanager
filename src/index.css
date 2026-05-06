@@ -55,6 +55,24 @@ input:focus-visible {
   transition: transform 0.4s ease-out, opacity 0.3s ease-out;
 }
 
+/* League-table reshuffle: a row that moved up/down between snapshots
+   animates from its previous y-offset back to 0, giving the table a
+   sense of motion when standings change. Driven by inline style. */
+@keyframes plm-table-reshuffle-up {
+  0%   { transform: translateY(var(--plm-row-shift, 0)); }
+  100% { transform: translateY(0); }
+}
+@keyframes plm-table-reshuffle-down {
+  0%   { transform: translateY(var(--plm-row-shift, 0)); }
+  100% { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Respect the OS-level "reduce motion" preference. */
+  tr {
+    animation: none !important;
+  }
+}
+
 /* Scrollbar styling for the editorial feel */
 ::-webkit-scrollbar {
   width: 6px;
