@@ -185,3 +185,44 @@ export function getNamePool(nationality: string): NameSet {
   const key = NATIONALITY_ALIASES[nationality] || nationality.replace(/-/g, '_');
   return NAME_POOLS[key] || NAME_POOLS['english'];
 }
+
+/**
+ * Infer a player's nationality by scanning all name pools for a match.
+ * Used to recover nationality on old saves where the field is missing.
+ *
+ * Priority: both first + last name match > last name only > first name only > 'english'.
+ * Compound last names (e.g. "de Jong", "van Dijk", "Di Maria") are tried before
+ * the single final word so they are resolved correctly.
+ */
+export function inferNationalityFromName(name: string): string {
+  const parts = name.trim().split(' ');
+  if (parts.length < 2) return 'english';
+
+  const firstName = parts[0];
+  // Try the full remainder as last name first (handles "de Jong", "van Dijk", etc.)
+  const lastNameFull = parts.slice(1).join(' ');
+  const lastNameSimple = parts[parts.length - 1];
+
+  const lastNames = lastNameFull === lastNameSimple
+    ? [lastNameFull]
+    : [lastNameFull, lastNameSimple];
+
+  const hasLastName = (pool: NameSet) => lastNames.some((ln) => pool.lastNames.includes(ln));
+
+  // Prefer pools where both first AND last name match
+  for (const [nat, pool] of Object.entries(NAME_POOLS)) {
+    if (pool.firstNames.includes(firstName) && hasLastName(pool)) return nat;
+  }
+
+  // Fall back: last name only (more distinctive than first names)
+  for (const [nat, pool] of Object.entries(NAME_POOLS)) {
+    if (hasLastName(pool)) return nat;
+  }
+
+  // Fall back: first name only
+  for (const [nat, pool] of Object.entries(NAME_POOLS)) {
+    if (pool.firstNames.includes(firstName)) return nat;
+  }
+
+  return 'english';
+}
