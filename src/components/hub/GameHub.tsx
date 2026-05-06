@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
+import { getClubLogoUrl, getNationalTeamLogoUrl } from '../../data/assets';
 import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { SquadMiniView } from './SquadMiniView';
@@ -16,9 +16,10 @@ interface GameHubProps {
   onAdvance: () => void;
   advanceLabel: string;
   julyNarrative?: string | null;
+  julyWinnerNationality?: string | null;
 }
 
-export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: GameHubProps) {
+export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, julyWinnerNationality }: GameHubProps) {
   const manager = useGameStore((s) => s.manager);
   const seasonNumber = useGameStore((s) => s.seasonNumber);
   const currentPhase = useGameStore((s) => s.currentPhase);
@@ -60,7 +61,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
   return (
     <div className="plm-flex plm-flex-col lg:plm-flex-row plm-gap-6 plm-w-full">
       {/* Desktop: League table on the left, sticky */}
-      <div className="plm-hidden lg:plm-block lg:plm-w-[420px] lg:plm-flex-shrink-0">
+      <div className="plm-hidden lg:plm-block lg:plm-w-[520px] lg:plm-flex-shrink-0">
         <div className="lg:plm-sticky lg:plm-top-6">
           <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
             <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-3">
@@ -79,14 +80,26 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
         </div>
 
         {/* July narrative (WC / Euro / preseason) */}
-        {currentPhase === 'july_advance' && julyNarrative && (
-          <div className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded-lg plm-p-4">
-            <h3 className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-amber-700 plm-mb-1.5">
-              Summer Headlines
-            </h3>
-            <p className="plm-text-sm plm-text-amber-900 plm-leading-relaxed">{julyNarrative}</p>
-          </div>
-        )}
+        {currentPhase === 'july_advance' && julyNarrative && (() => {
+          const crestUrl = julyWinnerNationality ? getNationalTeamLogoUrl(julyWinnerNationality) : null;
+          return (
+            <div className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded-lg plm-p-4">
+              <h3 className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-amber-700 plm-mb-1.5">
+                Summer Headlines
+              </h3>
+              <div className="plm-flex plm-items-start plm-gap-3">
+                {crestUrl && (
+                  <img
+                    src={crestUrl}
+                    alt=""
+                    className="plm-w-10 plm-h-10 plm-flex-shrink-0 plm-object-contain plm-mt-0.5"
+                  />
+                )}
+                <p className="plm-text-sm plm-text-amber-900 plm-leading-relaxed plm-min-w-0">{julyNarrative}</p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Deadline day banner */}
         {(currentPhase === 'august_deadline' || currentPhase === 'january_deadline') && (

@@ -116,6 +116,7 @@ function App() {
   const [agingResults, setAgingResults] = useState<AgingResult[]>([]);
   const [xiNotifications, setXiNotifications] = useState<XISwap[]>([]);
   const [julyNarrative, setJulyNarrative] = useState<string | null>(null);
+  const [julyWinnerNationality, setJulyWinnerNationality] = useState<string | null>(null);
   const [packPlayers, setPackPlayers] = useState<import('./types/entities').Player[]>([]);
   const [packConfig, setPackConfig] = useState<{ title: string; subtitle?: string; onComplete?: () => void } | null>(null);
   const [youthIntakePlayers, setYouthIntakePlayers] = useState<import('./types/entities').Player[]>([]);
@@ -532,6 +533,7 @@ function App() {
       const julyRng = new SeededRNG(`${sSeed}-july-narrative`);
       const julyResult = generateJulyNarrative(julyRng, calendarYear);
       setJulyNarrative(julyResult.text);
+      setJulyWinnerNationality(julyResult.winnerNationality);
       if (julyResult.englandWonTournament) {
         state.adjustBudget(playerClubId, 15);
         const trophyName = julyResult.englandWonTournament === 'world_cup' ? 'World Cup' : 'European Championship';
@@ -1250,6 +1252,7 @@ function App() {
     setMonthEvents([]);
     setXiNotifications([]);
     setJulyNarrative(null);
+    setJulyWinnerNationality(null);
     // Clear Starting XI for new season (will be auto-populated when first month starts)
     store.getState().clearStartingXI();
     store.getState().clearStartingXIHistory();
@@ -1424,6 +1427,7 @@ function App() {
                 onAdvance={handleAdvance}
                 advanceLabel={advanceLabel}
                 julyNarrative={julyNarrative}
+                julyWinnerNationality={julyWinnerNationality}
               />
             )}
             {gameView === 'squad' && (

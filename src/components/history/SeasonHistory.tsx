@@ -47,18 +47,28 @@ export function SeasonHistoryScreen() {
     return { mostGoals, highestPoints, longestStreak };
   }, [seasonHistories]);
 
-  // Trophy cabinet
+  // Trophy cabinet — league titles from final table + FA Cup wins from accomplishments
   const trophies = useMemo(() => {
-    const result: { season: number; award: string }[] = [];
+    const result: { season: number; award: string; type: 'league' | 'fa-cup' }[] = [];
     for (const history of seasonHistories) {
       if (history.finalTable.length === 0) continue;
       const sorted = [...history.finalTable].sort((a, b) => b.points - a.points);
       if (sorted[0]?.clubId === playerClubId) {
-        result.push({ season: history.seasonNumber, award: 'League Champion' });
+        result.push({ season: history.seasonNumber, award: 'League Champion', type: 'league' });
       }
     }
+    // FA Cup wins from manager accomplishments
+    if (manager?.accomplishments) {
+      for (const acc of manager.accomplishments) {
+        if (acc.type === 'fa-cup' && acc.clubId === playerClubId) {
+          result.push({ season: acc.season, award: 'FA Cup Winner', type: 'fa-cup' });
+        }
+      }
+    }
+    // Sort by season, then league before fa-cup
+    result.sort((a, b) => a.season - b.season || (a.type === 'league' ? -1 : 1));
     return result;
-  }, [seasonHistories, playerClubId]);
+  }, [seasonHistories, playerClubId, manager?.accomplishments]);
 
   const tutorialButton = (
     <button
@@ -114,15 +124,20 @@ export function SeasonHistoryScreen() {
             Trophy Cabinet
           </h3>
           <div className="plm-flex plm-flex-wrap plm-gap-2">
-            {trophies.map((t, i) => (
-              <div key={i} className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded plm-px-3 plm-py-2 plm-text-center">
-                <div className="plm-text-lg">&#9733;</div>
-                <div className="plm-text-[10px] plm-font-bold plm-text-amber-700 plm-uppercase">
-                  {t.award}
+            {trophies.map((t, i) => {
+              const startYear = 2025 + (t.season - 1);
+              const yearLabel = `Season ${t.season}, ${startYear.toString().slice(-2)}/${(startYear + 1).toString().slice(-2)}`;
+              const trophyImg = t.type === 'league' ? '/trophies/epl trophy.png' : '/trophies/fa cup trophy.png';
+              return (
+                <div key={i} className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded plm-px-3 plm-py-2 plm-text-center">
+                  <img src={trophyImg} alt={t.award} className="plm-w-10 plm-h-10 plm-mx-auto plm-object-contain" />
+                  <div className="plm-text-[10px] plm-font-bold plm-text-amber-700 plm-uppercase plm-mt-1">
+                    {t.award}
+                  </div>
+                  <div className="plm-text-[10px] plm-text-amber-600">{yearLabel}</div>
                 </div>
-                <div className="plm-text-[10px] plm-text-amber-600">Season {t.season}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

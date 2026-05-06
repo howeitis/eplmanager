@@ -46,7 +46,25 @@ const RANDOM_EURO_HOSTS = [
 export interface JulyNarrativeResult {
   text: string;
   englandWonTournament: 'world_cup' | 'euros' | null;
+  /** Nationality key for the tournament winner (e.g. "brazilian"), null when no tournament. */
+  winnerNationality: string | null;
 }
+
+/** Maps country names used in the winner pools to asset nationality keys. */
+const COUNTRY_TO_NATIONALITY: Record<string, string> = {
+  Brazil: 'brazilian',
+  Argentina: 'argentinian',
+  France: 'french',
+  Germany: 'german',
+  Spain: 'spanish',
+  England: 'english',
+  Italy: 'italian',
+  Netherlands: 'dutch',
+  Portugal: 'portuguese',
+  Belgium: 'belgian',
+  Denmark: 'danish',
+  Croatia: 'croatian',
+};
 
 export function generateJulyNarrative(rng: SeededRNG, calendarYear: number): JulyNarrativeResult {
   const tournament = getSummerTournament(calendarYear);
@@ -62,14 +80,14 @@ export function generateJulyNarrative(rng: SeededRNG, calendarYear: number): Jul
     const winner = winners[rng.randomInt(0, winners.length - 1)];
     if (winner === 'England') {
       const line = `IT'S COMING HOME! England are World Cup champions after lifting the trophy in ${host}. Pubs are packed, the nation rejoices — and the board has unlocked a £15M commercial windfall on the back of the celebrations.`;
-      return { text: line, englandWonTournament: 'world_cup' };
+      return { text: line, englandWonTournament: 'world_cup', winnerNationality: 'english' };
     }
     const dramas = [
       `${winner} lifted the World Cup trophy in ${host} after a dramatic final.`,
       `A golden generation delivered as ${winner} won the ${calendarYear} World Cup in ${host}.`,
       `${winner} are World Cup champions! The tournament in ${host} will be remembered for years.`,
     ];
-    return { text: dramas[rng.randomInt(0, dramas.length - 1)], englandWonTournament: null };
+    return { text: dramas[rng.randomInt(0, dramas.length - 1)], englandWonTournament: null, winnerNationality: COUNTRY_TO_NATIONALITY[winner] || null };
   }
 
   if (tournament === 'euros') {
@@ -83,17 +101,17 @@ export function generateJulyNarrative(rng: SeededRNG, calendarYear: number): Jul
     const winner = winners[rng.randomInt(0, winners.length - 1)];
     if (winner === 'England') {
       const line = `FOOTBALL'S COMING HOME! England are Kings of Europe after winning Euro ${calendarYear} in ${host}. A generation-defining summer — and the board has unlocked a £15M commercial windfall on the back of the celebrations.`;
-      return { text: line, englandWonTournament: 'euros' };
+      return { text: line, englandWonTournament: 'euros', winnerNationality: 'english' };
     }
     const dramas = [
       `${winner} won Euro ${calendarYear} hosted by ${host} after a thrilling summer of football.`,
       `Euro ${calendarYear} in ${host} is over — ${winner} are the new champions of Europe!`,
       `${winner} crowned European champions in ${host}! Their players return to their clubs on a high.`,
     ];
-    return { text: dramas[rng.randomInt(0, dramas.length - 1)], englandWonTournament: null };
+    return { text: dramas[rng.randomInt(0, dramas.length - 1)], englandWonTournament: null, winnerNationality: COUNTRY_TO_NATIONALITY[winner] || null };
   }
 
-  return { text: pickPreseasonStory(rng), englandWonTournament: null };
+  return { text: pickPreseasonStory(rng), englandWonTournament: null, winnerNationality: null };
 }
 
 export function pickPreseasonStory(rng: SeededRNG): string {
