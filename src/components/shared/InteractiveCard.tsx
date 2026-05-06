@@ -247,7 +247,7 @@ export function InteractiveCard({
               willChange: 'transform',
               '--plm-glare-x': `${glare.px}%`,
               '--plm-glare-y': `${glare.py}%`,
-            } as React.CSSProperties}
+            } as unknown as React.CSSProperties}
           >
             {/* Flip layer */}
             <animated.div
@@ -299,7 +299,7 @@ export function InteractiveCard({
           willChange: 'transform, opacity',
           '--plm-glare-x': `${glare.px}%`,
           '--plm-glare-y': `${glare.py}%`,
-        } as React.CSSProperties}
+        } as unknown as React.CSSProperties}
       >
         <div className="plm-relative plm-rounded-xl plm-overflow-hidden">
           {children}
