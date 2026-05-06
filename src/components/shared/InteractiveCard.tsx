@@ -7,7 +7,7 @@ import { getCardEffectTier } from '../../utils/cardTier';
 // Fulcrum at the center of the card. Pointer position relative to card
 // center drives rotateX/rotateY. Finger/cursor near the bottom edge → bottom
 // tilts away from the viewer, top tilts toward. Works on both mouse (hover)
-// and touch (drag). Tap-to-flip uses onClick for reliable cross-platform firing.
+// and touch (drag). Tap-to-flip uses both pointerUp and onClick for reliability.
 const MAX_TILT_DEG = 30;
 
 // Movement threshold that disqualifies a tap (treats it as a drag/scroll).
@@ -47,8 +47,8 @@ export function InteractiveCard({
   const containerRef = useRef<HTMLDivElement>(null);
   const exitingRef = useRef(false);
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  // Whether the last pointer-down→up was a tap (small movement). Read by onClick.
-  const lastWasTapRef = useRef(false);
+  // Debounce: prevent double-fire from pointerUp + click both triggering flip.
+  const lastFlipTimeRef = useRef(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
   // Glare position derived from current tilt. The sheen appears on the edge
@@ -78,6 +78,10 @@ export function InteractiveCard({
 
   const handleTapFlip = useCallback(() => {
     if (!cardBack || reducedMotion || exitingRef.current) return;
+    // Debounce: prevent double-fire within 400ms
+    const now = performance.now();
+    if (now - lastFlipTimeRef.current < 400) return;
+    lastFlipTimeRef.current = now;
     setIsFlipped((prev) => {
       const next = !prev;
       api.start({
@@ -97,13 +101,13 @@ export function InteractiveCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Spring back to neutral on release / pointer-leave ───
+  // ─── Spring back to neutral — slow, graceful ease ───
   const settleToNeutral = useCallback(() => {
     api.start({
       rotX: 0,
       rotY: 0,
       scale: 1,
-      config: { mass: 1, tension: 170, friction: 22 },
+      config: { mass: 2, tension: 60, friction: 18 },
     });
     updateGlareFromTilt(0, 0);
   }, [api, updateGlareFromTilt]);
@@ -140,13 +144,10 @@ export function InteractiveCard({
     settleToNeutral();
   }, [reducedMotion, settleToNeutral]);
 
-  // ─── Pointer tracking for tap detection ───
-  // Record where the pointer started; on pointerUp, mark whether it was a tap.
-  // The actual flip fires from onClick (reliable on both mouse and touch).
+  // ─── Pointer tracking for tap detection + flip ───
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (reducedMotion || exitingRef.current) return;
     tapStartRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
-    lastWasTapRef.current = false;
   }, [reducedMotion]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
@@ -156,48 +157,43 @@ export function InteractiveCard({
     if (start) {
       const dx = Math.abs(e.clientX - start.x);
       const dy = Math.abs(e.clientY - start.y);
-      lastWasTapRef.current = dx < TAP_DISTANCE_PX && dy < TAP_DISTANCE_PX;
+      if (dx < TAP_DISTANCE_PX && dy < TAP_DISTANCE_PX) {
+        // Fire flip directly from pointerUp (works on desktop, sometimes mobile)
+        handleTapFlip();
+      }
     }
     // Settle tilt back to neutral when touch ends (mouse settles on leave).
     if (e.pointerType === 'touch') {
       settleToNeutral();
     }
-  }, [reducedMotion, settleToNeutral]);
+  }, [reducedMotion, handleTapFlip, settleToNeutral]);
 
   const handlePointerCancel = useCallback(() => {
     tapStartRef.current = null;
-    lastWasTapRef.current = false;
     settleToNeutral();
   }, [settleToNeutral]);
 
-  // ─── Click handler: fires reliably on both mouse and touch ───
-  // Uses the tap ref set by pointer handlers to distinguish taps from drags.
+  // ─── Click handler: fires reliably on touch after ~300ms delay ───
+  // Serves as a fallback for mobile browsers where pointerUp may not trigger the flip.
+  // The debounce in handleTapFlip prevents double-fire when both pointerUp and click work.
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation(); // prevent modal backdrop dismiss
-    if (lastWasTapRef.current) {
-      lastWasTapRef.current = false;
-      handleTapFlip();
-    }
+    handleTapFlip();
   }, [handleTapFlip]);
 
   // ─── Transform strings ───
-  const outerTransform = to(
-    [spring.x, spring.y, spring.rotX, spring.rotY, spring.scale],
-    (x, y, rx, ry, s) => `translate3d(${x}px, ${y}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`
+  // Separate position/opacity from 3D transforms so opacity never breaks preserve-3d.
+  const positionTransform = to(
+    [spring.x, spring.y],
+    (x, y) => `translate3d(${x}px, ${y}px, 0)`
+  );
+
+  const tiltTransform = to(
+    [spring.rotX, spring.rotY, spring.scale],
+    (rx, ry, s) => `rotateX(${rx}deg) rotateY(${ry}deg) scale(${s})`
   );
 
   const innerTransform = spring.flipY.to((fy: number) => `rotateY(${fy}deg)`);
-
-  const sharedStyle = {
-    transform: outerTransform,
-    opacity: spring.opacity,
-    '--plm-glare-x': `${glare.px}%`,
-    '--plm-glare-y': `${glare.py}%`,
-    willChange: 'transform, opacity',
-    perspective: 1000,
-    touchAction: 'pan-y' as const,
-    cursor: cardBack ? 'pointer' : undefined,
-  } as unknown as React.CSSProperties;
 
   const overlays = (
     <>
@@ -209,12 +205,17 @@ export function InteractiveCard({
 
   if (cardBack) {
     return (
-      <animated.div
+      // Outermost: event handling + perspective provider
+      <div
         ref={containerRef}
         role="button"
         tabIndex={0}
         className="plm-relative plm-select-none"
-        style={{ ...sharedStyle, transformStyle: 'preserve-3d' as const }}
+        style={{
+          perspective: '1000px',
+          touchAction: 'pan-y',
+          cursor: 'pointer',
+        }}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         onPointerDown={handlePointerDown}
@@ -230,36 +231,60 @@ export function InteractiveCard({
         aria-label={isFlipped ? 'Show card front' : 'Show card back'}
         aria-pressed={isFlipped}
       >
+        {/* Position + opacity layer (does NOT need preserve-3d) */}
         <animated.div
           style={{
-            transformStyle: 'preserve-3d',
-            transform: innerTransform,
-            willChange: 'transform',
+            transform: positionTransform,
+            opacity: spring.opacity,
+            willChange: 'transform, opacity',
           }}
         >
-          <div
-            className="plm-relative plm-rounded-xl plm-overflow-hidden"
-            style={{ backfaceVisibility: 'hidden' }}
+          {/* Tilt layer (3D chain starts here) */}
+          <animated.div
+            style={{
+              transform: tiltTransform,
+              transformStyle: 'preserve-3d',
+              willChange: 'transform',
+              '--plm-glare-x': `${glare.px}%`,
+              '--plm-glare-y': `${glare.py}%`,
+            } as React.CSSProperties}
           >
-            {children}
-            {overlays}
-          </div>
-          <div
-            className="plm-absolute plm-inset-0 plm-rounded-xl plm-overflow-hidden"
-            style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-          >
-            {cardBack}
-          </div>
+            {/* Flip layer */}
+            <animated.div
+              style={{
+                transformStyle: 'preserve-3d',
+                transform: innerTransform,
+                willChange: 'transform',
+              }}
+            >
+              {/* Front face */}
+              <div
+                className="plm-relative plm-rounded-xl plm-overflow-hidden"
+                style={{ backfaceVisibility: 'hidden' }}
+              >
+                {children}
+                {overlays}
+              </div>
+              {/* Back face */}
+              <div
+                className="plm-absolute plm-inset-0 plm-rounded-xl plm-overflow-hidden"
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+              >
+                {cardBack}
+              </div>
+            </animated.div>
+          </animated.div>
         </animated.div>
-      </animated.div>
+      </div>
     );
   }
 
+  // Simple path (no flip)
   return (
-    <animated.div
+    <div
       ref={containerRef}
       className="plm-relative plm-select-none"
-      style={sharedStyle}
+      style={{ perspective: '1000px', touchAction: 'pan-y' }}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onPointerDown={handlePointerDown}
@@ -267,11 +292,21 @@ export function InteractiveCard({
       onPointerCancel={handlePointerCancel}
       onClick={handleClick}
     >
-      <div className="plm-relative plm-rounded-xl plm-overflow-hidden">
-        {children}
-        {overlays}
-      </div>
-    </animated.div>
+      <animated.div
+        style={{
+          transform: tiltTransform,
+          opacity: spring.opacity,
+          willChange: 'transform, opacity',
+          '--plm-glare-x': `${glare.px}%`,
+          '--plm-glare-y': `${glare.py}%`,
+        } as React.CSSProperties}
+      >
+        <div className="plm-relative plm-rounded-xl plm-overflow-hidden">
+          {children}
+          {overlays}
+        </div>
+      </animated.div>
+    </div>
   );
 }
 

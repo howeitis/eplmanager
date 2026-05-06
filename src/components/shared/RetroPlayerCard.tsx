@@ -217,6 +217,7 @@ export function RetroPlayerCard({
   const formShadow = getFormDropShadow(player.form ?? 0);
   const serialNumber = getSerialNumber(player.id);
   const trophies = player.trophiesWon || [];
+  const goldenBoots = player.goldenBoots ?? [];
   const summaryParts = size !== 'sm' ? generateScoutSummaryParts(player, { recentTransfers }) : null;
 
   // ─── Bottom-right corner ornament ───
@@ -377,6 +378,32 @@ export function RetroPlayerCard({
                     }}
                   >
                     {t.type === 'league' ? '🏆' : '🏅'}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Golden Boot stamps on card back */}
+          {goldenBoots.length > 0 && (
+            <div className="plm-flex plm-flex-col plm-items-center plm-gap-1.5 plm-px-3 plm-mt-2">
+              <span
+                className={`${fs.pos} plm-font-display plm-font-bold plm-uppercase plm-tracking-widest`}
+                style={{ color: '#D97706', opacity: 0.9 }}
+              >
+                Golden Boot · {goldenBoots.length}
+              </span>
+              <div className="plm-flex plm-flex-wrap plm-justify-center plm-gap-1.5">
+                {goldenBoots.map((season, i) => (
+                  <span
+                    key={i}
+                    title={`Golden Boot — Season ${season}`}
+                    style={{
+                      fontSize: size === 'xl' ? 22 : size === 'lg' ? 18 : size === 'md' ? 16 : 14,
+                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',
+                    }}
+                  >
+                    👟
                   </span>
                 ))}
               </div>

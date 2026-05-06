@@ -7,6 +7,16 @@ const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SK
 
 type AgingSort = 'risers' | 'decliners' | 'age';
 
+/** Determine visual card tier from overall rating. */
+function cardTierFromOverall(ovr: number): 'bronze' | 'silver' | 'gold' | 'elite' {
+  if (ovr >= 85) return 'elite';
+  if (ovr >= 80) return 'gold';
+  if (ovr >= 75) return 'silver';
+  return 'bronze';
+}
+
+const TIER_ORDER = { bronze: 0, silver: 1, gold: 2, elite: 3 } as const;
+
 interface AgingReportProps {
   agingResults: AgingResult[];
 }
@@ -29,6 +39,7 @@ export function AgingReport({ agingResults }: AgingReportProps) {
       preStats: PlayerStats;
       overallDelta: number;
       statDeltas: Record<keyof PlayerStats, number>;
+      tierUpgrade: string | null; // e.g. "Gold" if player crossed a tier boundary upward
     }[] = [];
 
     for (const player of playerClub.roster) {
@@ -49,7 +60,17 @@ export function AgingReport({ agingResults }: AgingReportProps) {
       const devEntry = clubAgingResult.developed.find((d) => d.playerId === player.id);
       const overallDelta = devEntry ? devEntry.newOverall - devEntry.oldOverall : 0;
 
-      entries.push({ player, preStats, overallDelta, statDeltas });
+      // Detect tier upgrade
+      let tierUpgrade: string | null = null;
+      if (devEntry && overallDelta > 0) {
+        const oldTier = cardTierFromOverall(devEntry.oldOverall);
+        const newTier = cardTierFromOverall(devEntry.newOverall);
+        if (TIER_ORDER[newTier] > TIER_ORDER[oldTier]) {
+          tierUpgrade = newTier.charAt(0).toUpperCase() + newTier.slice(1);
+        }
+      }
+
+      entries.push({ player, preStats, overallDelta, statDeltas, tierUpgrade });
     }
 
     // Sort
@@ -119,10 +140,14 @@ export function AgingReport({ agingResults }: AgingReportProps) {
 
         {/* Player Development Cards */}
         <div className="plm-grid plm-grid-cols-1 md:plm-grid-cols-2 plm-gap-2 plm-mb-6">
-          {playerEntries.map(({ player, overallDelta, statDeltas }) => (
+          {playerEntries.map(({ player, overallDelta, statDeltas, tierUpgrade }) => (
             <div
               key={player.id}
-              className="plm-rounded-lg plm-border plm-border-warm-200 plm-p-3 plm-bg-warm-50"
+              className={`plm-rounded-lg plm-border plm-p-3 ${
+                tierUpgrade
+                  ? 'plm-border-amber-300 plm-bg-gradient-to-br plm-from-amber-50 plm-to-white'
+                  : 'plm-border-warm-200 plm-bg-warm-50'
+              }`}
             >
               <div className="plm-flex plm-items-center plm-justify-between plm-mb-2">
                 <div>
@@ -148,6 +173,8 @@ export function AgingReport({ agingResults }: AgingReportProps) {
                   </div>
                 ))}
               </div>
+
+              {tierUpgrade && <TierUpgradeBadge tier={tierUpgrade} />}
             </div>
           ))}
         </div>
@@ -229,4 +256,26 @@ function StatDelta({ delta }: { delta: number }) {
   if (delta > 0) return <div className="plm-text-[9px] plm-font-bold plm-text-emerald-600">+{delta}</div>;
   if (delta < 0) return <div className="plm-text-[9px] plm-font-bold plm-text-red-600">{delta}</div>;
   return <div className="plm-text-[9px] plm-text-warm-300">=</div>;
+}
+
+const TIER_STYLES: Record<string, { bg: string; text: string; glow: string; icon: string }> = {
+  Silver: { bg: 'plm-bg-slate-100', text: 'plm-text-slate-600', glow: '0 0 8px rgba(148,163,184,0.6)', icon: '🥈' },
+  Gold: { bg: 'plm-bg-amber-100', text: 'plm-text-amber-700', glow: '0 0 12px rgba(245,158,11,0.5)', icon: '✨' },
+  Elite: { bg: 'plm-bg-purple-100', text: 'plm-text-purple-700', glow: '0 0 14px rgba(168,85,247,0.5)', icon: '💎' },
+};
+
+function TierUpgradeBadge({ tier }: { tier: string }) {
+  const s = TIER_STYLES[tier] || TIER_STYLES.Gold;
+  return (
+    <div
+      className={`plm-mt-2 plm-flex plm-items-center plm-justify-center plm-gap-1.5 plm-rounded-full plm-py-1.5 plm-px-3 plm-animate-tier-pulse ${s.bg}`}
+      style={{ boxShadow: s.glow }}
+    >
+      <span className="plm-text-sm">{s.icon}</span>
+      <span className={`plm-text-[10px] plm-font-bold plm-uppercase plm-tracking-widest ${s.text}`}>
+        Upgraded to {tier}
+      </span>
+      <span className="plm-text-sm">{s.icon}</span>
+    </div>
+  );
 }

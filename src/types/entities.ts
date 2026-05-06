@@ -54,6 +54,8 @@ export interface Player {
   homegrown?: boolean;
   /** Trophies won while at the player's current club */
   trophiesWon?: { season: number; type: 'league' | 'cup' }[];
+  /** Seasons in which this player won the Premier League Golden Boot */
+  goldenBoots?: number[];
 }
 
 export interface ClubColors {

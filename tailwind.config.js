@@ -98,6 +98,10 @@ export default {
           '0%, 100%': { boxShadow: '0 2px 6px rgba(0,0,0,0.2), 0 0 6px rgba(157,23,77,0.5)' },
           '50%': { boxShadow: '0 2px 6px rgba(0,0,0,0.2), 0 0 16px rgba(157,23,77,1), 0 0 24px rgba(194,24,91,0.7)' },
         },
+        'tier-pulse': {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.85', transform: 'scale(1.03)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.2s ease-out',
@@ -117,6 +121,7 @@ export default {
         'name-write': 'name-write 0.9s ease-out forwards',
         'twinkle-star': 'twinkle-star 1.8s ease-in-out infinite',
         'stat-glow': 'stat-glow 1.5s ease-in-out infinite',
+        'tier-pulse': 'tier-pulse 2s ease-in-out infinite',
       },
       colors: {
         cream: '#FAF8F5',

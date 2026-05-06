@@ -997,6 +997,26 @@ function App() {
     awardTrophy(champion.clubId, 'league');
     if (cupResult.winner) awardTrophy(cupResult.winner, 'cup');
 
+    // Award Golden Boot to the league's top scorer.
+    let topScorerPlayer: { goals: number; playerId: string } = { goals: 0, playerId: '' };
+    for (const club of clubs) {
+      for (const p of club.roster) {
+        if (p.isTemporary) continue;
+        if (p.goals > topScorerPlayer.goals) {
+          topScorerPlayer = { goals: p.goals, playerId: p.id };
+        }
+      }
+    }
+    if (topScorerPlayer.playerId && topScorerPlayer.goals > 0) {
+      for (const club of clubs) {
+        const p = club.roster.find((r) => r.id === topScorerPlayer.playerId);
+        if (p) {
+          p.goldenBoots = [...(p.goldenBoots ?? []), seasonNumber];
+          break;
+        }
+      }
+    }
+
     // Log accomplishments for the user's manager profile only.
     if (playerPosition === 1) {
       state.addAccomplishment({
