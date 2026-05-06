@@ -7,18 +7,16 @@ import { getCardEffectTier } from '../../utils/cardTier';
 // Fulcrum at the center of the card. Pointer position relative to card
 // center drives rotateX/rotateY. Finger/cursor near the bottom edge → bottom
 // tilts away from the viewer, top tilts toward. Works on both mouse (hover)
-// and touch (drag). Tap-to-flip triggers on short-distance interactions.
-const MAX_TILT_DEG = 18;
+// and touch (drag). Tap-to-flip uses onClick for reliable cross-platform firing.
+const MAX_TILT_DEG = 30;
 
-// Movement threshold that disqualifies a tap (treats it as a scroll instead).
-const TAP_DISTANCE_PX = 8;
+// Movement threshold that disqualifies a tap (treats it as a drag/scroll).
+const TAP_DISTANCE_PX = 12;
 
 export type SwipeDirection = 'left' | 'right' | 'down';
 
 export interface InteractiveCardProps {
   player: Player;
-  // Kept for type compatibility — InteractiveCard no longer uses pull-down
-  // dismiss internally. The host modal owns its own close affordances.
   onDismiss?: () => void;
   onNext?: () => void;
   onPrev?: () => void;
@@ -38,8 +36,6 @@ function clamp(v: number, min: number, max: number) {
 
 export function InteractiveCard({
   player,
-  // onNext / onPrev are accepted for backwards-compatible shape but the
-  // carousel is now driven by external arrow buttons, not on-card swipes.
   onNext: _onNext,
   onPrev: _onPrev,
   enterFrom = null,
@@ -51,15 +47,19 @@ export function InteractiveCard({
   const containerRef = useRef<HTMLDivElement>(null);
   const exitingRef = useRef(false);
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  // Whether the last pointer-down→up was a tap (small movement). Read by onClick.
+  const lastWasTapRef = useRef(false);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Glare position derived from current tilt — simulates light reflecting off
-  // the surface. Stored as a percentage [0,100].
+  // Glare position derived from current tilt. The sheen appears on the edge
+  // tilted TOWARD the viewer (opposite side from the pointer), simulating light
+  // catching the raised surface.
   const [glare, setGlare] = useState({ px: 50, py: 50 });
 
   const updateGlareFromTilt = useCallback((rotX: number, rotY: number) => {
-    const px = 50 + (rotY / MAX_TILT_DEG) * 50;
-    const py = 50 - (rotX / MAX_TILT_DEG) * 50;
+    // Invert: sheen tracks the raised edge, not the pointer position.
+    const px = 50 - (rotY / MAX_TILT_DEG) * 50;
+    const py = 50 + (rotX / MAX_TILT_DEG) * 50;
     setGlare({ px: clamp(px, 0, 100), py: clamp(py, 0, 100) });
   }, []);
 
@@ -140,13 +140,13 @@ export function InteractiveCard({
     settleToNeutral();
   }, [reducedMotion, settleToNeutral]);
 
-  // ─── Tap-to-flip (touch + mouse) ───
-  // Record pointer-down origin; if pointer-up is close in space, treat as
-  // a tap and flip. Larger movement is a scroll, not a tap — let the
-  // browser handle it.
+  // ─── Pointer tracking for tap detection ───
+  // Record where the pointer started; on pointerUp, mark whether it was a tap.
+  // The actual flip fires from onClick (reliable on both mouse and touch).
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (reducedMotion || exitingRef.current) return;
     tapStartRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+    lastWasTapRef.current = false;
   }, [reducedMotion]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
@@ -156,20 +156,29 @@ export function InteractiveCard({
     if (start) {
       const dx = Math.abs(e.clientX - start.x);
       const dy = Math.abs(e.clientY - start.y);
-      if (dx < TAP_DISTANCE_PX && dy < TAP_DISTANCE_PX) {
-        handleTapFlip();
-      }
+      lastWasTapRef.current = dx < TAP_DISTANCE_PX && dy < TAP_DISTANCE_PX;
     }
     // Settle tilt back to neutral when touch ends (mouse settles on leave).
     if (e.pointerType === 'touch') {
       settleToNeutral();
     }
-  }, [reducedMotion, handleTapFlip, settleToNeutral]);
+  }, [reducedMotion, settleToNeutral]);
 
   const handlePointerCancel = useCallback(() => {
     tapStartRef.current = null;
+    lastWasTapRef.current = false;
     settleToNeutral();
   }, [settleToNeutral]);
+
+  // ─── Click handler: fires reliably on both mouse and touch ───
+  // Uses the tap ref set by pointer handlers to distinguish taps from drags.
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); // prevent modal backdrop dismiss
+    if (lastWasTapRef.current) {
+      lastWasTapRef.current = false;
+      handleTapFlip();
+    }
+  }, [handleTapFlip]);
 
   // ─── Transform strings ───
   const outerTransform = to(
@@ -186,8 +195,6 @@ export function InteractiveCard({
     '--plm-glare-y': `${glare.py}%`,
     willChange: 'transform, opacity',
     perspective: 1000,
-    // Allow vertical scroll to pass through (touch-action: none used to
-    // block scroll while we owned the gesture).
     touchAction: 'pan-y' as const,
     cursor: cardBack ? 'pointer' : undefined,
   } as unknown as React.CSSProperties;
@@ -199,10 +206,6 @@ export function InteractiveCard({
       {!reducedMotion && tier === 'cosmic' && <CosmicLayer />}
     </>
   );
-
-  // Block stray click bubbling so it never reaches the modal backdrop on
-  // browsers that synthesize click after a touch drag.
-  const stopClick = (e: React.MouseEvent) => e.stopPropagation();
 
   if (cardBack) {
     return (
@@ -217,7 +220,7 @@ export function InteractiveCard({
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
-        onClick={stopClick}
+        onClick={handleClick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -262,7 +265,7 @@ export function InteractiveCard({
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
-      onClick={stopClick}
+      onClick={handleClick}
     >
       <div className="plm-relative plm-rounded-xl plm-overflow-hidden">
         {children}
