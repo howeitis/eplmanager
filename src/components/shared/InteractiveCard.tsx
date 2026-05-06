@@ -4,14 +4,10 @@ import type { Player } from '../../types/entities';
 import { getCardEffectTier } from '../../utils/cardTier';
 
 // ─── Tilt model ───
-// Fulcrum at the back-center of the card. Pointer position relative to card
-// center drives rotateX/rotateY. Pointer near the top-right corner →
-// top-right corner pops toward the viewer.
-//
-// Touch swipe gestures used to live here (carousel + flip), but the swipe
-// recognition was unreliable across browsers and device pixel ratios. Tap
-// to flip is now the only interaction; carousel navigation is delegated to
-// dedicated arrow buttons supplied by the host.
+// Fulcrum at the center of the card. Pointer position relative to card
+// center drives rotateX/rotateY. Finger/cursor near the bottom edge → bottom
+// tilts away from the viewer, top tilts toward. Works on both mouse (hover)
+// and touch (drag). Tap-to-flip triggers on short-distance interactions.
 const MAX_TILT_DEG = 18;
 
 // Movement threshold that disqualifies a tap (treats it as a scroll instead).
@@ -125,11 +121,11 @@ export function InteractiveCard({
     });
   }, [api, updateGlareFromTilt]);
 
-  // ─── Hover tilt (mouse / pen, no drag) ───
+  // ─── Tilt (mouse hover + touch drag) ───
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (reducedMotion || exitingRef.current) return;
-    if (e.pointerType === 'touch') return; // touch is handled by useDrag
-    if (e.buttons !== 0) return;             // skip while dragging
+    // Mouse: only tilt on hover (no button pressed). Touch: always tilt.
+    if (e.pointerType === 'mouse' && e.buttons !== 0) return;
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -157,17 +153,23 @@ export function InteractiveCard({
     if (reducedMotion || exitingRef.current) return;
     const start = tapStartRef.current;
     tapStartRef.current = null;
-    if (!start) return;
-    const dx = Math.abs(e.clientX - start.x);
-    const dy = Math.abs(e.clientY - start.y);
-    if (dx < TAP_DISTANCE_PX && dy < TAP_DISTANCE_PX) {
-      handleTapFlip();
+    if (start) {
+      const dx = Math.abs(e.clientX - start.x);
+      const dy = Math.abs(e.clientY - start.y);
+      if (dx < TAP_DISTANCE_PX && dy < TAP_DISTANCE_PX) {
+        handleTapFlip();
+      }
     }
-  }, [reducedMotion, handleTapFlip]);
+    // Settle tilt back to neutral when touch ends (mouse settles on leave).
+    if (e.pointerType === 'touch') {
+      settleToNeutral();
+    }
+  }, [reducedMotion, handleTapFlip, settleToNeutral]);
 
   const handlePointerCancel = useCallback(() => {
     tapStartRef.current = null;
-  }, []);
+    settleToNeutral();
+  }, [settleToNeutral]);
 
   // ─── Transform strings ───
   const outerTransform = to(
@@ -257,6 +259,9 @@ export function InteractiveCard({
       style={sharedStyle}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       onClick={stopClick}
     >
       <div className="plm-relative plm-rounded-xl plm-overflow-hidden">

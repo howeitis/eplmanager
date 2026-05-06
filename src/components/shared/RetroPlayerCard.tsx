@@ -493,18 +493,6 @@ export function RetroPlayerCard({
         />
       )}
 
-      {/* Shimmer sweep overlay for 80+ cards */}
-      {player.overall >= 80 && (
-        <div className="plm-absolute plm-inset-0 plm-overflow-hidden plm-pointer-events-none plm-z-10">
-          <div
-            className="plm-absolute plm-top-0 plm-h-full plm-w-1/3 plm-animate-shimmer"
-            style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-            }}
-          />
-        </div>
-      )}
-
       {/* ─── Sparkle overlay for any future star (u21 75+) or 85+ rating ─── */}
       {(futureStar !== null || player.overall >= 85) && (
         <div className="plm-absolute plm-inset-0 plm-pointer-events-none plm-z-[3] plm-overflow-hidden">
