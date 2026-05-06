@@ -1,0 +1,8 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/((?!assets|national flags|National team logos|Premier League Clubs Logos|favicon\\.svg|icons\\.svg|epl_manager.*\\.webp|eplmanager.*\\.png).*)", "destination": "/index.html" }
+  ]
+}

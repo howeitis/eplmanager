@@ -21,6 +21,7 @@ import { TutorialModal } from './components/shared/TutorialModal';
 import { NavigationContext } from './hooks/useNavigation';
 import { useGameStore } from './store/gameStore';
 import { CLUBS } from './data/clubs';
+import { inferNationalityFromName } from './data/namePool';
 import { generateAllSquads, generatePhilosophyBonusPlayer } from './engine/playerGen';
 import { saveGame, loadGame } from './utils/save';
 import { SeededRNG, seasonSeed as deriveSeasonSeed } from './utils/rng';
@@ -234,7 +235,7 @@ function App() {
           ...club,
           roster: club.roster.map((p) => ({
             ...p,
-            nationality: p.nationality ?? 'English',
+            nationality: p.nationality ?? inferNationalityFromName(p.name),
             goals: typeof p.goals === 'number' && !isNaN(p.goals) ? p.goals : 0,
             assists: typeof p.assists === 'number' && !isNaN(p.assists) ? p.assists : 0,
             cleanSheets: typeof p.cleanSheets === 'number' && !isNaN(p.cleanSheets) ? p.cleanSheets : 0,
