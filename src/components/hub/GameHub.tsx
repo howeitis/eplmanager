@@ -6,6 +6,7 @@ import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { SquadMiniView } from './SquadMiniView';
 import { GoalScorersWidget } from './GoalScorersWidget';
+import { RivalsWatch } from './RivalsWatch';
 import { LeagueTable } from '../shared/LeagueTable';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 import type { NavTab } from '../shared/BottomNav';
@@ -146,13 +147,14 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
                 />
               )
             )}
-            <div className="plm-min-w-0">
+            <div className="plm-min-w-0 plm-flex-1">
               <h1 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-truncate">
                 {playerClub?.name}
               </h1>
-              <p className="plm-text-xs plm-text-warm-500">
-                {manager?.name} &middot; Rep {manager?.reputation}
+              <p className="plm-text-xs plm-text-warm-500 plm-truncate">
+                {manager?.name}
               </p>
+              <ReputationGauge reputation={manager?.reputation ?? 0} accent={clubData?.colors.primary} />
             </div>
           </div>
           <div className="plm-grid plm-grid-cols-4 plm-gap-2">
@@ -200,6 +202,11 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative }: 
           </div>
         </div>
 
+        {/* Rivals tracker — head-to-head positions vs your derby rivals */}
+        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+          <RivalsWatch />
+        </div>
+
         {/* Goal Scorers leaderboard */}
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
           <GoalScorersWidget />
@@ -239,4 +246,27 @@ function isLightColor(hex: string): boolean {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return (r * 299 + g * 587 + b * 114) / 1000 > 160;
+}
+
+function ReputationGauge({ reputation, accent }: { reputation: number; accent?: string }) {
+  const pct = Math.max(0, Math.min(100, reputation));
+  const tier =
+    reputation >= 80 ? 'Iconic' :
+    reputation >= 60 ? 'Established' :
+    reputation >= 40 ? 'Respected' :
+    reputation >= 20 ? 'Up-and-coming' : 'Untested';
+  return (
+    <div className="plm-mt-1.5">
+      <div className="plm-flex plm-items-center plm-justify-between plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-wider plm-font-semibold">
+        <span>Reputation</span>
+        <span className="plm-tabular-nums plm-text-charcoal">{reputation} · {tier}</span>
+      </div>
+      <div className="plm-mt-1 plm-h-1.5 plm-w-full plm-rounded-full plm-bg-warm-100 plm-overflow-hidden">
+        <div
+          className="plm-h-full plm-rounded-full plm-transition-all plm-duration-700"
+          style={{ width: `${pct}%`, backgroundColor: accent || '#1A1A1A' }}
+        />
+      </div>
+    </div>
+  );
 }

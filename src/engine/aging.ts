@@ -1,6 +1,7 @@
 import type { Player, Position, Club, ClubData } from '../types/entities';
 import { SeededRNG } from '../utils/rng';
 import { generatePlayer, calculateOverall, calculateMarketValue } from './playerGen';
+import { BALANCE } from '../data/balance';
 
 // ─── Age Bracket Definitions ───
 
@@ -74,13 +75,25 @@ export function calculateAgingChanges(
 
   // Early peaker: hits ceiling by 24, declines by 27
   if (player.earlyPeaker) {
+    const [stallMin, stallMax] = BALANCE.aging.earlyPeakerStallRange;
+    const [declineMin, declineMax] = BALANCE.aging.earlyPeakerDeclineRange;
     if (player.age >= 24 && player.age <= 26) {
-      effectiveMin = -1;
-      effectiveMax = 0;
+      effectiveMin = stallMin;
+      effectiveMax = stallMax;
     } else if (player.age >= 27) {
-      effectiveMin = -4;
-      effectiveMax = -1;
+      effectiveMin = declineMin;
+      effectiveMax = declineMax;
     }
+  }
+
+  // Trait nudges to decline brackets only — Durable ages slower, Fragile faster.
+  // Capped at 0 so Durable can't turn a decline year into growth.
+  if (effectiveMax <= 0) {
+    const traitMod =
+      player.trait === 'Durable' ? BALANCE.aging.traitDeclineMod.Durable :
+      player.trait === 'Fragile' ? BALANCE.aging.traitDeclineMod.Fragile : 0;
+    effectiveMin = Math.min(0, effectiveMin + traitMod);
+    effectiveMax = Math.min(0, effectiveMax + traitMod);
   }
 
   // Calculate total stat change budget, then distribute across stats

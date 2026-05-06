@@ -8,6 +8,25 @@ import type { MatchResult, Fixture, SeasonEvent } from '../../types/entities';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
+/**
+ * Tier-based upset detection. If a club ≥2 tiers worse than its opponent wins
+ * (or draws on the road against a top-tier side), surface a small UPSET banner
+ * to give round-week summaries a heartbeat.
+ */
+function detectUpset(result: MatchResult): { isUpset: boolean; underdogId?: string } {
+  const home = clubDataMap.get(result.homeClubId);
+  const away = clubDataMap.get(result.awayClubId);
+  if (!home || !away) return { isUpset: false };
+
+  const tierGap = home.tier - away.tier; // positive → home is weaker
+  const homeWon = result.homeGoals > result.awayGoals;
+  const awayWon = result.awayGoals > result.homeGoals;
+
+  if (tierGap >= 2 && homeWon) return { isUpset: true, underdogId: home.id };
+  if (tierGap <= -2 && awayWon) return { isUpset: true, underdogId: away.id };
+  return { isUpset: false };
+}
+
 interface MatchResultsProps {
   monthLabel: string;
   fixtures: Fixture[];
@@ -285,6 +304,21 @@ function MatchScoreCard({
     .filter((s) => !s.isHome)
     .map((s) => findPlayerName(s.playerId, result.awayClubId));
 
+  // Chronological scorers for the user match — used for staggered reveal.
+  const orderedUserScorers = useMemo(() => {
+    if (!isPlayerMatch || !isUserSection) return [];
+    return [...result.scorers]
+      .sort((a, b) => a.minute - b.minute)
+      .map((s) => ({
+        minute: s.minute,
+        isHome: s.isHome,
+        name: findPlayerName(s.playerId, s.isHome ? result.homeClubId : result.awayClubId),
+      }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result.fixtureId, isPlayerMatch, isUserSection]);
+
+  const upset = useMemo(() => detectUpset(result), [result]);
+
   // User match highlight style
   const userAccent = playerClubData?.colors.primary;
   const userAccentBg = userAccent ? userAccent + '15' : undefined;
@@ -324,6 +358,12 @@ function MatchScoreCard({
       {result.isDerby && (
         <div className="plm-text-[9px] plm-font-bold plm-text-amber-600 plm-uppercase plm-tracking-wider plm-text-center plm-py-0.5 plm-bg-amber-50 plm-rounded-t plm-border-b plm-border-amber-100">
           Derby
+        </div>
+      )}
+
+      {upset.isUpset && (
+        <div className="plm-text-[9px] plm-font-bold plm-text-purple-700 plm-uppercase plm-tracking-wider plm-text-center plm-py-0.5 plm-bg-purple-50 plm-rounded-t plm-border-b plm-border-purple-100 plm-animate-fade-in">
+          Upset
         </div>
       )}
 
@@ -392,8 +432,37 @@ function MatchScoreCard({
         </div>
       </div>
 
-      {/* Scorers for player's match */}
-      {isPlayerMatch && (homeScorers.length > 0 || awayScorers.length > 0) && (
+      {/* Scorers — staggered chronological reveal in the user's headline match;
+          compact dedupe in the bulk-fixtures list for everyone else. */}
+      {isPlayerMatch && isUserSection && orderedUserScorers.length > 0 && (
+        <div className="plm-px-3 plm-pb-2 plm-flex plm-flex-wrap plm-gap-1 plm-justify-center plm-text-[10px]">
+          {orderedUserScorers.map((s, i) => {
+            const accent = s.isHome ? homeClub?.colors.primary : awayClub?.colors.primary;
+            const lastName = s.name.split(' ').pop() || s.name;
+            return (
+              <span
+                key={`${s.minute}-${i}`}
+                className="plm-inline-flex plm-items-center plm-gap-1 plm-rounded-full plm-px-2 plm-py-0.5 plm-bg-white/70 plm-border plm-border-warm-200 plm-text-warm-700 plm-animate-fade-in plm-opacity-0"
+                style={{
+                  animationDelay: `${200 + i * 220}ms`,
+                  animationFillMode: 'forwards',
+                  borderColor: accent ? accent + '40' : undefined,
+                }}
+                title={`${s.name} ${s.minute}'`}
+              >
+                <span
+                  className="plm-w-1.5 plm-h-1.5 plm-rounded-full"
+                  style={{ backgroundColor: accent || '#999' }}
+                  aria-hidden
+                />
+                <span className="plm-font-medium">{lastName}</span>
+                <span className="plm-text-warm-400 plm-tabular-nums">{s.minute}'</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
+      {isPlayerMatch && !isUserSection && (homeScorers.length > 0 || awayScorers.length > 0) && (
         <div className="plm-px-3 plm-pb-2 plm-flex plm-gap-4 plm-text-[10px] plm-text-warm-500">
           {homeScorers.length > 0 && (
             <div className="plm-flex-1 plm-text-right plm-truncate">
