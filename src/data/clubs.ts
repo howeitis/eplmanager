@@ -395,7 +395,7 @@ export const CLUBS: ClubData[] = [
     shortName: 'LEE',
     tier: 5,
     budget: 32,
-    colors: { primary: '#003090', secondary: '#FDBE11' },
+    colors: { primary: '#FFCD00', secondary: '#1D428A' },
     rivalries: ['nottm-forest'],
     namePool: [
       { nationality: 'english', weight: 35 },
@@ -418,7 +418,7 @@ export const CLUBS: ClubData[] = [
     shortName: 'SUN',
     tier: 5,
     budget: 28,
-    colors: { primary: '#3A64A3', secondary: '#FFFFFF' },
+    colors: { primary: '#EB172B', secondary: '#FFFFFF' },
     rivalries: [],
     namePool: [
       { nationality: 'english', weight: 45 },
@@ -439,7 +439,7 @@ export const CLUBS: ClubData[] = [
     shortName: 'BUR',
     tier: 5,
     budget: 30,
-    colors: { primary: '#D71920', secondary: '#FFFFFF' },
+    colors: { primary: '#6C1D45', secondary: '#95BFE5' },
     rivalries: [],
     namePool: [
       { nationality: 'english', weight: 40 },

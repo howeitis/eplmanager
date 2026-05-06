@@ -75,7 +75,12 @@ function MiniPlayerRow({ player }: { player: Player }) {
         {player.name}
       </span>
       {player.injured && (
-        <span className="plm-text-[10px] plm-text-red-500 plm-font-medium">INJ</span>
+        <span
+          className="plm-text-[10px] plm-text-red-500 plm-font-medium plm-tabular-nums"
+          title={`Out ${player.injuryWeeks} month${player.injuryWeeks === 1 ? '' : 's'}`}
+        >
+          INJ {player.injuryWeeks}m
+        </span>
       )}
       {formBadge.label && !player.injured && (
         <span className={`plm-text-[9px] plm-font-semibold plm-px-1 plm-py-0.5 plm-rounded ${formBadge.color}`}>

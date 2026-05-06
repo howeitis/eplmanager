@@ -131,20 +131,34 @@ export function calculateAgingChanges(
 /**
  * Tier-based regen rating ranges.
  * Top-tier clubs have better academies producing higher-rated youth players.
- * This maintains the competitive hierarchy across multi-season simulations.
+ * Bumped after balance testing showed top-tier squads gradually drifting
+ * downward over many seasons because every retirement was replaced by a
+ * regen capped 5–7 points below the player who left. The new ranges keep
+ * the squad-rating delta closer to 0 across a 5+ season run.
  */
 const REGEN_RATING_RANGES: Record<number, [number, number]> = {
-  1: [65, 77], // Elite academies — can produce first-team quality
-  2: [62, 73], // Strong academies
-  3: [58, 69], // Solid academies
-  4: [55, 65], // Modest academies
-  5: [52, 62], // Basic academies
+  1: [68, 80], // Elite academies — can produce first-team quality
+  2: [64, 76], // Strong academies
+  3: [60, 71], // Solid academies
+  4: [56, 67], // Modest academies
+  5: [53, 63], // Basic academies
+};
+
+/**
+ * Star-boy chance scales with tier — top academies don't just produce more
+ * youth, they more often unearth a generational talent. (Was 8% flat.)
+ */
+const STAR_BOY_CHANCE_BY_TIER: Record<number, number> = {
+  1: 0.14,
+  2: 0.11,
+  3: 0.09,
+  4: 0.07,
+  5: 0.06,
 };
 
 /**
  * Generate a replacement player (regen) for a retired player.
  * The regen is a young player at the same position with a rating based on the club's tier.
- * ~8% chance to produce a "star boy" — a youth prospect significantly above the normal range.
  */
 export function generateRegen(
   rng: SeededRNG,
@@ -154,10 +168,11 @@ export function generateRegen(
   youthBoost: number = 0,
 ): Player {
   const [rangeMin, rangeMax] = REGEN_RATING_RANGES[club.tier] || REGEN_RATING_RANGES[3];
+  const starBoyChance = STAR_BOY_CHANCE_BY_TIER[club.tier] ?? 0.08;
 
   let targetRating: number;
   const starBoyRoll = rng.random();
-  if (starBoyRoll < 0.08) {
+  if (starBoyRoll < starBoyChance) {
     // Star boy: 6–12 points above the normal range ceiling
     const starBoost = rng.randomInt(6, 12);
     targetRating = Math.min(88, rangeMax + starBoost + youthBoost);
@@ -167,7 +182,7 @@ export function generateRegen(
 
   const regen = generatePlayer(rng, position, targetRating, club.namePool, regenId);
   regen.age = rng.randomInt(17, 20);
-  regen.highPotential = starBoyRoll < 0.08 ? true : rng.random() < 0.20;
+  regen.highPotential = starBoyRoll < starBoyChance ? true : rng.random() < 0.20;
   regen.earlyPeaker = false;
   regen.seasonsAtClub = 0;
   return regen;

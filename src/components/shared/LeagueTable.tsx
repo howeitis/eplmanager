@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import { ClubLink } from './ClubLink';
@@ -85,40 +85,41 @@ function PositionDelta({ delta }: { delta: number }) {
   );
 }
 
+function sortRows(table: LeagueTableRow[]): LeagueTableRow[] {
+  return [...table].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+    return b.goalsFor - a.goalsFor;
+  });
+}
+
 export function LeagueTable({ compact = false, hideForm = false }: LeagueTableProps) {
   const leagueTable = useGameStore((s) => s.leagueTable);
+  const previousLeagueTable = useGameStore((s) => s.previousLeagueTable);
   const fixtures = useGameStore((s) => s.fixtures);
   const manager = useGameStore((s) => s.manager);
   const playerClubId = manager?.clubId;
 
-  const sortedTable = useMemo(() => {
-    return [...leagueTable].sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
-      return b.goalsFor - a.goalsFor;
-    });
-  }, [leagueTable]);
+  const sortedTable = useMemo(() => sortRows(leagueTable), [leagueTable]);
 
   const formByClub = useMemo(() => buildRecentForm(fixtures), [fixtures]);
 
-  // Track previous positions so we can show ▲/▼ deltas after each round.
-  // Keyed by clubId → previous index. Updates after the table changes.
-  const prevPositionsRef = useRef<Map<string, number>>(new Map());
+  // Position deltas are derived from the store-level snapshot taken at the
+  // start of each monthly round. This survives hub unmount/remount (e.g.
+  // navigating to MatchResults and back), unlike a component-local ref.
   const positionDeltas = useMemo(() => {
     const deltas = new Map<string, number>();
+    if (previousLeagueTable.length === 0) return deltas;
+    const prevSorted = sortRows(previousLeagueTable);
+    const prevIdx = new Map<string, number>();
+    prevSorted.forEach((row, i) => prevIdx.set(row.clubId, i));
     for (let i = 0; i < sortedTable.length; i++) {
       const id = sortedTable[i].clubId;
-      const prev = prevPositionsRef.current.get(id);
+      const prev = prevIdx.get(id);
       deltas.set(id, prev === undefined ? 0 : i - prev);
     }
     return deltas;
-  }, [sortedTable]);
-
-  useEffect(() => {
-    const next = new Map<string, number>();
-    sortedTable.forEach((row, i) => next.set(row.clubId, i));
-    prevPositionsRef.current = next;
-  }, [sortedTable]);
+  }, [sortedTable, previousLeagueTable]);
 
   if (sortedTable.length === 0) {
     return (
@@ -209,23 +210,36 @@ function LeagueTableRowComponent({
 }) {
   const club = getClubInfo(row.clubId);
 
-  // Pulse the row briefly when the position changes — gives the table a heartbeat.
+  // Reshuffle animation: when a club's position changes, animate from its
+  // previous y-offset back to 0 (FLIP-style without measuring the DOM —
+  // we know the delta in rows already). 36px/row is a good visual fit for
+  // both compact and expanded tables.
+  const ROW_HEIGHT = 36;
+  const fromY = positionDelta * ROW_HEIGHT;
   const pulseClass = positionDelta < 0
-    ? 'plm-animate-fade-in plm-bg-emerald-50/50'
+    ? 'plm-bg-emerald-50/50'
     : positionDelta > 0
-    ? 'plm-animate-fade-in plm-bg-rose-50/40'
+    ? 'plm-bg-rose-50/40'
     : '';
 
   return (
     <tr
-      className={`plm-border-b plm-border-warm-100 plm-transition-all plm-duration-500 ${
+      className={`plm-border-b plm-border-warm-100 plm-transition-all plm-duration-700 plm-ease-out ${
         isPlayerClub
           ? 'plm-bg-warm-100'
           : `hover:plm-bg-warm-50 ${pulseClass}`
       } ${position === 1 ? 'plm-font-semibold' : ''}`}
-      style={isPlayerClub ? {
-        borderLeft: `3px solid ${club?.colors.primary || '#1A1A1A'}`,
-      } : undefined}
+      style={{
+        ...(isPlayerClub ? { borderLeft: `3px solid ${club?.colors.primary || '#1A1A1A'}` } : {}),
+        // Animate from the previous slot's y-position to its new home.
+        // The browser keeps the rendered row at translateY:0; we set the
+        // animation key/start by toggling the transform via the data-attr.
+        transform: 'translateY(0)',
+        animation: positionDelta !== 0
+          ? `plm-table-reshuffle-${positionDelta > 0 ? 'down' : 'up'} 700ms ease-out`
+          : undefined,
+        ['--plm-row-shift' as keyof React.CSSProperties]: `${fromY}px`,
+      } as React.CSSProperties}
     >
       <td className="plm-py-2 plm-px-1 plm-text-warm-500 plm-tabular-nums">
         <span className="plm-inline-flex plm-items-center plm-gap-1">

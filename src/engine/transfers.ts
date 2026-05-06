@@ -10,7 +10,7 @@ import type {
   ContinentSaleResult,
 } from '../types/entities';
 import { SeededRNG } from '../utils/rng';
-import { resetProgressionForTransfer } from './playerGen';
+import { generatePlayer, resetProgressionForTransfer } from './playerGen';
 import { BALANCE } from '../data/balance';
 
 // --- Continent sale destinations ---
@@ -25,6 +25,20 @@ const CONTINENT_CLUBS: Record<ContinentLeague, string[]> = {
 };
 
 const CONTINENT_SALE_DISCOUNT = BALANCE.transfer.continentSalePriceMult;
+
+/**
+ * Floor for what overall a club of a given tier will even consider bidding on.
+ * Stops Tier 1 clubs from sending offers for Tier 5 fillers (which spammed the
+ * user's inbox and wasn't believable — Man City don't put offers in for
+ * 60-rated reserves).
+ */
+const MIN_OVERALL_TO_BID_BY_TIER: Record<number, number> = {
+  1: 74,
+  2: 70,
+  3: 66,
+  4: 62,
+  5: 58,
+};
 
 // --- Market value calculation (Section 6.4 softened formula) ---
 
@@ -593,17 +607,20 @@ export function simulateAITransferWindow(
   }
 
   // --- Speculative incoming offers for the user's squad ---
-  // Independent of AI position-need pursuit: rivals proactively bid on the user's
-  // best players (listed or not). More action = more transfer activity.
+  // Rivals proactively bid on the user's better players. Target counts and
+  // the per-player roll have been tuned down — pre-fix this section dumped
+  // 4 offers per summer + 2 per winter onto the user, including some from
+  // top clubs chasing 60-rated fillers. Now: 2 / 1, capped, and clubs only
+  // bid on players that fit their tier's standard.
   const userClub = clubMap.get(playerClubId);
   if (userClub) {
     const userPlayers = userClub.roster.filter(
       (p) => !p.isTemporary && !p.acquiredThisWindow && p.overall >= 58,
     );
-    const targetCount = windowType === 'summer' ? 4 : 2;
+    const targetCount = windowType === 'summer' ? 2 : 1;
     const existingOfferPlayerIds = new Set(incomingOffers.map((o) => o.playerId));
 
-    // Rank user's players by attractiveness (high rating, young)
+    // Rank user's players by attractiveness (high rating, young).
     const rankedTargets = userPlayers
       .map((p) => ({ player: p, score: p.overall + (p.age <= 24 ? 5 : 0) - (p.age >= 32 ? 8 : 0) }))
       .sort((a, b) => b.score - a.score);
@@ -613,23 +630,18 @@ export function simulateAITransferWindow(
       if (speculativeAdded >= targetCount) break;
       if (existingOfferPlayerIds.has(player.id)) continue;
 
-      // 55% chance per eligible player per window
-      if (rng.random() > 0.55) continue;
+      // 35% chance per eligible player per window (was 55%).
+      if (rng.random() > 0.35) continue;
 
-      // Tier-appropriateness filter: top teams shouldn't want low-rated players
-      const maxBuyerTier = player.overall >= 75 ? 5  // Any tier can bid
-        : player.overall >= 68 ? 3                    // Tier 1-3
-        : player.overall >= 62 ? 5                    // Tier 2-5 (mid-range: all tiers)
-        : 5;                                          // Any tier for low players, but filter below
-      const minBuyerTier = player.overall < 62 ? 3 : 1; // Low-rated: only tier 3-5 bid
-
-      // Pick a plausible buyer: AI club with budget and appropriate tier
+      // Pick a plausible buyer: AI club with budget AND a tier-appropriate
+      // standard for this player. A Tier 1 club shouldn't be sending offers
+      // for a 62-rated reserve.
       const buyers = aiClubs
         .map((c) => clubMap.get(c.id)!)
         .filter((c) => {
           const canAfford = (mutableBudgets[c.id] || 0) >= refreshPlayerValue(player) * 0.9;
-          const tierOk = c.tier >= minBuyerTier && c.tier <= maxBuyerTier;
-          return canAfford && tierOk;
+          const meetsTierStandard = player.overall >= MIN_OVERALL_TO_BID_BY_TIER[c.tier];
+          return canAfford && meetsTierStandard;
         });
       if (buyers.length === 0) continue;
 
@@ -662,7 +674,139 @@ export function simulateAITransferWindow(
     }
   }
 
+  // --- AI continent imports ---
+  // Without this, AI squads decay across multi-season runs because the only
+  // sources of new senior players are PL-internal transfers (zero-sum) and
+  // 17–20yo regens (capped below the player they replace). A handful of
+  // mid-career imports per summer gives top clubs a credible way to maintain
+  // an elite spine and stops the league from regressing to the mean.
+  if (windowType === 'summer') {
+    const importsByTier = simulateAIContinentImports(
+      rng,
+      Array.from(clubMap.values()).filter((c) => c.id !== playerClubId),
+      mutableBudgets,
+      seasonNumber,
+    );
+    for (const imp of importsByTier) {
+      const club = clubMap.get(imp.clubId);
+      if (!club) continue;
+      club.roster.push(imp.player);
+      mutableBudgets[club.id] = Math.round((mutableBudgets[club.id] - imp.fee) * 10) / 10;
+      completedTransfers.push({
+        playerId: imp.player.id,
+        playerName: imp.player.name,
+        playerPosition: imp.player.position,
+        playerOverall: imp.player.overall,
+        playerAge: imp.player.age,
+        fromClubId: 'continent',
+        toClubId: club.id,
+        fee: imp.fee,
+        season: seasonNumber,
+        window: 'summer',
+        isContinentSale: false,
+        continentDestination: imp.continentLeague,
+      });
+      tickerMessages.push(
+        `Continental signing: ${club.name} sign ${imp.player.name} (${imp.player.overall} OVR) from ${imp.continentLeague} for £${imp.fee}M.`,
+      );
+    }
+  }
+
   return { completedTransfers, offers: incomingOffers, tickerMessages };
+}
+
+// --- AI Continent Imports ---
+
+interface ContinentImport {
+  clubId: string;
+  player: Player;
+  fee: number;
+  continentLeague: ContinentLeague;
+}
+
+/**
+ * Per-tier ceiling on how many continent imports a club may sign per summer
+ * window. Top clubs sign up to 2 (e.g. one striker + one CB); mid-table 0–1;
+ * tier 5 rarely shops abroad.
+ */
+const MAX_IMPORTS_BY_TIER: Record<number, number> = { 1: 2, 2: 2, 3: 1, 4: 1, 5: 0 };
+
+/** Per-club, per-summer chance to import at all (independent of count). */
+const IMPORT_CHANCE_BY_TIER: Record<number, number> = { 1: 0.85, 2: 0.7, 3: 0.45, 4: 0.25, 5: 0.0 };
+
+/**
+ * Imported player rating range — chosen so the import slots into the squad
+ * as a starter or near-starter, not a fringe regen. A Tier 1 club imports a
+ * 76–84 OVR player; a Tier 4 imports a 64–70 OVR player.
+ */
+const IMPORT_RATING_RANGE_BY_TIER: Record<number, [number, number]> = {
+  1: [76, 84],
+  2: [72, 80],
+  3: [68, 75],
+  4: [64, 70],
+  5: [60, 66],
+};
+
+function simulateAIContinentImports(
+  rng: SeededRNG,
+  aiClubs: Club[],
+  mutableBudgets: Record<string, number>,
+  seasonNumber: number,
+): ContinentImport[] {
+  const imports: ContinentImport[] = [];
+
+  for (const club of aiClubs) {
+    const importChance = IMPORT_CHANCE_BY_TIER[club.tier] ?? 0;
+    if (importChance === 0) continue;
+    if (rng.random() > importChance) continue;
+
+    // Squad size guard — don't push beyond a reasonable cap.
+    const seniorSize = club.roster.filter((p) => !p.isTemporary).length;
+    if (seniorSize >= 24) continue;
+
+    const maxImports = MAX_IMPORTS_BY_TIER[club.tier] ?? 0;
+    if (maxImports === 0) continue;
+    // Roll for actual count (1..maxImports), weighted toward the lower end.
+    const wantedCount = maxImports === 1
+      ? 1
+      : rng.weightedPick([1, 2], [70, 30]);
+
+    // Identify thin positions; if none, pick a random outfield position.
+    const counts: Record<Position, number> = { GK: 0, CB: 0, FB: 0, MF: 0, WG: 0, ST: 0 };
+    for (const p of club.roster.filter((pp) => !pp.isTemporary)) counts[p.position]++;
+    const thinPositions: Position[] = (['CB', 'FB', 'MF', 'WG', 'ST', 'GK'] as Position[])
+      .filter((pos) => counts[pos] <= ({ GK: 2, CB: 3, FB: 2, MF: 4, WG: 2, ST: 3 } as Record<Position, number>)[pos]);
+
+    const [ovrMin, ovrMax] = IMPORT_RATING_RANGE_BY_TIER[club.tier] || [66, 72];
+
+    for (let i = 0; i < wantedCount; i++) {
+      if ((mutableBudgets[club.id] || 0) < 6) break;
+      if (club.roster.filter((p) => !p.isTemporary).length >= 24) break;
+
+      const position: Position = thinPositions.length > 0
+        ? thinPositions[rng.randomInt(0, thinPositions.length - 1)]
+        : (['MF', 'ST', 'CB', 'WG'] as Position[])[rng.randomInt(0, 3)];
+
+      const targetOverall = rng.randomInt(ovrMin, ovrMax);
+      const importId = `import-s${seasonNumber}-${club.id}-${i}-${rng.randomInt(1000, 9999)}`;
+      const player = generatePlayer(rng, position, targetOverall, club.namePool, importId);
+      // Mid-career, not a regen.
+      player.age = rng.randomInt(24, 29);
+      player.seasonsAtClub = 0;
+      player.acquiredThisWindow = true;
+      player.highPotential = false;
+      player.earlyPeaker = false;
+
+      const baseValue = refreshPlayerValue(player);
+      const fee = Math.round(baseValue * 1.15 * 10) / 10;
+      if (fee > (mutableBudgets[club.id] || 0)) continue;
+
+      const continentLeague = CONTINENT_LEAGUES[rng.randomInt(0, CONTINENT_LEAGUES.length - 1)];
+      imports.push({ clubId: club.id, player, fee, continentLeague });
+    }
+  }
+
+  return imports;
 }
 
 // --- Featured player selection ---

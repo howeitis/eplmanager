@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { animated, useSpring, to } from '@react-spring/web';
-import { useDrag } from '@use-gesture/react';
 import type { Player } from '../../types/entities';
 import { getCardEffectTier } from '../../utils/cardTier';
 
-// ─── Tilt + gesture model ───
+// ─── Tilt model ───
 // Fulcrum at the back-center of the card. Pointer position relative to card
-// center drives rotateX/rotateY. Pointer/drag at the top-right corner →
+// center drives rotateX/rotateY. Pointer near the top-right corner →
 // top-right corner pops toward the viewer.
+//
+// Touch swipe gestures used to live here (carousel + flip), but the swipe
+// recognition was unreliable across browsers and device pixel ratios. Tap
+// to flip is now the only interaction; carousel navigation is delegated to
+// dedicated arrow buttons supplied by the host.
 const MAX_TILT_DEG = 18;
 
-// Tap vs swipe thresholds.
-const TAP_DISTANCE_PX = 8;   // total movement under this counts as tap
-const TAP_DURATION_MS = 250; // and only if released within this window
-const SWIPE_DISTANCE_PX = 70;
-const SWIPE_VELOCITY = 0.4;
+// Movement threshold that disqualifies a tap (treats it as a scroll instead).
+const TAP_DISTANCE_PX = 8;
 
 export type SwipeDirection = 'left' | 'right' | 'down';
 
@@ -41,8 +42,10 @@ function clamp(v: number, min: number, max: number) {
 
 export function InteractiveCard({
   player,
-  onNext,
-  onPrev,
+  // onNext / onPrev are accepted for backwards-compatible shape but the
+  // carousel is now driven by external arrow buttons, not on-card swipes.
+  onNext: _onNext,
+  onPrev: _onPrev,
   enterFrom = null,
   children,
   cardBack,
@@ -51,7 +54,7 @@ export function InteractiveCard({
   const reducedMotion = useRef(prefersReducedMotion()).current;
   const containerRef = useRef<HTMLDivElement>(null);
   const exitingRef = useRef(false);
-  const startTimeRef = useRef(0);
+  const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const [isFlipped, setIsFlipped] = useState(false);
 
   // Glare position derived from current tilt — simulates light reflecting off
@@ -98,21 +101,6 @@ export function InteractiveCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Animate off-screen for swipe. Used only by carousel onNext/onPrev.
-  const animateOff = useCallback((direction: SwipeDirection, then: () => void) => {
-    exitingRef.current = true;
-    const w = window.innerWidth;
-    api.start({
-      x: direction === 'left' ? -w : direction === 'right' ? w : 0,
-      opacity: 0.85,
-      scale: 0.96,
-      rotX: 0,
-      rotY: 0,
-      config: { tension: 380, friction: 26 },
-      onRest: then,
-    });
-  }, [api]);
-
   // ─── Spring back to neutral on release / pointer-leave ───
   const settleToNeutral = useCallback(() => {
     api.start({
@@ -156,69 +144,30 @@ export function InteractiveCard({
     settleToNeutral();
   }, [reducedMotion, settleToNeutral]);
 
-  // ─── Drag gesture (touch + active mouse drag) ───
-  const bind = useDrag(
-    (state) => {
-      const { down, first, last, canceled, movement: [mx, my], velocity: [vx, vy], event } = state;
-      if (reducedMotion || exitingRef.current) return;
+  // ─── Tap-to-flip (touch + mouse) ───
+  // Record pointer-down origin; if pointer-up is close in space, treat as
+  // a tap and flip. Larger movement is a scroll, not a tap — let the
+  // browser handle it.
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (reducedMotion || exitingRef.current) return;
+    tapStartRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+  }, [reducedMotion]);
 
-      // Stop the modal backdrop / siblings from also seeing the gesture.
-      if (event && 'stopPropagation' in event) {
-        try { (event as Event).stopPropagation(); } catch { /* noop */ }
-      }
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (reducedMotion || exitingRef.current) return;
+    const start = tapStartRef.current;
+    tapStartRef.current = null;
+    if (!start) return;
+    const dx = Math.abs(e.clientX - start.x);
+    const dy = Math.abs(e.clientY - start.y);
+    if (dx < TAP_DISTANCE_PX && dy < TAP_DISTANCE_PX) {
+      handleTapFlip();
+    }
+  }, [reducedMotion, handleTapFlip]);
 
-      if (first) {
-        startTimeRef.current = performance.now();
-      }
-
-      if (down) {
-        // Live tilt — drag movement maps to a fraction of the card size so the
-        // tilt feels consistent across card sizes.
-        const el = containerRef.current;
-        const w = el?.clientWidth || 220;
-        const h = el?.clientHeight || 320;
-        const cx = 0.5 + clamp(mx / w, -0.5, 0.5);
-        const cy = 0.5 + clamp(my / h, -0.5, 0.5);
-        applyTiltFromNormalized(cx, cy, 1.02);
-        return;
-      }
-
-      if (!last || canceled) return;
-
-      const duration = performance.now() - startTimeRef.current;
-
-      // 1. Tap — small movement + short duration → flip the card.
-      if (Math.abs(mx) < TAP_DISTANCE_PX && Math.abs(my) < TAP_DISTANCE_PX && duration < TAP_DURATION_MS) {
-        settleToNeutral();
-        handleTapFlip();
-        return;
-      }
-
-      // 2. Horizontal swipe → carousel navigation.
-      const horizontalIntent = Math.abs(mx) > Math.abs(my) * 1.4;
-      const horizontalCommit = Math.abs(mx) > SWIPE_DISTANCE_PX || Math.abs(vx) > SWIPE_VELOCITY;
-      if (horizontalIntent && horizontalCommit) {
-        if (mx < 0 && onNext) {
-          animateOff('left', onNext);
-          return;
-        }
-        if (mx > 0 && onPrev) {
-          animateOff('right', onPrev);
-          return;
-        }
-      }
-
-      // 3. Otherwise — drift back to neutral. Pull-down dismiss is gone; the
-      //    modal owns close via its X button / Esc / backdrop tap.
-      void vy;
-      settleToNeutral();
-    },
-    {
-      filterTaps: false,
-      pointer: { touch: true },
-      eventOptions: { passive: false },
-    },
-  );
+  const handlePointerCancel = useCallback(() => {
+    tapStartRef.current = null;
+  }, []);
 
   // ─── Transform strings ───
   const outerTransform = to(
@@ -235,7 +184,10 @@ export function InteractiveCard({
     '--plm-glare-y': `${glare.py}%`,
     willChange: 'transform, opacity',
     perspective: 1000,
-    touchAction: 'none' as const,
+    // Allow vertical scroll to pass through (touch-action: none used to
+    // block scroll while we owned the gesture).
+    touchAction: 'pan-y' as const,
+    cursor: cardBack ? 'pointer' : undefined,
   } as unknown as React.CSSProperties;
 
   const overlays = (
@@ -253,14 +205,25 @@ export function InteractiveCard({
   if (cardBack) {
     return (
       <animated.div
-        {...bind()}
         ref={containerRef}
+        role="button"
+        tabIndex={0}
         className="plm-relative plm-select-none"
         style={{ ...sharedStyle, transformStyle: 'preserve-3d' as const }}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onClick={stopClick}
-        aria-label={isFlipped ? 'Flip card to front' : 'Flip card to back'}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleTapFlip();
+          }
+        }}
+        aria-label={isFlipped ? 'Show card front' : 'Show card back'}
+        aria-pressed={isFlipped}
       >
         <animated.div
           style={{
@@ -289,7 +252,6 @@ export function InteractiveCard({
 
   return (
     <animated.div
-      {...bind()}
       ref={containerRef}
       className="plm-relative plm-select-none"
       style={sharedStyle}

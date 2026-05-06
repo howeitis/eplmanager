@@ -395,8 +395,11 @@ function MobilePlayerCard({
           <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-py-0.5 plm-rounded" title="Captain">C</span>
         )}
         {player.injured && (
-          <span className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-py-0.5 plm-rounded plm-font-semibold">
-            INJ
+          <span
+            className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-py-0.5 plm-rounded plm-font-semibold plm-tabular-nums"
+            title={`Out ${player.injuryWeeks} month${player.injuryWeeks === 1 ? '' : 's'}`}
+          >
+            INJ {player.injuryWeeks}m
           </span>
         )}
         {player.isTemporary && (
