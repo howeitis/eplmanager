@@ -34,8 +34,8 @@ export interface EPLManagerAppProps {
  * never leak out.
  *
  * @example
- * import { EPLManagerApp } from '@omhhey/epl-manager';
- * import '@omhhey/epl-manager/style.css';
+ * import { EPLManagerApp } from '@howeitis/epl-manager';
+ * import '@howeitis/epl-manager/style.css';
  *
  * function GamePage() {
  *   return <EPLManagerApp assetBasePath="/games/epl-manager" />;

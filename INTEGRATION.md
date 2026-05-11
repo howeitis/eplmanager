@@ -1,6 +1,6 @@
 # Integrating Premier League Manager into a host site
 
-This document is for embedding `@omhhey/epl-manager` as a route in another React app — the typical case is the author's personal site (React 19 + Vite 7 + React Router v7).
+This document is for embedding `@howeitis/epl-manager` as a route in another React app — the typical case is the author's personal site (React 19 + Vite 7 + React Router v7).
 
 The game ships as a library: `<EPLManagerApp />` is the only component you need to render. CSS is scoped so it can't leak out, Tailwind preflight is disabled, and asset URLs are configurable so the static files can live under any sub-path.
 
@@ -22,7 +22,7 @@ GitHub Packages hosts private npm packages free for personal accounts. One-time 
 2. In the **host site's repo**, create `.npmrc` at the repo root:
 
    ```ini
-   @omhhey:registry=https://npm.pkg.github.com
+   @howeitis:registry=https://npm.pkg.github.com
    //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
    ```
 
@@ -41,7 +41,7 @@ GitHub Packages hosts private npm packages free for personal accounts. One-time 
 From the host site:
 
 ```bash
-npm install @omhhey/epl-manager
+npm install @howeitis/epl-manager
 ```
 
 This installs the game's dependencies (Zustand, idb-keyval, seedrandom, @react-spring/web, etc.). React and react-dom are *peer* deps — they resolve to whatever the host already has.
@@ -74,12 +74,12 @@ Anywhere in the host's router — for React Router v7:
 ```tsx
 // host-site/src/routes/games/EPLManagerRoute.tsx
 import { lazy, Suspense } from 'react';
-import '@omhhey/epl-manager/style.css';
+import '@howeitis/epl-manager/style.css';
 
 // Lazy-load: the game is ~205 KB gzip JS, no reason to ship it
 // to visitors who don't open this route.
 const EPLManagerApp = lazy(() =>
-  import('@omhhey/epl-manager').then((m) => ({ default: m.EPLManagerApp }))
+  import('@howeitis/epl-manager').then((m) => ({ default: m.EPLManagerApp }))
 );
 
 export default function EPLManagerRoute() {
@@ -143,7 +143,7 @@ The development loop is now:
 1. In the **game repo**: edit, test (`npm test`), commit, push.
 2. Bump version: `npm version patch` (or `minor` / `major`).
 3. Publish: `npm publish`.
-4. In the **host repo**: `npm update @omhhey/epl-manager` and redeploy.
+4. In the **host repo**: `npm update @howeitis/epl-manager` and redeploy.
 
 The host site stays pinned to whatever version is in its `package.json` until you choose to update. No surprise breakage from upstream changes.
 
@@ -151,7 +151,7 @@ The host site stays pinned to whatever version is in its `package.json` until yo
 
 ## Troubleshooting
 
-**"Module not found: @omhhey/epl-manager"**
+**"Module not found: @howeitis/epl-manager"**
 Check `.npmrc` is at the repo root and `GITHUB_TOKEN` is exported. Run `npm install` again.
 
 **"Cannot find module 'react'" at runtime**
