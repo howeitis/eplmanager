@@ -4,6 +4,14 @@ import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl, getNational
 import { generateScoutSummaryParts } from '../../engine/scoutSummary';
 import { getPlayerFaceUri } from '../../utils/avatarFace';
 import { CLUBS } from '../../data/clubs';
+import {
+  cardTierFromOverall,
+  getTierAccentColor,
+  getTierBorderColor,
+  getTierBgGradient,
+  getTierFoilColor,
+  isLightColor,
+} from '../../utils/tierColors';
 import { ShirtOverlay } from './ShirtOverlay';
 
 const CLUB_BY_ID = new Map(CLUBS.map((c) => [c.id, c]));
@@ -72,50 +80,9 @@ function shortenClubName(name: string | undefined): string | undefined {
 
 // ─── Color helpers ───
 
-function getOverallColor(overall: number, age?: number): string {
-  // Future star mixed silver-gold for u21 75-80
-  if (age !== undefined && age <= 21 && overall >= 75 && overall < 80) {
-    return '#D4AF37'; // mixed silver-gold
-  }
-  if (overall >= 80) return '#FFD700';
-  if (overall >= 75) return '#C0C0C0';
-  if (overall >= 65) return '#CD7F32';
-  return '#8B7355';
-}
-
-function getCardBorderColor(overall: number, age?: number): string {
-  if (age !== undefined && age <= 21 && overall >= 75 && overall < 80) {
-    return '#B8980A'; // mixed silver-gold border
-  }
-  if (overall >= 80) return '#B8860B';
-  if (overall >= 75) return '#808080';
-  if (overall >= 65) return '#8B4513';
-  return '#6B5B45';
-}
-
-function getCardBgGradient(overall: number, age?: number): string {
-  // Future star (u21, 75-80): mixed silver-gold gradient
-  if (age !== undefined && age <= 21 && overall >= 75 && overall < 80) {
-    return 'linear-gradient(135deg, #FFF8DC 0%, #C0C0C0 25%, #FFD700 50%, #C0C0C0 75%, #FFF8DC 100%)';
-  }
-  if (overall >= 80) return 'linear-gradient(135deg, #FFF8DC 0%, #FFD700 30%, #FFF8DC 50%, #FFD700 70%, #FFF8DC 100%)';
-  if (overall >= 75) return 'linear-gradient(135deg, #F5F5F5 0%, #C0C0C0 30%, #F5F5F5 50%, #C0C0C0 70%, #F5F5F5 100%)';
-  if (overall >= 65) return 'linear-gradient(135deg, #FFF3E0 0%, #CD7F32 30%, #FFF3E0 50%, #CD7F32 70%, #FFF3E0 100%)';
-  return 'linear-gradient(135deg, #FAF0E6 0%, #D2B48C 30%, #FAF0E6 50%, #D2B48C 70%, #FAF0E6 100%)';
-}
-
-// Foil-stamped metallic ink that complements each card tier. Deeper,
-// higher-contrast shades so the stamp reads as embossed metallic on the
-// card's base color rather than re-using the bright overall hue.
-function getFoilStampColor(overall: number, age?: number): string {
-  if (age !== undefined && age <= 21 && overall >= 75 && overall < 80) {
-    return '#6B5A14'; // antique champagne foil (future star)
-  }
-  if (overall >= 80) return '#7A5A10'; // deep antique gold foil
-  if (overall >= 75) return '#3F3F46'; // brushed pewter foil
-  if (overall >= 65) return '#5A3418'; // burnished copper foil
-  return '#4A3A2E'; // dark sepia foil
-}
+// Tier color palette lives in src/utils/tierColors.ts so the player card and
+// manager card stay aligned. cardTierFromOverall(overall, age) covers the u21
+// 75–79 "future-star" mixed silver-gold case as well as the standard bands.
 
 // Elite-stat accent — dark magenta foil. Only the single top stat qualifies.
 const ELITE_STAT_THRESHOLD = 90;
@@ -144,13 +111,6 @@ function shiftHex(hex: string, delta: number): string {
   const b = clamp(parseInt(hex.slice(5, 7), 16) + delta);
   const toHex = (v: number) => v.toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function isLightColor(hex: string): boolean {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 160;
 }
 
 function getHeroStat(stats: PlayerStats): { key: string; value: number } | null {
@@ -207,10 +167,11 @@ export function RetroPlayerCard({
   const isGold = player.overall >= 80;
   const isShimmerGold = player.overall >= 86;
   const futureStar = getFutureStarTier(player);
-  const overallColor = getOverallColor(player.overall, player.age);
-  const borderColor = getCardBorderColor(player.overall, player.age);
-  const bgGradient = getCardBgGradient(player.overall, player.age);
-  const foilStampColor = getFoilStampColor(player.overall, player.age);
+  const cardTier = cardTierFromOverall(player.overall, player.age);
+  const overallColor = getTierAccentColor(cardTier);
+  const borderColor = getTierBorderColor(cardTier);
+  const bgGradient = getTierBgGradient(cardTier);
+  const foilStampColor = getTierFoilColor(cardTier);
   // Top stat only — we highlight a single elite stat per card.
   const heroStat = getHeroStat(player.stats);
   const heroStatElite = heroStat !== null && heroStat.value >= 95;

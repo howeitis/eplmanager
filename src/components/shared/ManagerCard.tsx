@@ -1,6 +1,14 @@
 import type { ManagerProfile } from '../../types/entities';
 import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '../../data/assets';
 import { getManagerFaceUri } from '../../utils/avatarFace';
+import {
+  cardTierFromManagerReputation,
+  getTierAccentColor,
+  getTierBorderColor,
+  getTierBgGradient,
+  getTierFoilColor,
+  isLightColor,
+} from '../../utils/tierColors';
 
 const PHILOSOPHY_LABELS: Record<string, string> = {
   attacking: 'Attacking',
@@ -10,58 +18,6 @@ const PHILOSOPHY_LABELS: Record<string, string> = {
   developmental: 'Developmental',
   'rotation-heavy': 'Rotation-Heavy',
 };
-
-// ─── Reputation-based card tier ───
-// Mirrors the player card's overall → tier mapping so gold/silver/bronze
-// reads the same way across player and manager cards.
-type ManagerTier = 'elite' | 'gold' | 'silver' | 'bronze' | 'base';
-
-function getReputationTier(reputation: number): ManagerTier {
-  if (reputation >= 90) return 'elite';
-  if (reputation >= 85) return 'gold';
-  if (reputation >= 75) return 'silver';
-  if (reputation >= 65) return 'bronze';
-  return 'base';
-}
-
-function getTierColor(tier: ManagerTier): string {
-  if (tier === 'elite' || tier === 'gold') return '#FFD700';
-  if (tier === 'silver') return '#C0C0C0';
-  if (tier === 'bronze') return '#CD7F32';
-  return '#8B7355';
-}
-
-function getTierBorderColor(tier: ManagerTier): string {
-  if (tier === 'elite' || tier === 'gold') return '#B8860B';
-  if (tier === 'silver') return '#808080';
-  if (tier === 'bronze') return '#8B4513';
-  return '#6B5B45';
-}
-
-function getTierBgGradient(tier: ManagerTier): string {
-  if (tier === 'elite' || tier === 'gold')
-    return 'linear-gradient(135deg, #FFF8DC 0%, #FFD700 30%, #FFF8DC 50%, #FFD700 70%, #FFF8DC 100%)';
-  if (tier === 'silver')
-    return 'linear-gradient(135deg, #F5F5F5 0%, #C0C0C0 30%, #F5F5F5 50%, #C0C0C0 70%, #F5F5F5 100%)';
-  if (tier === 'bronze')
-    return 'linear-gradient(135deg, #FFF3E0 0%, #CD7F32 30%, #FFF3E0 50%, #CD7F32 70%, #FFF3E0 100%)';
-  return 'linear-gradient(135deg, #FAF0E6 0%, #D2B48C 30%, #FAF0E6 50%, #D2B48C 70%, #FAF0E6 100%)';
-}
-
-// Foil-stamped ink that reads as embossed metallic on the card base.
-function getFoilStampColor(tier: ManagerTier): string {
-  if (tier === 'elite' || tier === 'gold') return '#7A5A10';
-  if (tier === 'silver') return '#3F3F46';
-  if (tier === 'bronze') return '#5A3418';
-  return '#4A3A2E';
-}
-
-function isLightColor(hex: string): boolean {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 160;
-}
 
 // Philosophy → descriptor used in the auto-generated bio line.
 const PHILOSOPHY_ADJECTIVE: Record<string, string> = {
@@ -145,11 +101,11 @@ export function ManagerCard({
   seasonNumber,
 }: ManagerCardProps) {
   const totalTrophies = (manager.totalLeagueTitles || 0) + (manager.totalFaCups || 0);
-  const tier = getReputationTier(manager.reputation);
-  const tierColor = getTierColor(tier);
+  const tier = cardTierFromManagerReputation(manager.reputation);
+  const tierColor = getTierAccentColor(tier);
   const borderColor = getTierBorderColor(tier);
   const bgGradient = getTierBgGradient(tier);
-  const foilColor = getFoilStampColor(tier);
+  const foilColor = getTierFoilColor(tier);
   const isShimmer = tier === 'elite';
   const bio = buildBio(manager);
 
