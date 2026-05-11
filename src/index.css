@@ -2,12 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-*, *::before, *::after {
+/*
+ * All global rules below are scoped to `.plm-app-root` so the game's
+ * styles never leak into a host site that mounts this package as a
+ * sub-route. Tailwind preflight is disabled in tailwind.config.js for
+ * the same reason — we provide our own minimal reset, scoped to the
+ * root, below.
+ */
+
+.plm-app-root,
+.plm-app-root *,
+.plm-app-root *::before,
+.plm-app-root *::after {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
+.plm-app-root {
   font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -15,27 +25,30 @@ body {
   color: #1A1A1A;
 }
 
-h1, h2, h3, h4 {
+.plm-app-root h1,
+.plm-app-root h2,
+.plm-app-root h3,
+.plm-app-root h4 {
   font-family: 'Playfair Display', Georgia, serif;
 }
 
 /* Focus indicators for keyboard navigation */
-*:focus-visible {
+.plm-app-root *:focus-visible {
   outline: 2px solid #1A1A1A;
   outline-offset: 2px;
   border-radius: 2px;
 }
 
-button:focus-visible,
-a:focus-visible,
-select:focus-visible,
-input:focus-visible {
+.plm-app-root button:focus-visible,
+.plm-app-root a:focus-visible,
+.plm-app-root select:focus-visible,
+.plm-app-root input:focus-visible {
   outline: 2px solid #1A1A1A;
   outline-offset: 2px;
 }
 
 /* Skip to main content link (hidden unless focused) */
-.plm-skip-link {
+.plm-app-root .plm-skip-link {
   position: absolute;
   left: -9999px;
   top: 0;
@@ -45,13 +58,13 @@ input:focus-visible {
   color: #FFFFFF;
   font-size: 14px;
 }
-.plm-skip-link:focus {
+.plm-app-root .plm-skip-link:focus {
   left: 8px;
   top: 8px;
 }
 
 /* Smooth transitions for league table position animations */
-.plm-table-row-enter {
+.plm-app-root .plm-table-row-enter {
   transition: transform 0.4s ease-out, opacity 0.3s ease-out;
 }
 
@@ -68,22 +81,23 @@ input:focus-visible {
 }
 @media (prefers-reduced-motion: reduce) {
   /* Respect the OS-level "reduce motion" preference. */
-  tr {
+  .plm-app-root tr {
     animation: none !important;
   }
 }
 
-/* Scrollbar styling for the editorial feel */
-::-webkit-scrollbar {
+/* Scrollbar styling for the editorial feel — scoped to the app root so we
+   don't override the host site's chrome. */
+.plm-app-root ::-webkit-scrollbar {
   width: 6px;
 }
-::-webkit-scrollbar-track {
+.plm-app-root ::-webkit-scrollbar-track {
   background: transparent;
 }
-::-webkit-scrollbar-thumb {
+.plm-app-root ::-webkit-scrollbar-thumb {
   background: #C4BFB6;
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
+.plm-app-root ::-webkit-scrollbar-thumb:hover {
   background: #9E9A93;
 }

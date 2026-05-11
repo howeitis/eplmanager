@@ -2,6 +2,13 @@
 export default {
   prefix: 'plm-',
   content: ['./src/**/*.{js,ts,jsx,tsx}'],
+  // Preflight disabled so this package never resets the host site's
+  // base element styles (body, *, headings) when consumed as a library.
+  // The minimal reset we DO need lives in src/index.css under
+  // `.plm-app-root` so it stays scoped.
+  corePlugins: {
+    preflight: false,
+  },
   theme: {
     extend: {
       fontFamily: {

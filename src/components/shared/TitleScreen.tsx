@@ -1,3 +1,5 @@
+import { getBrandLogoUrl, getHeroImageUrl } from '../../data/assets';
+
 interface TitleScreenProps {
   onStart: () => void;
 }
@@ -12,7 +14,7 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
       <div
         className="plm-absolute plm-inset-0 plm-bg-cover plm-bg-center plm-opacity-40"
         style={{
-          backgroundImage: 'url(/epl_manager_hero.webp)',
+          backgroundImage: `url(${getHeroImageUrl()})`,
           filter: 'blur(8px) brightness(0.6)',
           transform: 'scale(1.05)',
         }}
@@ -25,7 +27,7 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
       <div className="plm-relative plm-z-10 plm-flex plm-flex-col plm-items-center plm-gap-6 plm-px-6 plm-text-center plm-animate-fade-in">
         {/* Logo */}
         <img
-          src="/eplmanager_logo_clean.png"
+          src={getBrandLogoUrl()}
           alt="EPL Manager Logo"
           className="plm-w-32 plm-h-32 md:plm-w-40 md:plm-h-40 plm-object-contain plm-drop-shadow-lg"
         />

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { SaveMetadata } from '../../types/entities';
 import { getAllSaveMetadata, deleteSave } from '../../utils/save';
 import { getManagerFaceUri } from '../../utils/avatarFace';
+import { getBrandLogoUrl, getHeroImageUrl } from '../../data/assets';
 
 interface SaveSlotSelectProps {
   onSelectSlot: (slot: number, isExisting: boolean) => void;
@@ -44,7 +45,7 @@ export function SaveSlotSelect({ onSelectSlot }: SaveSlotSelectProps) {
       <div
         className="plm-absolute plm-inset-0 plm-bg-cover plm-bg-center plm-opacity-30"
         style={{
-          backgroundImage: 'url(/epl_manager_hero.webp)',
+          backgroundImage: `url(${getHeroImageUrl()})`,
           filter: 'blur(8px) brightness(0.5)',
           transform: 'scale(1.05)',
         }}
@@ -58,7 +59,7 @@ export function SaveSlotSelect({ onSelectSlot }: SaveSlotSelectProps) {
         {/* Logo + title */}
         <div className="plm-flex plm-flex-col plm-items-center plm-mb-8 plm-gap-3">
           <img
-            src="/eplmanager_logo_clean.png"
+            src={getBrandLogoUrl()}
             alt="EPL Manager Logo"
             className="plm-w-16 plm-h-16 plm-object-contain plm-drop-shadow-lg"
           />

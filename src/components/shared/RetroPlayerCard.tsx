@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
-import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl, getNationalTeamLogoUrl } from '../../data/assets';
+import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl, getNationalTeamLogoUrl, getBrandLogoUrl, getAssetBasePath } from '../../data/assets';
 import { generateScoutSummaryParts } from '../../engine/scoutSummary';
 import { getPlayerFaceUri } from '../../utils/avatarFace';
 import { CLUBS } from '../../data/clubs';
@@ -306,7 +306,7 @@ export function RetroPlayerCard({
         {/* EPL Manager logo — clean, centered */}
         <div className="plm-flex plm-flex-col plm-items-center plm-justify-center plm-h-full plm-gap-3">
           <img
-            src="/eplmanager_logo_clean.png"
+            src={getBrandLogoUrl()}
             alt="EPL Manager"
             className={`plm-object-contain plm-opacity-90 ${
               size === 'sm' ? 'plm-w-16 plm-h-16' : size === 'xl' ? 'plm-w-36 plm-h-36' : 'plm-w-24 plm-h-24'
@@ -599,7 +599,7 @@ export function RetroPlayerCard({
           // is navy but the shirt is white) — fall back to the team primary.
           const shirtColor = clubData?.kit?.base ?? clubColors?.primary;
           const logoSrc = clubData?.logo
-            ? `/Premier League Clubs Logos/${clubData.logo}`
+            ? `${getAssetBasePath()}/Premier League Clubs Logos/${clubData.logo}`
             : undefined;
           return (
             <div

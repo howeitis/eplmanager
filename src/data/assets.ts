@@ -1,6 +1,32 @@
 /**
  * Mappings from game entity IDs/names to asset file paths in /public.
+ *
+ * Asset base path is configurable so this game can be consumed as a
+ * library inside a host site that serves the asset folders under a
+ * sub-path (e.g. `/games/epl-manager/Premier League Clubs Logos/...`).
+ * Standalone usage leaves the default empty base ('') which resolves
+ * to `/Premier League Clubs Logos/...` etc.
+ *
+ * Consumers call `setAssetBasePath('/games/epl-manager')` once at app
+ * mount (before any card renders) to redirect every URL helper below.
  */
+
+let assetBasePath = '';
+
+/**
+ * Set the prefix prepended to every asset URL returned by the helpers
+ * in this file. No trailing slash — `'/games/epl-manager'` resolves to
+ * `/games/epl-manager/Premier League Clubs Logos/...`. Pass `''` to
+ * restore the standalone default.
+ */
+export function setAssetBasePath(base: string): void {
+  // Normalize: strip trailing slash so callers don't have to think about it.
+  assetBasePath = base.replace(/\/+$/, '');
+}
+
+export function getAssetBasePath(): string {
+  return assetBasePath;
+}
 
 /** Maps club IDs to their logo filenames in /public/Premier League Clubs Logos/ */
 export const CLUB_LOGOS: Record<string, string> = {
@@ -29,7 +55,7 @@ export const CLUB_LOGOS: Record<string, string> = {
 export function getClubLogoUrl(clubId: string): string {
   const filename = CLUB_LOGOS[clubId];
   if (!filename) return '';
-  return `/Premier League Clubs Logos/${filename}`;
+  return `${assetBasePath}/Premier League Clubs Logos/${filename}`;
 }
 
 /**
@@ -97,11 +123,21 @@ export function getNationalityFlagUrl(nationality: string): string {
   const key = nationality.toLowerCase().trim().replace(/\s+/g, '-');
   const code = NATIONALITY_FLAG_CODES[key];
   if (!code) return '';
-  return `/national flags/${code}.webp`;
+  return `${assetBasePath}/national flags/${code}.webp`;
 }
 
 export function getNationalityLabel(nationality: string): string {
   return nationality.charAt(0).toUpperCase() + nationality.slice(1).replace(/-/g, ' ');
+}
+
+/** Brand logo path. Honors the configured asset base path. */
+export function getBrandLogoUrl(): string {
+  return `${assetBasePath}/eplmanager_logo_clean.png`;
+}
+
+/** Hero image used on TitleScreen / SaveSlotSelect. Honors the asset base path. */
+export function getHeroImageUrl(): string {
+  return `${assetBasePath}/epl_manager_hero.webp`;
 }
 
 /**
@@ -160,5 +196,5 @@ export function getNationalTeamLogoUrl(nationality: string): string | null {
   const key = nationality.toLowerCase().trim().replace(/\s+/g, '-');
   const fn = NATIONALITY_TEAM_LOGOS[key];
   if (!fn) return null;
-  return `/National team logos/${fn}`;
+  return `${assetBasePath}/National team logos/${fn}`;
 }
