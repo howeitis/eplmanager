@@ -7,12 +7,24 @@ type SaveableState = Record<string, any>;
 const SAVE_KEY_PREFIX = 'epl-manager-save-';
 const METADATA_KEY = 'epl-manager-save-metadata';
 
+/**
+ * Bump this whenever the persisted shape of SaveData changes in a way that
+ * isn't backward-compatible. When bumping, add a step to migrateSaveData()
+ * that upgrades the previous version to the new one, and add a Vitest.
+ *
+ * History:
+ *  v1 — implicit (pre-versioning). previousLeagueTable and clubReputation
+ *       were optional; some saves omit them entirely.
+ *  v2 — schemaVersion introduced. Migration backfills the optional fields.
+ */
+export const CURRENT_SCHEMA_VERSION = 2;
+
 export interface SaveData {
+  schemaVersion: number;
   clubs: unknown[];
   fixtures: unknown[];
   leagueTable: unknown[];
-  /** Optional — added in v1.x. Older saves restore with []. */
-  previousLeagueTable?: unknown[];
+  previousLeagueTable: unknown[];
   budgets: Record<string, number>;
   transferHistory: unknown[];
   currentPhase: string;
@@ -28,17 +40,79 @@ export interface SaveData {
   startingXI: Record<string, string>;
   startingXIHistory: unknown[];
   shortlist: string[];
-  /** Optional — added in v1.x. Older saves rebuild from each club's static tier. */
-  clubReputation?: Record<string, number>;
+  clubReputation: Record<string, number>;
+}
+
+/** Raw shape coming off disk — fields are optional because old saves may omit them. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RawSaveData = Record<string, any>;
+
+export class SaveCorruptedError extends Error {
+  constructor(reason: string) {
+    super(`Save file is corrupted or invalid: ${reason}`);
+    this.name = 'SaveCorruptedError';
+  }
 }
 
 function getSaveKey(slot: number): string {
   return `${SAVE_KEY_PREFIX}${slot}`;
 }
 
+/**
+ * Step a save forward through every schema version until it matches CURRENT_SCHEMA_VERSION.
+ * Each `if (version < N)` block must upgrade vN-1 → vN, then bump `version`.
+ *
+ * Pre-versioning saves (no schemaVersion field at all) are treated as v1.
+ */
+export function migrateSaveData(raw: RawSaveData): SaveData {
+  let version: number = typeof raw.schemaVersion === 'number' ? raw.schemaVersion : 1;
+  let data: RawSaveData = { ...raw };
+
+  if (version < 2) {
+    // v1 → v2: backfill fields that were optional in v1 and stamp the version.
+    data = {
+      ...data,
+      previousLeagueTable: Array.isArray(data.previousLeagueTable) ? data.previousLeagueTable : [],
+      clubReputation:
+        data.clubReputation && typeof data.clubReputation === 'object' ? data.clubReputation : {},
+      startingXI: data.startingXI && typeof data.startingXI === 'object' ? data.startingXI : {},
+      startingXIHistory: Array.isArray(data.startingXIHistory) ? data.startingXIHistory : [],
+      shortlist: Array.isArray(data.shortlist) ? data.shortlist : [],
+    };
+    version = 2;
+  }
+
+  return { ...data, schemaVersion: version } as SaveData;
+}
+
+/**
+ * Validate that a migrated save has the structural invariants the game relies on.
+ * Throws SaveCorruptedError with a specific reason on failure.
+ */
+export function validateSaveData(data: SaveData): void {
+  if (!Array.isArray(data.clubs) || data.clubs.length !== 20) {
+    throw new SaveCorruptedError(`expected 20 clubs, got ${(data.clubs as unknown[])?.length ?? 0}`);
+  }
+  if (!Array.isArray(data.fixtures) || data.fixtures.length !== 380) {
+    throw new SaveCorruptedError(
+      `expected 380 fixtures, got ${(data.fixtures as unknown[])?.length ?? 0}`,
+    );
+  }
+  if (!data.manager) {
+    throw new SaveCorruptedError('manager is missing');
+  }
+  if (typeof data.gameSeed !== 'string' || data.gameSeed.length === 0) {
+    throw new SaveCorruptedError('gameSeed is missing');
+  }
+  if (typeof data.seasonNumber !== 'number') {
+    throw new SaveCorruptedError('seasonNumber is missing');
+  }
+}
+
 /** Extract saveable state from the game store (excludes tempFillIns and transferOffers) */
 export function extractSaveData(state: SaveableState): SaveData {
   return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     clubs: state.clubs as unknown[],
     fixtures: state.fixtures as unknown[],
     leagueTable: state.leagueTable as unknown[],
@@ -73,8 +147,12 @@ export async function saveGame(slot: number, state: SaveableState): Promise<void
 }
 
 export async function loadGame(slot: number): Promise<SaveData | null> {
-  const data = await idbGet<SaveData>(getSaveKey(slot));
-  return data || null;
+  const raw = await idbGet<RawSaveData>(getSaveKey(slot));
+  if (!raw) return null;
+
+  const migrated = migrateSaveData(raw);
+  validateSaveData(migrated);
+  return migrated;
 }
 
 export async function deleteSave(slot: number): Promise<void> {
