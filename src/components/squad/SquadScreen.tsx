@@ -122,7 +122,7 @@ export function SquadScreen({
 
       {/* August deadline warning */}
       {currentPhase === 'august_deadline' && (
-        <div className="plm-bg-amber-50 plm-border-2 plm-border-amber-400 plm-rounded-lg plm-px-4 plm-py-4">
+        <div className="plm-bg-amber-50 plm-border plm-border-amber-300 plm-rounded-lg plm-px-4 plm-py-4">
           <div className="plm-flex plm-items-start plm-gap-3">
             <span className="plm-text-2xl plm-flex-shrink-0" aria-hidden="true">⏰</span>
             <div className="plm-flex-1 plm-min-w-0">

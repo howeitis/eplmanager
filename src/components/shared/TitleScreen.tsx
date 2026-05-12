@@ -50,7 +50,7 @@ export function TitleScreen({ onStart }: TitleScreenProps) {
         {/* Start button */}
         <button
           onClick={onStart}
-          className="plm-mt-4 plm-px-10 plm-py-3.5 plm-rounded-lg plm-text-sm plm-font-bold plm-uppercase plm-tracking-wider plm-transition-all plm-min-h-[44px] plm-bg-white plm-text-charcoal hover:plm-bg-warm-200 plm-shadow-lg hover:plm-shadow-xl plm-transform hover:plm-scale-105"
+          className="plm-mt-4 plm-px-10 plm-py-3.5 plm-rounded-lg plm-text-sm plm-font-bold plm-uppercase plm-tracking-wider plm-transition-all plm-min-h-[44px] plm-bg-white plm-text-charcoal hover:plm-bg-warm-200 plm-shadow-lg hover:plm-shadow-xl"
         >
           Play
         </button>

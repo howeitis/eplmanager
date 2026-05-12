@@ -32,19 +32,44 @@
   font-family: 'Playfair Display', Georgia, serif;
 }
 
-/* Focus indicators for keyboard navigation */
-.plm-app-root *:focus-visible {
-  outline: 2px solid #1A1A1A;
-  outline-offset: 2px;
-  border-radius: 2px;
+/* Form-control reset — preflight is disabled (so the host site's base
+   styles stay intact), but we still need to neutralize the browser's
+   default <button> / <input> / <select> chrome inside the app so
+   clickable elements don't show UA gradients/bevels. */
+.plm-app-root button,
+.plm-app-root [role="button"] {
+  background-color: transparent;
+  background-image: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  -webkit-appearance: button;
+  -webkit-tap-highlight-color: transparent;
 }
 
+.plm-app-root input,
+.plm-app-root select,
+.plm-app-root textarea {
+  font: inherit;
+  color: inherit;
+  margin: 0;
+}
+
+.plm-app-root :disabled {
+  cursor: default;
+}
+
+/* Focus indicators for keyboard navigation */
 .plm-app-root button:focus-visible,
 .plm-app-root a:focus-visible,
 .plm-app-root select:focus-visible,
 .plm-app-root input:focus-visible {
   outline: 2px solid #1A1A1A;
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 /* Skip to main content link (hidden unless focused) */
