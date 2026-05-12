@@ -32,35 +32,54 @@
   font-family: 'Playfair Display', Georgia, serif;
 }
 
-/* Form-control reset — preflight is disabled (so the host site's base
-   styles stay intact), but we still need to neutralize the browser's
-   default <button> / <input> / <select> chrome inside the app so
-   clickable elements don't show UA gradients/bevels. */
-.plm-app-root button,
-.plm-app-root [role="button"] {
+/*
+ * Form-control defaults — preflight is disabled so the host site's
+ * base styles stay intact. We replace it with our own scoped reset
+ * that gives naked <button> elements a subtle modern "ghost" look:
+ * inheritable text, a small amount of padding so the click area
+ * separates from surrounding text, soft rounded corners, and a
+ * faint background tint on hover/active.
+ *
+ * Every selector below is wrapped in :where() so the rules carry
+ * ZERO specificity. Any Tailwind utility class (plm-bg-*, plm-px-*,
+ * plm-rounded-*, hover:plm-bg-*, etc.) cleanly overrides these
+ * defaults — without that wrapper, .plm-app-root button (0,1,1)
+ * would beat .plm-px-10 (0,1,0) on specificity once Vite strips
+ * the @layer wrappers in the production build.
+ */
+:where(.plm-app-root) :where(button, [role="button"]) {
   background-color: transparent;
   background-image: none;
   border: 0;
-  padding: 0;
+  padding: 0.375rem 0.75rem;
   margin: 0;
+  border-radius: 0.375rem;
   color: inherit;
   font: inherit;
   line-height: inherit;
   cursor: pointer;
   -webkit-appearance: button;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.plm-app-root input,
-.plm-app-root select,
-.plm-app-root textarea {
+:where(.plm-app-root) :where(button:hover) {
+  background-color: rgba(26, 26, 26, 0.04);
+}
+
+:where(.plm-app-root) :where(button:active) {
+  background-color: rgba(26, 26, 26, 0.07);
+}
+
+:where(.plm-app-root) :where(button:disabled) {
+  cursor: default;
+  background-color: transparent;
+}
+
+:where(.plm-app-root) :where(input, select, textarea) {
   font: inherit;
   color: inherit;
   margin: 0;
-}
-
-.plm-app-root :disabled {
-  cursor: default;
 }
 
 /* Focus indicators for keyboard navigation */
