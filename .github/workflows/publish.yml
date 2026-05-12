@@ -32,7 +32,11 @@ jobs:
           fi
           echo "Tag $GITHUB_REF_NAME matches package.json version $PKG_VERSION."
 
-      - run: npm ci
+      # npm install (not ci) — the lockfile is generated on Windows
+      # so it doesn't carry Linux-only optional natives like
+      # @emnapi/{core,runtime}; npm ci's strict matching rejects that.
+      # npm install resolves the missing platform deps and proceeds.
+      - run: npm install --no-audit --no-fund
 
       - run: npm run typecheck
 
