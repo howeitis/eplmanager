@@ -266,14 +266,14 @@ export function SquadScreen({
         </div>
 
         {/* Filters */}
-        <div className="plm-flex plm-flex-wrap plm-items-center plm-gap-1.5 plm-mb-3" role="group" aria-label="Filter by position">
-          <span className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-[0.15em] plm-font-semibold plm-mr-1">FILTER:</span>
+        <div className="plm-flex plm-flex-nowrap plm-items-center plm-gap-0.5 plm-mb-3" role="group" aria-label="Filter by position">
+          <span className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-[0.15em] plm-font-semibold plm-mr-1 plm-flex-shrink-0">FILTER:</span>
           {(['ALL', ...POSITION_ORDER] as const).map((pos) => (
             <button
               key={pos}
               onClick={() => setFilterPos(pos)}
               aria-pressed={filterPos === pos}
-              className={`plm-px-3 plm-py-1.5 plm-text-xs plm-font-medium plm-rounded plm-transition-colors plm-min-h-[44px] plm-min-w-[44px] ${
+              className={`plm-px-2 plm-py-1.5 plm-text-xs plm-font-medium plm-rounded plm-transition-colors plm-min-h-[44px] plm-flex-shrink-0 ${
                 filterPos === pos
                   ? 'plm-bg-charcoal plm-text-white'
                   : 'plm-bg-transparent plm-text-warm-500 hover:plm-text-charcoal'
