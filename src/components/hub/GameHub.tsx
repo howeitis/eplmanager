@@ -6,7 +6,6 @@ import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { InFormScroller } from './InFormScroller';
 import { AroundTheLeague } from './AroundTheLeague';
-import { RecentResults } from './RecentResults';
 import { LeagueTable } from '../shared/LeagueTable';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 import type { NavTab } from '../shared/BottomNav';
@@ -93,9 +92,52 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
       {/* Main content column */}
       <div className="plm-relative plm-flex-1 plm-min-w-0 plm-space-y-4" style={{ zIndex: 1 }}>
-        {/* Phase indicator — unboxed, sits flush at the top of the page */}
+        {/* Top hero — phase header + club identity sit together unboxed
+            as one masthead block, no extra gap between them. */}
         <div className="plm-pt-1 plm-pb-1">
           <PhaseIndicator phase={currentPhase} seasonNumber={seasonNumber} />
+
+          {/* Club identity, logo + name + manager line — flows directly
+              under the phase header. */}
+          <div className="plm-mt-3 plm-flex plm-items-center plm-gap-3">
+            {playerClub && getClubLogoUrl(playerClub.id) ? (
+              <img
+                src={getClubLogoUrl(playerClub.id)}
+                alt={playerClub.name}
+                className="plm-w-14 plm-h-14 plm-flex-shrink-0 plm-object-contain"
+              />
+            ) : playerClub ? (
+              <div
+                className="plm-w-14 plm-h-14 plm-flex-shrink-0"
+                style={{ backgroundColor: playerClub.colors.primary }}
+              />
+            ) : null}
+            <div className="plm-min-w-0 plm-flex-1">
+              <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
+                {playerClub?.name}
+              </h1>
+              <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
+                Managed by {manager?.name}
+              </p>
+            </div>
+          </div>
+
+          <div className="plm-mt-5 plm-space-y-3">
+            <ReputationGauge reputation={manager?.reputation ?? 0} accent={clubData?.colors.primary} />
+            {playerClub && (
+              <ClubReputationGauge
+                reputation={clubReputation[playerClub.id] ?? 50}
+                tier={playerClub.tier}
+                accent={clubData?.colors.primary}
+              />
+            )}
+          </div>
+
+          <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
+            <StatBox label="Position" value={position || '-'} />
+            <StatBox label="Points" value={playerRow?.points ?? 0} />
+            <StatBox label="Budget" value={`£${playerBudget.toFixed(0)}M`} accent />
+          </div>
         </div>
 
         {/* July narrative (WC / Euro / preseason) */}
@@ -162,49 +204,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           </div>
         )}
 
-        {/* Club identity & stats — unboxed hero. Logo sits naked beside
-            the club name; reputation gauges and a 3-stat row below. */}
-        <div className="plm-pb-2">
-          <div className="plm-flex plm-items-center plm-gap-3">
-            {playerClub && getClubLogoUrl(playerClub.id) ? (
-              <img
-                src={getClubLogoUrl(playerClub.id)}
-                alt={playerClub.name}
-                className="plm-w-14 plm-h-14 plm-flex-shrink-0 plm-object-contain"
-              />
-            ) : playerClub ? (
-              <div
-                className="plm-w-14 plm-h-14 plm-flex-shrink-0"
-                style={{ backgroundColor: playerClub.colors.primary }}
-              />
-            ) : null}
-            <div className="plm-min-w-0 plm-flex-1">
-              <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
-                {playerClub?.name}
-              </h1>
-              <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
-                Managed by {manager?.name}
-              </p>
-            </div>
-          </div>
-
-          <div className="plm-mt-5 plm-space-y-3">
-            <ReputationGauge reputation={manager?.reputation ?? 0} accent={clubData?.colors.primary} />
-            {playerClub && (
-              <ClubReputationGauge
-                reputation={clubReputation[playerClub.id] ?? 50}
-                tier={playerClub.tier}
-                accent={clubData?.colors.primary}
-              />
-            )}
-          </div>
-
-          <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
-            <StatBox label="Position" value={position || '-'} />
-            <StatBox label="Points" value={playerRow?.points ?? 0} />
-            <StatBox label="Budget" value={`£${playerBudget.toFixed(0)}M`} accent />
-          </div>
-        </div>
+        {/* Club identity hero now lives inside the masthead block above. */}
 
         {/* Board status */}
         <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
@@ -248,15 +248,10 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           </div>
         </div>
 
-        {/* Around the League — compressed standings snapshot */}
-        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
-          <AroundTheLeague />
-        </div>
-
-        {/* Recent Results — last month's fixtures for the player's club */}
-        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
-          <RecentResults />
-        </div>
+        {/* Around the League — snap-scrolling deck: Next Month, Recent Results,
+            Rivals, Golden Boot. Each card carries its own chrome, so this
+            section has no outer wrapper. */}
+        <AroundTheLeague />
 
         {/* In Form — top 5 by form, excluding injured */}
         <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
