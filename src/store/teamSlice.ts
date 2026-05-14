@@ -44,6 +44,12 @@ export interface TeamSlice {
    * club's `tier` to match its new reputation band. Call once at season end.
    */
   applyClubReputationsForSeason: (finalTable: LeagueTableRow[]) => void;
+  /**
+   * Clear the `acquiredThisWindow` flag on every player across every club.
+   * Used at the season transition so the "recently signed" cooldown
+   * expires roughly one year after the signing.
+   */
+  clearAllAcquiredFlags: () => void;
 }
 
 export const createTeamSlice: StateCreator<GameState, [], [], TeamSlice> = (set, get) => ({
@@ -184,6 +190,17 @@ export const createTeamSlice: StateCreator<GameState, [], [], TeamSlice> = (set,
       }));
       return { clubs, clubReputation: nextRep };
     });
+  },
+
+  clearAllAcquiredFlags: () => {
+    set((state) => ({
+      clubs: state.clubs.map((c) => ({
+        ...c,
+        roster: c.roster.map((p) =>
+          p.acquiredThisWindow ? { ...p, acquiredThisWindow: false } : p,
+        ),
+      })),
+    }));
   },
 });
 

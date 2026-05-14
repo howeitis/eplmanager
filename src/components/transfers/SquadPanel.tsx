@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { Player, Club, Position } from '../../types/entities';
-import { getContinentSalePrice, canSellToContinent } from '../../engine/transfers';
+import { getContinentSalePrice, canSellToContinent, refreshPlayerValue } from '../../engine/transfers';
 import { useModalParams } from '../../hooks/useModalParams';
+import { useGameStore } from '../../store/gameStore';
+import { getClubLogoUrl } from '../../data/assets';
 import { ShortlistStar } from '../shared/ShortlistStar';
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
@@ -17,6 +19,20 @@ export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
   const { openModal } = useModalParams();
+  const marketListings = useGameStore((s) => s.marketListings);
+  const addMarketListing = useGameStore((s) => s.addMarketListing);
+  const listedIds = useMemo(() => new Set(marketListings.map((l) => l.playerId)), [marketListings]);
+
+  const handleListForSale = (player: Player) => {
+    if (listedIds.has(player.id)) return;
+    const value = refreshPlayerValue(player);
+    addMarketListing({
+      playerId: player.id,
+      clubId: club.id,
+      askingPrice: Math.round(value * 1.1 * 10) / 10,
+      listedByPlayer: false,
+    });
+  };
 
   const roster = useMemo(() => {
     let result = club.roster.filter((p) => !p.isTemporary);
@@ -47,15 +63,24 @@ export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
 
   return (
     <div>
-      <h2 className="plm-text-sm plm-font-bold plm-text-gray-900 plm-mb-1">
-        Your Squad
-      </h2>
-      <p className="plm-text-xs plm-text-gray-500 plm-mb-3">
-        {roster.length} player{roster.length !== 1 ? 's' : ''}
-      </p>
+      {/* Crest + player count inline */}
+      <div className="plm-flex plm-items-center plm-gap-2 plm-mb-3">
+        {getClubLogoUrl(club.id) && (
+          <img
+            src={getClubLogoUrl(club.id)}
+            alt=""
+            aria-hidden
+            className="plm-w-7 plm-h-7 plm-object-contain plm-flex-shrink-0"
+          />
+        )}
+        <span className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-tabular-nums">
+          {roster.length} player{roster.length !== 1 ? 's' : ''}
+        </span>
+      </div>
 
       {/* Position filter */}
-      <div className="plm-flex plm-flex-wrap plm-gap-1.5 plm-mb-2" role="group" aria-label="Filter by position">
+      <div className="plm-flex plm-flex-wrap plm-items-center plm-gap-1.5 plm-mb-2" role="group" aria-label="Filter by position">
+        <span className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-[0.15em] plm-font-semibold plm-mr-1">FILTER:</span>
         {(['ALL', ...POSITION_ORDER] as const).map((pos) => (
           <button
             key={pos}
@@ -96,6 +121,7 @@ export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
           const salePrice = getContinentSalePrice(player);
           const canSell = canSellToContinent(player);
           const isConfirming = confirmSell === player.id;
+          const isListed = listedIds.has(player.id);
 
           return (
             <div
@@ -116,7 +142,7 @@ export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
                     {player.name}
                   </div>
                   <div className="plm-text-xs plm-text-gray-500">
-                    {player.position} &middot; Age {player.age} &middot; {player.trait}
+                    {player.position} &middot; Age {player.age}
                   </div>
                 </div>
                 <div className="plm-text-right plm-flex-shrink-0">
@@ -138,7 +164,7 @@ export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
                 </div>
               )}
 
-              {/* Sell to Continent */}
+              {/* Side-by-side actions: Add to Transfer List + Sell to Continent */}
               {isConfirming ? (
                 <div role="alertdialog" aria-label={`Confirm sale of ${player.name}`} className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded plm-p-3 plm-mt-2">
                   <p className="plm-text-xs plm-text-amber-800 plm-mb-2">
@@ -160,28 +186,44 @@ export function SquadPanel({ club, onSellToContinent }: SquadPanelProps) {
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => canSell && setConfirmSell(player.id)}
-                  disabled={!canSell}
-                  className={`plm-w-full plm-text-xs plm-font-medium plm-px-3 plm-py-2.5 plm-rounded plm-mt-2 plm-transition-colors plm-min-h-[44px] ${
-                    canSell
-                      ? 'plm-bg-gray-100 plm-text-gray-700 hover:plm-bg-gray-200 plm-border plm-border-gray-300'
-                      : 'plm-bg-gray-50 plm-text-gray-400 plm-cursor-not-allowed plm-border plm-border-gray-200'
-                  }`}
-                  title={
-                    !canSell && player.acquiredThisWindow
-                      ? 'Recently signed — cannot sell abroad this window'
-                      : !canSell && player.isTemporary
-                        ? 'Cannot sell temporary fill-in'
-                        : `Sell to continent for £${salePrice.toFixed(1)}M`
-                  }
-                >
-                  {canSell
-                    ? `Sell to Continent — £${salePrice.toFixed(1)}M`
-                    : player.acquiredThisWindow
-                      ? 'Recently signed — cannot sell abroad this window'
-                      : 'Cannot sell'}
-                </button>
+                <div className="plm-grid plm-grid-cols-2 plm-gap-2 plm-mt-2">
+                  <button
+                    onClick={() => handleListForSale(player)}
+                    disabled={isListed || player.isTemporary}
+                    className={`plm-text-xs plm-font-medium plm-px-3 plm-py-2.5 plm-rounded plm-transition-colors plm-min-h-[44px] plm-border ${
+                      isListed
+                        ? 'plm-bg-emerald-50 plm-text-emerald-700 plm-border-emerald-200 plm-cursor-default'
+                        : player.isTemporary
+                          ? 'plm-bg-gray-50 plm-text-gray-400 plm-cursor-not-allowed plm-border-gray-200'
+                          : 'plm-bg-gray-100 plm-text-gray-700 hover:plm-bg-gray-200 plm-border-gray-300'
+                    }`}
+                    title={isListed ? 'Already on the transfer list' : 'Add to transfer list — clubs may bid.'}
+                  >
+                    {isListed ? '✓ On Transfer List' : 'Add to Transfer List'}
+                  </button>
+                  <button
+                    onClick={() => canSell && setConfirmSell(player.id)}
+                    disabled={!canSell}
+                    className={`plm-text-xs plm-font-medium plm-px-3 plm-py-2.5 plm-rounded plm-transition-colors plm-min-h-[44px] plm-border ${
+                      canSell
+                        ? 'plm-bg-gray-100 plm-text-gray-700 hover:plm-bg-gray-200 plm-border-gray-300'
+                        : 'plm-bg-gray-50 plm-text-gray-400 plm-cursor-not-allowed plm-border-gray-200'
+                    }`}
+                    title={
+                      !canSell && player.acquiredThisWindow
+                        ? 'Recently signed — cannot sell abroad until next season'
+                        : !canSell && player.isTemporary
+                          ? 'Cannot sell temporary fill-in'
+                          : `Sell to continent for £${salePrice.toFixed(1)}M`
+                    }
+                  >
+                    {canSell
+                      ? `Sell Abroad £${salePrice.toFixed(1)}M`
+                      : player.acquiredThisWindow
+                        ? 'Recently Signed'
+                        : 'Cannot Sell'}
+                  </button>
+                </div>
               )}
             </div>
           );

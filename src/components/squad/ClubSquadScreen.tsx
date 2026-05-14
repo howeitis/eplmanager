@@ -84,61 +84,80 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
   }
 
   return (
-    <div className="plm-space-y-4 plm-w-full">
+    <div className="plm-relative plm-space-y-4 plm-w-full">
+      {/* Club-color ambient glow — mirrors the hub masthead */}
+      <div
+        aria-hidden
+        className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
+        style={{
+          background: `linear-gradient(to bottom, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
+          zIndex: 0,
+        }}
+      />
+
       {/* Back button */}
       <button
         onClick={navigateBack}
-        className="plm-text-sm plm-text-warm-500 hover:plm-text-charcoal plm-transition-colors plm-min-h-[44px] plm-inline-flex plm-items-center plm-gap-1"
+        className="plm-relative plm-text-sm plm-text-warm-500 hover:plm-text-charcoal plm-transition-colors plm-min-h-[44px] plm-inline-flex plm-items-center plm-gap-1"
+        style={{ zIndex: 1 }}
       >
         &larr; Back
       </button>
 
-      {/* Club header */}
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <div className="plm-flex plm-items-center plm-gap-3 plm-mb-3">
+      {/* Unboxed editorial masthead */}
+      <section className="plm-relative" style={{ zIndex: 1 }}>
+        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+          Club Profile
+        </p>
+        <div className="plm-mt-3 plm-flex plm-items-center plm-gap-3">
           {getClubLogoUrl(clubData.id) ? (
             <img
               src={getClubLogoUrl(clubData.id)}
               alt={clubData.name}
-              className="plm-w-12 plm-h-12 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-1 plm-border-2"
-              style={{ borderColor: clubData.colors.secondary }}
+              className="plm-w-14 plm-h-14 plm-flex-shrink-0 plm-object-contain"
             />
           ) : (
             <div
-              className="plm-w-12 plm-h-12 plm-rounded-full plm-flex-shrink-0 plm-border-2"
-              style={{
-                backgroundColor: clubData.colors.primary,
-                borderColor: clubData.colors.secondary,
-              }}
+              className="plm-w-14 plm-h-14 plm-flex-shrink-0"
+              style={{ backgroundColor: clubData.colors.primary }}
             />
           )}
           <div className="plm-min-w-0 plm-flex-1">
-            <h1 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-truncate">
+            <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
               {clubData.name}
             </h1>
-            <div className="plm-flex plm-items-center plm-gap-2 plm-mt-0.5">
-              <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-bg-warm-100 plm-text-warm-600 plm-px-2 plm-py-0.5 plm-rounded-full">
-                Tier {clubData.tier} — {TIER_LABELS[clubData.tier]}
-              </span>
-            </div>
+            <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
+              Tier {clubData.tier} &middot; {TIER_LABELS[clubData.tier]}
+            </p>
           </div>
         </div>
 
-        <div className="plm-grid plm-grid-cols-3 plm-gap-2">
-          <StatBox label="Position" value={position || '-'} />
-          <StatBox label="Squad" value={filteredPlayers.length} />
-          <StatBox label="Budget" value={`£${budget.toFixed(0)}M`} accent />
+        <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
+          <MastheadStat label="Position" value={position ? ordinal(position) : '-'} />
+          <MastheadStat label="Squad" value={filteredPlayers.length} />
+          <MastheadStat label="Budget" value={`£${budget.toFixed(0)}M`} accent={clubData.colors.primary} />
         </div>
-      </div>
+      </section>
 
       {/* Roster */}
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-3">
-          Squad ({filteredPlayers.length})
-        </h2>
+      <div className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+        <div className="plm-flex plm-items-center plm-gap-2 plm-mb-3">
+          {getClubLogoUrl(clubData.id) && (
+            <img
+              src={getClubLogoUrl(clubData.id)}
+              alt=""
+              aria-hidden
+              className="plm-w-7 plm-h-7 plm-object-contain plm-flex-shrink-0"
+            />
+          )}
+          <span className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-tabular-nums">
+            {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
+          </span>
+        </div>
 
         {/* Filters */}
-        <div className="plm-flex plm-flex-wrap plm-gap-1.5 plm-mb-3" role="group" aria-label="Filter by position">
+        <div className="plm-flex plm-flex-wrap plm-items-center plm-gap-1.5 plm-mb-3" role="group" aria-label="Filter by position">
+          <span className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-[0.15em] plm-font-semibold plm-mr-1">FILTER:</span>
           {(['ALL', ...POSITION_ORDER] as const).map((pos) => (
             <button
               key={pos}
@@ -283,17 +302,29 @@ function MobilePlayerCard({
   );
 }
 
-function StatBox({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
+function MastheadStat({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
   return (
-    <div className="plm-bg-warm-50 plm-rounded plm-p-2 plm-text-center">
-      <div className="plm-text-[10px] plm-text-warm-400 plm-font-medium plm-uppercase plm-tracking-wider">
-        {label}
-      </div>
-      <div className={`plm-text-lg plm-font-bold plm-tabular-nums ${accent ? 'plm-text-emerald-700' : 'plm-text-charcoal'}`}>
+    <div className="plm-px-2 plm-text-center first:plm-pl-0 last:plm-pr-0">
+      <div
+        className="plm-font-display plm-text-2xl plm-font-bold plm-tabular-nums plm-leading-none"
+        style={{ color: accent || '#1A1A1A' }}
+      >
         {value}
+      </div>
+      <div className="plm-text-[10px] plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-mt-1.5">
+        {label}
       </div>
     </div>
   );
+}
+
+function ordinal(n: number): string {
+  const j = n % 10;
+  const k = n % 100;
+  if (j === 1 && k !== 11) return `${n}st`;
+  if (j === 2 && k !== 12) return `${n}nd`;
+  if (j === 3 && k !== 13) return `${n}rd`;
+  return `${n}th`;
 }
 
 function FormBadge({ form }: { form: number }) {

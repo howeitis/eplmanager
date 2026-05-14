@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
+import { getClubLogoUrl } from '../../data/assets';
 import type { Player, Position } from '../../types/entities';
 import type { Formation, Mentality } from '../../engine/matchSim';
 import { FormationPicker } from './FormationPicker';
@@ -250,14 +251,23 @@ export function SquadScreen({
 
       {/* Roster */}
       {squadView === 'roster' && <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <div className="plm-flex plm-items-center plm-justify-between plm-mb-3">
-          <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal">
-            Squad ({filteredPlayers.filter((p) => !p.isTemporary).length})
-          </h2>
+        <div className="plm-flex plm-items-center plm-gap-2 plm-mb-3">
+          {clubData && getClubLogoUrl(clubData.id) && (
+            <img
+              src={getClubLogoUrl(clubData.id)}
+              alt=""
+              aria-hidden
+              className="plm-w-7 plm-h-7 plm-object-contain plm-flex-shrink-0"
+            />
+          )}
+          <span className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-tabular-nums">
+            {filteredPlayers.filter((p) => !p.isTemporary).length} player{filteredPlayers.filter((p) => !p.isTemporary).length !== 1 ? 's' : ''}
+          </span>
         </div>
 
         {/* Filters */}
-        <div className="plm-flex plm-flex-wrap plm-gap-1.5 plm-mb-3" role="group" aria-label="Filter by position">
+        <div className="plm-flex plm-flex-wrap plm-items-center plm-gap-1.5 plm-mb-3" role="group" aria-label="Filter by position">
+          <span className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-[0.15em] plm-font-semibold plm-mr-1">FILTER:</span>
           {(['ALL', ...POSITION_ORDER] as const).map((pos) => (
             <button
               key={pos}

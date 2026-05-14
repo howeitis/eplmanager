@@ -3,6 +3,8 @@ import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import { getClubLogoUrl } from '../../data/assets';
 import { ScrollPipIndicator } from '../shared/ScrollPipIndicator';
+import { useNavigation } from '../../hooks/useNavigation';
+import { useModalParams } from '../../hooks/useModalParams';
 import type { Fixture, GamePhase, LeagueTableRow } from '../../types/entities';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
@@ -66,6 +68,8 @@ export function AroundTheLeague() {
   const fixtures = useGameStore((s) => s.fixtures);
   const clubs = useGameStore((s) => s.clubs);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { navigateToClub } = useNavigation();
+  const { openModal } = useModalParams();
 
   const playerClubId = manager?.clubId;
   const playerClubData = playerClubId ? clubDataMap.get(playerClubId) : null;
@@ -138,12 +142,12 @@ export function AroundTheLeague() {
   }, [playerClubData, sortedTable]);
 
   const goldenBoot = useMemo(() => {
-    const out: { name: string; clubId: string; goals: number }[] = [];
+    const out: { playerId: string; name: string; clubId: string; goals: number }[] = [];
     for (const club of clubs) {
       for (const p of club.roster) {
         if (p.isTemporary) continue;
         const g = Number.isFinite(p.goals) ? p.goals : 0;
-        if (g > 0) out.push({ name: p.name, clubId: club.id, goals: g });
+        if (g > 0) out.push({ playerId: p.id, name: p.name, clubId: club.id, goals: g });
       }
     }
     out.sort((a, b) => b.goals - a.goals);
@@ -176,7 +180,7 @@ export function AroundTheLeague() {
             subtitle="Looking ahead"
             accent={accent}
           >
-            <NextMonthList fixtures={nextMonthData.upcoming} playerClubId={playerClubId} />
+            <NextMonthList fixtures={nextMonthData.upcoming} playerClubId={playerClubId} onOpenClub={navigateToClub} />
           </Card>
 
           <Card
@@ -184,15 +188,15 @@ export function AroundTheLeague() {
             subtitle="Looking back"
             accent={accent}
           >
-            <RecentResultsList fixtures={recentMonthData.played} playerClubId={playerClubId} />
+            <RecentResultsList fixtures={recentMonthData.played} playerClubId={playerClubId} onOpenClub={navigateToClub} />
           </Card>
 
           <Card title="Rivals Watch" subtitle="Derby table" accent={accent}>
-            <RivalsList rivals={rivals} playerPos={playerPos} />
+            <RivalsList rivals={rivals} playerPos={playerPos} onOpenClub={navigateToClub} />
           </Card>
 
           <Card title="Golden Boot" subtitle="The race" accent={accent}>
-            <GoldenBootList rows={goldenBoot} />
+            <GoldenBootList rows={goldenBoot} onOpenPlayer={openModal} onOpenClub={navigateToClub} />
           </Card>
         </ul>
       </div>
@@ -247,15 +251,26 @@ function FixtureRow({
   oppClubId,
   rightSlot,
   resultTone,
+  onOpenClub,
 }: {
   isHome: boolean;
   oppClubId: string;
   rightSlot: React.ReactNode;
   resultTone?: { letter: FormResult } | null;
+  onOpenClub?: (clubId: string) => void;
 }) {
   const opp = clubDataMap.get(oppClubId);
+  const clickable = !!onOpenClub;
+  const Row = clickable ? 'button' : 'div';
   return (
-    <div className="plm-flex plm-items-center plm-gap-2.5 plm-py-1.5 plm-border-b plm-border-warm-200 last:plm-border-b-0">
+    <Row
+      type={clickable ? 'button' : undefined as undefined}
+      onClick={clickable ? () => onOpenClub!(oppClubId) : undefined}
+      aria-label={clickable ? `View ${opp?.name}` : undefined}
+      className={`plm-flex plm-items-center plm-gap-2.5 plm-py-1.5 plm-border-b plm-border-warm-200 last:plm-border-b-0 plm-w-full plm-text-left ${
+        clickable ? 'plm-cursor-pointer hover:plm-bg-warm-50 plm-transition-colors plm-rounded-md' : ''
+      }`}
+    >
       {resultTone ? (
         <span
           className={`plm-inline-flex plm-items-center plm-justify-center plm-w-[18px] plm-h-[18px] plm-rounded-md plm-text-[10px] plm-font-extrabold ${RESULT_PILL[resultTone.letter].bg} ${RESULT_PILL[resultTone.letter].fg}`}
@@ -292,11 +307,11 @@ function FixtureRow({
       <span className="plm-font-display plm-font-extrabold plm-text-[14px] plm-text-charcoal plm-tabular-nums">
         {rightSlot}
       </span>
-    </div>
+    </Row>
   );
 }
 
-function NextMonthList({ fixtures, playerClubId }: { fixtures: Fixture[]; playerClubId: string }) {
+function NextMonthList({ fixtures, playerClubId, onOpenClub }: { fixtures: Fixture[]; playerClubId: string; onOpenClub: (clubId: string) => void }) {
   if (fixtures.length === 0) {
     return <p className="plm-text-xs plm-text-warm-500 plm-italic plm-py-2">No upcoming fixtures.</p>;
   }
@@ -310,6 +325,7 @@ function NextMonthList({ fixtures, playerClubId }: { fixtures: Fixture[]; player
             key={f.id}
             isHome={isHome}
             oppClubId={oppId}
+            onOpenClub={onOpenClub}
             rightSlot={
               <span className="plm-text-[10px] plm-font-bold plm-uppercase plm-tracking-[0.1em] plm-text-warm-500 plm-font-sans">
                 MD {f.gameweek}
@@ -322,7 +338,7 @@ function NextMonthList({ fixtures, playerClubId }: { fixtures: Fixture[]; player
   );
 }
 
-function RecentResultsList({ fixtures, playerClubId }: { fixtures: Fixture[]; playerClubId: string }) {
+function RecentResultsList({ fixtures, playerClubId, onOpenClub }: { fixtures: Fixture[]; playerClubId: string; onOpenClub: (clubId: string) => void }) {
   if (fixtures.length === 0) {
     return <p className="plm-text-xs plm-text-warm-500 plm-italic plm-py-2">No matches played yet.</p>;
   }
@@ -339,6 +355,7 @@ function RecentResultsList({ fixtures, playerClubId }: { fixtures: Fixture[]; pl
             key={f.id}
             isHome={isHome}
             oppClubId={oppId}
+            onOpenClub={onOpenClub}
             resultTone={{ letter: r }}
             rightSlot={`${myGoals}–${theirGoals}`}
           />
@@ -353,9 +370,11 @@ function RecentResultsList({ fixtures, playerClubId }: { fixtures: Fixture[]; pl
 function RivalsList({
   rivals,
   playerPos,
+  onOpenClub,
 }: {
   rivals: { clubId: string; position: number; row: LeagueTableRow }[];
   playerPos: number;
+  onOpenClub: (clubId: string) => void;
 }) {
   if (rivals.length === 0 || playerPos === 0) {
     return <p className="plm-text-xs plm-text-warm-500 plm-italic plm-py-2">No derbies on record.</p>;
@@ -369,9 +388,12 @@ function RivalsList({
         const tone = gap === 0 ? 'plm-text-warm-500' : ahead ? 'plm-text-rose-700' : 'plm-text-emerald-700';
         const label = gap === 0 ? '—' : ahead ? `+${Math.abs(gap)}` : `−${Math.abs(gap)}`;
         return (
-          <div
+          <button
+            type="button"
             key={clubId}
-            className="plm-flex plm-items-center plm-gap-2.5 plm-py-2 plm-border-b plm-border-warm-200 last:plm-border-b-0"
+            onClick={() => onOpenClub(clubId)}
+            aria-label={`View ${club?.name}`}
+            className="plm-flex plm-items-center plm-gap-2.5 plm-py-2 plm-border-b plm-border-warm-200 last:plm-border-b-0 plm-w-full plm-text-left plm-cursor-pointer hover:plm-bg-warm-50 plm-transition-colors plm-rounded-md"
           >
             {getClubLogoUrl(clubId) ? (
               <img
@@ -398,7 +420,7 @@ function RivalsList({
             <span className={`plm-font-display plm-font-extrabold plm-text-[14px] ${tone}`}>
               {label}
             </span>
-          </div>
+          </button>
         );
       })}
     </div>
@@ -416,7 +438,15 @@ function ordinal(n: number): string {
 
 // ─── Golden Boot card ─────────────────────────────────────────────
 
-function GoldenBootList({ rows }: { rows: { name: string; clubId: string; goals: number }[] }) {
+function GoldenBootList({
+  rows,
+  onOpenPlayer,
+  onOpenClub,
+}: {
+  rows: { playerId: string; name: string; clubId: string; goals: number }[];
+  onOpenPlayer: (playerId: string, clubId: string) => void;
+  onOpenClub: (clubId: string) => void;
+}) {
   if (rows.length === 0) {
     return <p className="plm-text-xs plm-text-warm-500 plm-italic plm-py-2">No goals yet.</p>;
   }
@@ -426,17 +456,27 @@ function GoldenBootList({ rows }: { rows: { name: string; clubId: string; goals:
         const club = clubDataMap.get(r.clubId);
         return (
           <div
-            key={r.name}
+            key={r.playerId}
             className="plm-grid plm-grid-cols-[14px_1fr_28px] plm-gap-2 plm-items-center plm-py-2 plm-border-b plm-border-warm-200 last:plm-border-b-0"
           >
             <span className="plm-font-display plm-font-bold plm-text-[11px] plm-text-warm-500 plm-tabular-nums">
               {i + 1}
             </span>
             <div className="plm-min-w-0">
-              <p className="plm-font-display plm-font-bold plm-text-[13.5px] plm-text-charcoal plm-leading-tight plm-truncate plm-m-0">
+              <button
+                type="button"
+                onClick={() => onOpenPlayer(r.playerId, r.clubId)}
+                aria-label={`View ${r.name}`}
+                className="plm-font-display plm-font-bold plm-text-[13.5px] plm-text-charcoal plm-leading-tight plm-truncate plm-m-0 plm-block plm-text-left plm-w-full hover:plm-underline"
+              >
                 {r.name}
-              </p>
-              <div className="plm-flex plm-items-center plm-gap-1.5 plm-mt-0.5">
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenClub(r.clubId)}
+                aria-label={`View ${club?.name}`}
+                className="plm-flex plm-items-center plm-gap-1.5 plm-mt-0.5 plm-text-left hover:plm-opacity-80 plm-transition-opacity"
+              >
                 {getClubLogoUrl(r.clubId) ? (
                   <img
                     src={getClubLogoUrl(r.clubId)}
@@ -454,7 +494,7 @@ function GoldenBootList({ rows }: { rows: { name: string; clubId: string; goals:
                 <span className="plm-text-[9.5px] plm-uppercase plm-tracking-[0.1em] plm-font-bold plm-text-warm-500 plm-truncate">
                   {club?.name}
                 </span>
-              </div>
+              </button>
             </div>
             <span className="plm-font-display plm-font-extrabold plm-text-[17px] plm-text-charcoal plm-tabular-nums plm-text-right">
               {r.goals}

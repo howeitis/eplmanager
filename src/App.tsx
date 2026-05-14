@@ -1228,6 +1228,11 @@ function App() {
   const handleContinueToOffSeason = useCallback(async () => {
     const state = store.getState();
 
+    // Clear "recently signed" flags so the cooldown ends roughly one year
+    // after the player joined — by the start of the next summer window
+    // the flag is gone everywhere.
+    state.clearAllAcquiredFlags();
+
     // Advance to next season
     state.advanceSeason();
 

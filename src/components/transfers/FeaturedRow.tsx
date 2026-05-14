@@ -84,6 +84,11 @@ export function FeaturedRow({ listings }: FeaturedRowProps) {
           );
         })}
       </ul>
+
+      {/* Hidden-gems reminder */}
+      <p className="plm-mt-6 plm-text-center plm-text-xs plm-text-warm-500 plm-italic plm-font-display plm-leading-relaxed">
+        Looking for more? Click into any club from the league table to uncover hidden gems.
+      </p>
     </div>
   );
 }
