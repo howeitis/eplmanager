@@ -6,6 +6,7 @@ import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { InFormScroller } from './InFormScroller';
 import { AroundTheLeague } from './AroundTheLeague';
+import { RecentResults } from './RecentResults';
 import { LeagueTable } from '../shared/LeagueTable';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 import type { NavTab } from '../shared/BottomNav';
@@ -92,8 +93,8 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
       {/* Main content column */}
       <div className="plm-relative plm-flex-1 plm-min-w-0 plm-space-y-4" style={{ zIndex: 1 }}>
-        {/* Phase indicator */}
-        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
+        {/* Phase indicator — unboxed, sits flush at the top of the page */}
+        <div className="plm-pt-1 plm-pb-1">
           <PhaseIndicator phase={currentPhase} seasonNumber={seasonNumber} />
         </div>
 
@@ -161,35 +162,33 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           </div>
         )}
 
-        {/* Club identity & stats */}
-        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
-          <div className="plm-flex plm-items-start plm-gap-4">
-            {playerClub && (
-              getClubLogoUrl(playerClub.id) ? (
-                <img
-                  src={getClubLogoUrl(playerClub.id)}
-                  alt={playerClub.name}
-                  className="plm-w-14 plm-h-14 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5 plm-border-2"
-                  style={{ borderColor: playerClub.colors.secondary }}
-                />
-              ) : (
-                <div
-                  className="plm-w-14 plm-h-14 plm-rounded-full plm-flex-shrink-0 plm-border-2"
-                  style={{ backgroundColor: playerClub.colors.primary, borderColor: playerClub.colors.secondary }}
-                />
-              )
-            )}
+        {/* Club identity & stats — unboxed hero. Logo sits naked beside
+            the club name; reputation gauges and a 3-stat row below. */}
+        <div className="plm-pb-2">
+          <div className="plm-flex plm-items-center plm-gap-3">
+            {playerClub && getClubLogoUrl(playerClub.id) ? (
+              <img
+                src={getClubLogoUrl(playerClub.id)}
+                alt={playerClub.name}
+                className="plm-w-14 plm-h-14 plm-flex-shrink-0 plm-object-contain"
+              />
+            ) : playerClub ? (
+              <div
+                className="plm-w-14 plm-h-14 plm-flex-shrink-0"
+                style={{ backgroundColor: playerClub.colors.primary }}
+              />
+            ) : null}
             <div className="plm-min-w-0 plm-flex-1">
               <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
                 {playerClub?.name}
               </h1>
-              <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate plm-mt-0.5">
+              <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
                 Managed by {manager?.name}
               </p>
             </div>
           </div>
 
-          <div className="plm-mt-4 plm-pt-4 plm-border-t plm-border-warm-200 plm-space-y-3">
+          <div className="plm-mt-5 plm-space-y-3">
             <ReputationGauge reputation={manager?.reputation ?? 0} accent={clubData?.colors.primary} />
             {playerClub && (
               <ClubReputationGauge
@@ -200,10 +199,9 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
             )}
           </div>
 
-          <div className="plm-mt-4 plm-pt-4 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-4 plm-divide-x plm-divide-warm-200">
+          <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
             <StatBox label="Position" value={position || '-'} />
             <StatBox label="Points" value={playerRow?.points ?? 0} />
-            <StatBox label="Squad" value={playerClub?.roster.filter((p) => !p.isTemporary).length || 0} />
             <StatBox label="Budget" value={`£${playerBudget.toFixed(0)}M`} accent />
           </div>
         </div>
@@ -250,10 +248,14 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           </div>
         </div>
 
-        {/* Around the League — compressed standings snapshot replacing the
-            separate Rivals + Goal Scorers cards. */}
+        {/* Around the League — compressed standings snapshot */}
         <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
           <AroundTheLeague />
+        </div>
+
+        {/* Recent Results — last month's fixtures for the player's club */}
+        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
+          <RecentResults />
         </div>
 
         {/* In Form — top 5 by form, excluding injured */}

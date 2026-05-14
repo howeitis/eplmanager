@@ -107,6 +107,13 @@
   top: 8px;
 }
 
+/* Hide native scrollbar on horizontal scrollers that use a custom
+   pip indicator (e.g. InFormScroller). Firefox uses the inline
+   scrollbar-width style; webkit needs the pseudo-element rule. */
+.plm-app-root .plm-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Smooth transitions for league table position animations */
 .plm-app-root .plm-table-row-enter {
   transition: transform 0.4s ease-out, opacity 0.3s ease-out;
