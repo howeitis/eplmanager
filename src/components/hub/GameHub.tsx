@@ -4,7 +4,7 @@ import { CLUBS } from '../../data/clubs';
 import { getClubLogoUrl, getNationalTeamLogoUrl } from '../../data/assets';
 import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
-import { SquadMiniView } from './SquadMiniView';
+import { InFormScroller } from './InFormScroller';
 import { GoalScorersWidget } from './GoalScorersWidget';
 import { RivalsWatch } from './RivalsWatch';
 import { LeagueTable } from '../shared/LeagueTable';
@@ -233,9 +233,9 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           <GoalScorersWidget />
         </div>
 
-        {/* Squad mini-view */}
+        {/* In Form — top 5 by form, excluding injured */}
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-          <SquadMiniView />
+          <InFormScroller />
           <button
             onClick={() => onNavigate('squad')}
             className="plm-mt-3 plm-w-full plm-text-center plm-text-xs plm-text-warm-500 hover:plm-text-charcoal plm-transition-colors plm-py-2 plm-min-h-[44px] plm-flex plm-items-center plm-justify-center"
