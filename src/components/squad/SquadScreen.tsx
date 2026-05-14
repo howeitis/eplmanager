@@ -173,7 +173,12 @@ export function SquadScreen({
         </div>
       )}
 
-      {/* Formation & Mentality — collapsible */}
+      {/* Desktop: two-column split — tactics/XI on left, squad list on right */}
+      <div className="plm-flex plm-flex-col lg:plm-flex-row plm-gap-4 plm-items-start">
+
+      {/* Left column: Tactics + Starting XI */}
+      <div className="plm-w-full lg:plm-w-[520px] lg:plm-flex-shrink-0 plm-space-y-4">
+      {/* Tactics — collapsible (formation + mentality only) */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
         <button
           onClick={() => setTacticsOpen((v) => !v)}
@@ -199,30 +204,32 @@ export function SquadScreen({
           </span>
         </button>
         {tacticsOpen && (
-          <div className="plm-mt-3">
-            <div className="plm-grid plm-grid-cols-1 md:plm-grid-cols-2 plm-gap-4">
-              <FormationPicker
-                formation={formation}
-                onFormationChange={onFormationChange}
-                roster={allPlayers}
-              />
-              <MentalitySelector
-                mentality={mentality}
-                onMentalityChange={onMentalityChange}
-              />
-            </div>
-            {/* Starting XI Pitch View */}
-            <div className="plm-mt-4 plm-pt-4 plm-border-t plm-border-warm-100">
-              <StartingXIPicker
-                formation={formation}
-                xiNotifications={xiNotifications}
-                onDismissNotifications={onDismissNotifications}
-              />
-            </div>
+          <div className="plm-mt-3 plm-grid plm-grid-cols-1 md:plm-grid-cols-2 plm-gap-4">
+            <FormationPicker
+              formation={formation}
+              onFormationChange={onFormationChange}
+              roster={allPlayers}
+            />
+            <MentalitySelector
+              mentality={mentality}
+              onMentalityChange={onMentalityChange}
+            />
           </div>
         )}
       </div>
 
+      {/* Starting XI — always visible */}
+      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+        <StartingXIPicker
+          formation={formation}
+          xiNotifications={xiNotifications}
+          onDismissNotifications={onDismissNotifications}
+        />
+      </div>
+      </div>
+
+      {/* Right column: squad list */}
+      <div className="plm-w-full lg:plm-flex-1 plm-min-w-0 plm-space-y-4">
       {/* View Toggle: Roster / Progression */}
       <div className="plm-flex plm-gap-1 plm-bg-warm-100 plm-rounded-lg plm-p-0.5">
         {([['roster', 'Roster'], ['progression', 'Progression']] as [SquadView, string][]).map(([key, label]) => (
@@ -335,6 +342,8 @@ export function SquadScreen({
           ))}
         </div>
       </div>}
+      </div>
+      </div>
       {tutorial.show && <TutorialModal tab="squad" onClose={tutorial.onClose} />}
     </div>
   );

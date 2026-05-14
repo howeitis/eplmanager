@@ -63,14 +63,24 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           of the hub using the player's primary club color. Sits behind all
           content. */}
       {clubData && (
-        <div
-          aria-hidden
-          className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
-          style={{
-            background: `linear-gradient(to bottom, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
-            zIndex: 0,
-          }}
-        />
+        <>
+          <div
+            aria-hidden
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
+            style={{
+              background: `linear-gradient(to bottom, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
+              zIndex: 0,
+            }}
+          />
+          <div
+            aria-hidden
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+            style={{
+              background: `linear-gradient(to top, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
+              zIndex: 0,
+            }}
+          />
+        </>
       )}
 
       {/* Desktop: League table on the left, sticky — unboxed, EPL logo header */}
@@ -258,17 +268,6 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           </button>
         </div>
 
-        {/* Club-color ambient glow — mirrors the top glow, anchored to bottom */}
-        {clubData && (
-          <div
-            aria-hidden
-            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
-            style={{
-              background: `linear-gradient(to top, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
-              zIndex: 0,
-            }}
-          />
-        )}
       </div>
       {tutorial.show && <TutorialModal tab="hub" onClose={tutorial.onClose} />}
     </div>

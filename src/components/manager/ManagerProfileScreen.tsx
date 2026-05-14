@@ -7,24 +7,6 @@ import { getManagerFaceUri } from '../../utils/avatarFace';
 import { saveGame } from '../../utils/save';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 
-const PHILOSOPHY_LABELS: Record<string, string> = {
-  attacking: 'Attacking',
-  possession: 'Possession',
-  pragmatic: 'Pragmatic',
-  defensive: 'Defensive',
-  developmental: 'Developmental',
-  'rotation-heavy': 'Rotation-Heavy',
-};
-
-const BACKGROUND_LABELS: Record<string, string> = {
-  'former-pro': 'Former Professional',
-  'lower-league-pro': 'Lower League Pro',
-  'academy-coach': 'Academy Coach',
-  journalist: 'Journalist',
-  analyst: 'Analyst',
-  'never-played': 'Never Played',
-};
-
 const ACCOMPLISHMENT_ICONS: Record<string, string> = {
   'league-title': '🏆',
   'fa-cup': '🏅',
@@ -138,22 +120,6 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
               {currentClub?.name ?? 'Between clubs'}
             </p>
           </div>
-        </div>
-
-        <div className="plm-mt-4 plm-flex plm-flex-wrap plm-gap-x-3 plm-gap-y-1 plm-text-sm plm-text-warm-600">
-          <span>{manager.nationality}</span>
-          <span aria-hidden>&middot;</span>
-          <span>Age {manager.age}</span>
-          <span aria-hidden>&middot;</span>
-          <span>Rep {manager.reputation}</span>
-        </div>
-
-        <div className="plm-mt-1 plm-flex plm-flex-wrap plm-gap-x-3 plm-gap-y-1 plm-text-sm plm-text-warm-600">
-          <span>{PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy}</span>
-          <span aria-hidden>&middot;</span>
-          <span>{manager.preferredFormation}</span>
-          <span aria-hidden>&middot;</span>
-          <span>{BACKGROUND_LABELS[manager.playingBackground] || manager.playingBackground}</span>
         </div>
 
         {manager.bio && (
@@ -311,18 +277,6 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
         >
           Resign Position
         </button>
-      )}
-
-      {/* Club-color ambient glow — anchored to bottom, mirrors the top glow */}
-      {currentClub && (
-        <div
-          aria-hidden
-          className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
-          style={{
-            background: `linear-gradient(to top, ${currentClub.colors.primary}38 0%, ${currentClub.colors.primary}1F 28%, ${currentClub.colors.primary}0A 55%, transparent 100%)`,
-            zIndex: 0,
-          }}
-        />
       )}
 
       {/* Resign confirmation modals */}
