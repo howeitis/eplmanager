@@ -65,7 +65,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
       {clubData && (
         <div
           aria-hidden
-          className="plm-pointer-events-none plm-absolute plm-inset-x-0 plm--top-16 plm-h-[320px]"
+          className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
           style={{
             background: `linear-gradient(to bottom, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
             zIndex: 0,
@@ -134,7 +134,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           </div>
 
           <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
-            <StatBox label="Position" value={position || '-'} />
+            <StatBox label="Position" value={position ? ordinal(position) : '-'} />
             <StatBox label="Points" value={playerRow?.points ?? 0} />
             <StatBox label="Budget" value={`£${playerBudget.toFixed(0)}M`} accent />
           </div>
@@ -206,8 +206,8 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
         {/* Club identity hero now lives inside the masthead block above. */}
 
-        {/* Board status */}
-        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
+        {/* Board status — unboxed editorial block */}
+        <div className="plm-pt-5 plm-border-t plm-border-warm-200">
           <BoardStatus />
         </div>
 
@@ -267,6 +267,15 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
       {tutorial.show && <TutorialModal tab="hub" onClose={tutorial.onClose} />}
     </div>
   );
+}
+
+function ordinal(n: number): string {
+  const j = n % 10;
+  const k = n % 100;
+  if (j === 1 && k !== 11) return `${n}st`;
+  if (j === 2 && k !== 12) return `${n}nd`;
+  if (j === 3 && k !== 13) return `${n}rd`;
+  return `${n}th`;
 }
 
 function StatBox({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {

@@ -133,7 +133,8 @@ export function AroundTheLeague() {
         if (idx === -1) return null;
         return { clubId: rid, position: idx + 1, row: sortedTable[idx] };
       })
-      .filter((x): x is { clubId: string; position: number; row: LeagueTableRow } => x !== null);
+      .filter((x): x is { clubId: string; position: number; row: LeagueTableRow } => x !== null)
+      .sort((a, b) => a.position - b.position);
   }, [playerClubData, sortedTable]);
 
   const goldenBoot = useMemo(() => {
@@ -171,8 +172,8 @@ export function AroundTheLeague() {
       >
         <ul role="list" className="plm-flex plm-gap-3 plm-list-none plm-pl-0 plm-m-0">
           <Card
-            title="Next Month"
-            subtitle={nextMonthData.month ? PHASE_MONTH_LABEL[nextMonthData.month] : 'Upcoming'}
+            title={nextMonthData.month ? `${PHASE_MONTH_LABEL[nextMonthData.month]!.toUpperCase()}'S MATCHES` : 'UPCOMING MATCHES'}
+            subtitle="Looking ahead"
             accent={accent}
           >
             <NextMonthList fixtures={nextMonthData.upcoming} playerClubId={playerClubId} />
@@ -436,13 +437,22 @@ function GoldenBootList({ rows }: { rows: { name: string; clubId: string; goals:
                 {r.name}
               </p>
               <div className="plm-flex plm-items-center plm-gap-1.5 plm-mt-0.5">
-                <span
-                  className="plm-inline-block plm-w-1.5 plm-h-1.5 plm-rounded-full"
-                  style={{ backgroundColor: club?.colors.primary }}
-                  aria-hidden
-                />
-                <span className="plm-text-[9.5px] plm-uppercase plm-tracking-[0.1em] plm-font-bold plm-text-warm-500">
-                  {club?.shortName ?? club?.name}
+                {getClubLogoUrl(r.clubId) ? (
+                  <img
+                    src={getClubLogoUrl(r.clubId)}
+                    alt=""
+                    className="plm-w-4 plm-h-4 plm-object-contain plm-flex-shrink-0"
+                    aria-hidden
+                  />
+                ) : (
+                  <span
+                    className="plm-inline-block plm-w-1.5 plm-h-1.5 plm-rounded-full"
+                    style={{ backgroundColor: club?.colors.primary }}
+                    aria-hidden
+                  />
+                )}
+                <span className="plm-text-[9.5px] plm-uppercase plm-tracking-[0.1em] plm-font-bold plm-text-warm-500 plm-truncate">
+                  {club?.name}
                 </span>
               </div>
             </div>

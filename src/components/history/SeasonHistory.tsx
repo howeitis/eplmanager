@@ -130,7 +130,11 @@ export function SeasonHistoryScreen() {
               const trophyImg = t.type === 'league' ? '/trophies/epl trophy.png' : '/trophies/fa cup trophy.png';
               return (
                 <div key={i} className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded plm-px-3 plm-py-2 plm-text-center">
-                  <img src={trophyImg} alt={t.award} className="plm-w-10 plm-h-10 plm-mx-auto plm-object-contain" />
+                  <img
+                    src={trophyImg}
+                    alt={t.award}
+                    className={`${t.type === 'league' ? 'plm-w-14 plm-h-14' : 'plm-w-10 plm-h-10'} plm-mx-auto plm-object-contain`}
+                  />
                   <div className="plm-text-[10px] plm-font-bold plm-text-amber-700 plm-uppercase plm-mt-1">
                     {t.award}
                   </div>

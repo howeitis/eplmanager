@@ -6,7 +6,6 @@ import { FormationPicker } from './FormationPicker';
 import { MentalitySelector } from './MentalitySelector';
 import { StartingXIPicker } from './StartingXIPicker';
 import { SquadProgression } from './SquadProgression';
-import { GoalScorersWidget } from '../hub/GoalScorersWidget';
 import { useModalParams } from '../../hooks/useModalParams';
 import type { XISwap } from '../../engine/startingXI';
 import { refreshPlayerValue } from '../../engine/transfers';
@@ -210,11 +209,6 @@ export function SquadScreen({
 
       {/* Progression View */}
       {squadView === 'progression' && <SquadProgression />}
-
-      {/* Goal Scorers (secondary placement) */}
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <GoalScorersWidget variant="squad" />
-      </div>
 
       {/* Roster */}
       {squadView === 'roster' && <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">

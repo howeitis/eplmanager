@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import type { Player } from '../../types/entities';
 import { useModalParams } from '../../hooks/useModalParams';
 
-type ProgressionSort = 'form_trend' | 'goals' | 'biggest_climbers' | 'biggest_droppers';
+type ProgressionSort = 'form_trend' | 'goals';
 
 /** Compute trend arrow from last 3+ form entries */
 function getTrendArrow(formHistory: number[]): string {
@@ -26,16 +26,8 @@ function getTrendColor(arrow: string): string {
 /** Micro sparkline SVG for form history */
 function FormSparkline({ formHistory }: { formHistory: number[] }) {
   if (formHistory.length === 0) {
-    // Single neutral dot + badge
     return (
-      <div className="plm-flex plm-items-center plm-gap-1.5">
-        <svg width="24" height="16" viewBox="0 0 24 16" className="plm-flex-shrink-0">
-          <circle cx="12" cy="8" r="3" fill="#9CA3AF" />
-        </svg>
-        <span className="plm-text-[9px] plm-text-warm-400 plm-bg-warm-100 plm-px-1 plm-py-0.5 plm-rounded plm-whitespace-nowrap">
-          New to club
-        </span>
-      </div>
+      <span className="plm-text-[10px] plm-text-warm-400 plm-tracking-wider">—</span>
     );
   }
 
@@ -50,34 +42,17 @@ function FormSparkline({ formHistory }: { formHistory: number[] }) {
     return height - padding - normalized * (height - 2 * padding);
   };
 
-  const xStep = formHistory.length > 1
-    ? (width - 2 * padding) / (formHistory.length - 1)
-    : 0;
+  // Pad short histories so we always render a real sparkline rather than
+  // an orphan dot — repeat the only entry so the trend reads as flat.
+  const series = formHistory.length === 1 ? [formHistory[0], formHistory[0]] : formHistory;
 
-  const points = formHistory.map((form, i) => ({
+  const xStep = (width - 2 * padding) / (series.length - 1);
+  const points = series.map((form, i) => ({
     x: padding + i * xStep,
     y: yScale(form),
     form,
   }));
 
-  if (formHistory.length <= 2) {
-    // Dots only, no line
-    return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="plm-flex-shrink-0">
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={dotRadius + 0.5}
-            fill={getFormDotColor(p.form)}
-          />
-        ))}
-      </svg>
-    );
-  }
-
-  // Full sparkline with line + dots
   const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
   return (
@@ -127,16 +102,6 @@ export function SquadProgression() {
         }
         case 'goals':
           return b.goals - a.goals;
-        case 'biggest_climbers': {
-          const deltaA = formTrendValue(a.formHistory);
-          const deltaB = formTrendValue(b.formHistory);
-          return deltaB - deltaA;
-        }
-        case 'biggest_droppers': {
-          const deltaA = formTrendValue(a.formHistory);
-          const deltaB = formTrendValue(b.formHistory);
-          return deltaA - deltaB;
-        }
         default:
           return 0;
       }
@@ -157,8 +122,6 @@ export function SquadProgression() {
         {([
           ['form_trend', 'Form'],
           ['goals', 'Goals'],
-          ['biggest_climbers', 'Risers'],
-          ['biggest_droppers', 'Droppers'],
         ] as [ProgressionSort, string][]).map(([key, label]) => (
           <button
             key={key}
@@ -251,9 +214,6 @@ function DesktopProgressionRow({ player, onOpenModal }: { player: Player; onOpen
 }
 
 function MobileProgressionCard({ player, onOpenModal }: { player: Player; onOpenModal: () => void }) {
-  const arrow = getTrendArrow(player.formHistory);
-  const trendColor = getTrendColor(arrow);
-
   return (
     <button
       onClick={onOpenModal}
@@ -266,9 +226,6 @@ function MobileProgressionCard({ player, onOpenModal }: { player: Player; onOpen
         {player.name}
       </span>
       <FormSparkline formHistory={player.formHistory} />
-      {player.formHistory.length >= 3 && (
-        <span className={`plm-text-sm plm-font-bold ${trendColor}`}>{arrow}</span>
-      )}
       <FormBadgeSmall form={player.form} />
       <span className="plm-text-[10px] plm-text-warm-500 plm-tabular-nums plm-w-12 plm-text-right">
         {player.goals}G {player.assists}A
