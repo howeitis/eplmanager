@@ -1,7 +1,7 @@
 {
   "name": "@howeitis/epl-manager",
   "private": false,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Premier League Manager — embeddable React component for a client-side football management simulation.",
   "type": "module",
   "license": "UNLICENSED",

@@ -348,6 +348,8 @@ export interface SaveMetadata {
   clubName: string;
   seasonNumber: number;
   leaguePosition: number;
+  /** Phase the save was written in — used to render "Season X · Month · Yth place". Optional for backward compat with pre-0.1.5 saves. */
+  currentPhase?: GamePhase;
   lastSaved: string;
   managerName?: string;
   managerAvatar?: string;

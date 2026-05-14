@@ -1,8 +1,27 @@
 import { useState, useEffect } from 'react';
-import type { SaveMetadata } from '../../types/entities';
+import type { GamePhase, SaveMetadata } from '../../types/entities';
 import { getAllSaveMetadata, deleteSave } from '../../utils/save';
 import { getManagerFaceUri } from '../../utils/avatarFace';
 import { getBrandLogoUrl, getHeroImageUrl } from '../../data/assets';
+
+const PHASE_LABELS: Record<GamePhase, string> = {
+  summer_window: 'Summer Window',
+  july_advance: 'July',
+  august: 'August',
+  august_deadline: 'August Deadline',
+  september: 'September',
+  october: 'October',
+  november: 'November',
+  december: 'December',
+  january_window: 'January Window',
+  january: 'January',
+  january_deadline: 'January Deadline',
+  february: 'February',
+  march: 'March',
+  april: 'April',
+  may: 'May',
+  season_end: 'Season End',
+};
 
 interface SaveSlotSelectProps {
   onSelectSlot: (slot: number, isExisting: boolean) => void;
@@ -86,7 +105,7 @@ export function SaveSlotSelect({ onSelectSlot }: SaveSlotSelectProps) {
                 tabIndex={0}
                 onClick={() => onSelectSlot(slot, !!save)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSlot(slot, !!save); } }}
-                aria-label={save ? `Load save slot ${slot}: ${save.clubName}, Season ${save.seasonNumber}` : `Start new game in slot ${slot}`}
+                aria-label={save ? `Load save slot ${slot}: ${save.clubName}, Season ${save.seasonNumber}${save.currentPhase ? `, ${PHASE_LABELS[save.currentPhase]}` : ''}${save.leaguePosition > 0 ? `, ${ordinal(save.leaguePosition)} place` : ''}` : `Start new game in slot ${slot}`}
                 className="plm-w-full plm-rounded-lg plm-border plm-p-4 plm-text-left plm-transition-all plm-min-h-[44px] plm-cursor-pointer"
                 style={{
                   backgroundColor: 'rgba(255,255,255,0.07)',
@@ -124,7 +143,17 @@ export function SaveSlotSelect({ onSelectSlot }: SaveSlotSelectProps) {
                           {save.clubName}
                         </div>
                         <div className="plm-text-sm plm-text-warm-400 plm-mt-1">
-                          Season {save.seasonNumber} &middot; {ordinal(save.leaguePosition)} place
+                          Season {save.seasonNumber}
+                          {save.currentPhase && (
+                            <>
+                              {' '}&middot; {PHASE_LABELS[save.currentPhase]}
+                            </>
+                          )}
+                          {save.leaguePosition > 0 && (
+                            <>
+                              {' '}&middot; {ordinal(save.leaguePosition)} place
+                            </>
+                          )}
                         </div>
                         <div className="plm-text-xs plm-text-warm-600 plm-mt-1">
                           Last saved: {new Date(save.lastSaved).toLocaleDateString()}

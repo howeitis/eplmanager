@@ -138,11 +138,36 @@ export function extractSaveData(state: SaveableState): SaveData {
 
 export async function saveGame(slot: number, state: SaveableState): Promise<void> {
   const data = extractSaveData(state);
+
+  // Recompute metadata from latest state so the slot picker always reflects
+  // current league position, phase, and timestamp — independent of caller hygiene.
+  const playerClubId = (state.manager as { clubId?: string } | null | undefined)?.clubId;
+  const table = (state.leagueTable as { clubId: string; points: number; goalDifference: number; goalsFor: number; played?: number }[]) ?? [];
+  const anyMatchesPlayed = table.some((r) => (r.played ?? 0) > 0);
+  const sorted = [...table].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+    return b.goalsFor - a.goalsFor;
+  });
+  const prevMetadata = (state.saveMetadata as SaveMetadata | null) ?? null;
+  const computedPos = playerClubId ? sorted.findIndex((r) => r.clubId === playerClubId) + 1 : 0;
+  // Before any matches are played, sort is essentially arbitrary — keep the previous
+  // value (0 on a brand-new save) rather than reporting a misleading position.
+  const leaguePosition = anyMatchesPlayed && computedPos > 0 ? computedPos : (prevMetadata?.leaguePosition ?? 0);
+  const freshMetadata: SaveMetadata = {
+    ...(prevMetadata as SaveMetadata),
+    leaguePosition,
+    currentPhase: state.currentPhase as SaveMetadata['currentPhase'],
+    seasonNumber: state.seasonNumber as number,
+    lastSaved: new Date().toISOString(),
+  };
+  data.saveMetadata = freshMetadata;
+
   await idbSet(getSaveKey(slot), data);
 
   // Update metadata index
   const allMetadata = await getAllSaveMetadata();
-  allMetadata[slot] = data.saveMetadata;
+  allMetadata[slot] = freshMetadata;
   await idbSet(METADATA_KEY, allMetadata);
 }
 
