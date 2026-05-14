@@ -84,14 +84,31 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
   }
   const sortedSeasons = [...accomplishmentsBySeason.keys()].sort((a, b) => b - a);
 
+  const accent = currentClub?.colors.primary;
+
   return (
-    <div className="plm-space-y-6">
-      {/* Header */}
-      <div className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-p-5">
-        <div className="plm-flex plm-items-start plm-gap-4">
+    <div className="plm-relative plm-space-y-6">
+      {/* Club-color ambient glow — bleeds to viewport edges, mirrors the hub masthead. */}
+      {currentClub && (
+        <div
+          aria-hidden
+          className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
+          style={{
+            background: `linear-gradient(to bottom, ${currentClub.colors.primary}38 0%, ${currentClub.colors.primary}1F 28%, ${currentClub.colors.primary}0A 55%, transparent 100%)`,
+            zIndex: 0,
+          }}
+        />
+      )}
+
+      {/* Editorial masthead — unboxed identity + stats */}
+      <section className="plm-relative" style={{ zIndex: 1 }}>
+        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+          The Manager
+        </p>
+        <div className="plm-mt-3 plm-flex plm-items-center plm-gap-3">
           <div className="plm-relative plm-flex-shrink-0">
             <div
-              className="plm-w-16 plm-h-16 plm-rounded-full plm-flex plm-items-center plm-justify-center plm-overflow-hidden plm-border-2"
+              className="plm-w-14 plm-h-14 plm-rounded-full plm-flex plm-items-center plm-justify-center plm-overflow-hidden plm-border-2"
               style={{
                 backgroundColor: currentClub?.colors.primary || '#f3f4f6',
                 borderColor: currentClub?.colors.secondary || '#d1d5db',
@@ -105,50 +122,64 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
                 className="plm-w-full plm-h-full plm-object-contain"
               />
             </div>
-            {/* Club crest badge */}
             {currentClub && getClubLogoUrl(currentClub.id) && (
               <img
                 src={getClubLogoUrl(currentClub.id)}
                 alt={currentClub.name}
-                className="plm-absolute plm-bottom-0 plm-right-0 plm-w-6 plm-h-6 plm-rounded-full plm-bg-white plm-p-0.5 plm-border plm-border-warm-200 plm-object-contain"
+                className="plm-absolute plm--bottom-1 plm--right-1 plm-w-6 plm-h-6 plm-rounded-full plm-bg-white plm-p-0.5 plm-border plm-border-warm-200 plm-object-contain"
               />
             )}
           </div>
-          <div className="plm-min-w-0">
-            <h1 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal">
+          <div className="plm-min-w-0 plm-flex-1">
+            <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
               {manager.name}
             </h1>
-            <div className="plm-flex plm-flex-wrap plm-gap-x-3 plm-gap-y-1 plm-mt-1 plm-text-sm plm-text-warm-600">
-              <span>{manager.nationality}</span>
-              <span>&middot;</span>
-              <span>Age {manager.age}</span>
-              <span>&middot;</span>
-              <span>Rep {manager.reputation}</span>
-            </div>
-            <div className="plm-flex plm-flex-wrap plm-gap-2 plm-mt-2">
-              <span className="plm-text-xs plm-bg-warm-100 plm-text-warm-700 plm-px-2 plm-py-0.5 plm-rounded-full">
-                {PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy}
-              </span>
-              <span className="plm-text-xs plm-bg-warm-100 plm-text-warm-700 plm-px-2 plm-py-0.5 plm-rounded-full">
-                {manager.preferredFormation}
-              </span>
-              <span className="plm-text-xs plm-bg-warm-100 plm-text-warm-700 plm-px-2 plm-py-0.5 plm-rounded-full">
-                {BACKGROUND_LABELS[manager.playingBackground] || manager.playingBackground}
-              </span>
-            </div>
+            <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
+              {currentClub ? `Managing ${currentClub.name}` : 'Between clubs'}
+            </p>
           </div>
         </div>
 
+        <div className="plm-mt-4 plm-flex plm-flex-wrap plm-gap-x-3 plm-gap-y-1 plm-text-sm plm-text-warm-600">
+          <span>{manager.nationality}</span>
+          <span aria-hidden>&middot;</span>
+          <span>Age {manager.age}</span>
+          <span aria-hidden>&middot;</span>
+          <span>Rep {manager.reputation}</span>
+        </div>
+
+        <div className="plm-mt-3 plm-flex plm-flex-wrap plm-gap-2">
+          <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.15em] plm-bg-warm-100 plm-text-warm-700 plm-px-2.5 plm-py-1 plm-rounded-full">
+            {PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy}
+          </span>
+          <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.15em] plm-bg-warm-100 plm-text-warm-700 plm-px-2.5 plm-py-1 plm-rounded-full">
+            {manager.preferredFormation}
+          </span>
+          <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.15em] plm-bg-warm-100 plm-text-warm-700 plm-px-2.5 plm-py-1 plm-rounded-full">
+            {BACKGROUND_LABELS[manager.playingBackground] || manager.playingBackground}
+          </span>
+        </div>
+
         {manager.bio && (
-          <p className="plm-mt-4 plm-text-sm plm-text-warm-600 plm-italic plm-border-t plm-border-warm-100 plm-pt-3">
+          <p className="plm-mt-5 plm-pt-4 plm-border-t plm-border-warm-200 plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-leading-relaxed">
             &ldquo;{manager.bio}&rdquo;
           </p>
         )}
-      </div>
 
-      {/* Manager Card */}
-      <div className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-p-5">
-        <h2 className="plm-font-display plm-font-bold plm-text-charcoal plm-mb-4">Manager Card</h2>
+        {/* Career totals — editorial 4-up stat row */}
+        <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-2 md:plm-grid-cols-4 plm-divide-x plm-divide-warm-200">
+          <ManagerStatBox label="Games" value={manager.totalGamesManaged} />
+          <ManagerStatBox label="League Titles" value={manager.totalLeagueTitles} accent={!!manager.totalLeagueTitles && !!accent ? accent : undefined} />
+          <ManagerStatBox label="FA Cups" value={manager.totalFaCups} />
+          <ManagerStatBox label="Years" value={yearsInManagement} />
+        </div>
+      </section>
+
+      {/* Manager Card — unboxed centered showpiece */}
+      <section className="plm-relative" style={{ zIndex: 1 }}>
+        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500 plm-mb-3">
+          Manager Card
+        </p>
         <div className="plm-flex plm-justify-center">
           <ManagerCard
             manager={manager}
@@ -157,22 +188,13 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
             seasonNumber={seasonNumber}
           />
         </div>
-      </div>
+      </section>
 
-      {/* Career Totals */}
-      <div className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-p-5">
-        <h2 className="plm-font-display plm-font-bold plm-text-charcoal plm-mb-3">Career Totals</h2>
-        <div className="plm-grid plm-grid-cols-2 md:plm-grid-cols-4 plm-gap-4">
-          <StatCard label="Games Managed" value={manager.totalGamesManaged} />
-          <StatCard label="League Titles" value={manager.totalLeagueTitles} />
-          <StatCard label="FA Cups" value={manager.totalFaCups} />
-          <StatCard label="Years in Management" value={yearsInManagement} />
-        </div>
-      </div>
-
-      {/* Tenures */}
-      <div className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-p-5">
-        <h2 className="plm-font-display plm-font-bold plm-text-charcoal plm-mb-3">Club Tenures</h2>
+      {/* Tenures — unboxed editorial list */}
+      <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500 plm-mb-3">
+          Club Tenures
+        </p>
         <div className="plm-space-y-3">
           {manager.tenures.map((tenure, idx) => {
             const tenureClub = clubMap.get(tenure.clubId);
@@ -180,7 +202,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
             return (
               <div
                 key={`${tenure.clubId}-${tenure.startSeason}`}
-                className="plm-flex plm-items-start plm-gap-3 plm-p-3 plm-rounded-lg plm-border plm-border-warm-100"
+                className="plm-flex plm-items-start plm-gap-3 plm-py-3 plm-border-b plm-border-warm-200 last:plm-border-b-0"
               >
                 {tenureClub && getClubLogoUrl(tenureClub.id) ? (
                   <img
@@ -226,12 +248,14 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Honors / Accomplishments */}
+      {/* Honors / Accomplishments — unboxed */}
       {manager.accomplishments.length > 0 && (
-        <div className="plm-bg-white plm-rounded-lg plm-border plm-border-warm-200 plm-p-5">
-          <h2 className="plm-font-display plm-font-bold plm-text-charcoal plm-mb-3">Honors</h2>
+        <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+          <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500 plm-mb-3">
+            Honors
+          </p>
           <div className="plm-space-y-4">
             {sortedSeasons.map((season) => {
               const accs = accomplishmentsBySeason.get(season)!;
@@ -267,7 +291,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
       {/* Save Button */}
@@ -362,11 +386,18 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function ManagerStatBox({ label, value, accent }: { label: string; value: number; accent?: string }) {
   return (
-    <div className="plm-text-center">
-      <div className="plm-text-2xl plm-font-display plm-font-bold plm-text-charcoal">{value}</div>
-      <div className="plm-text-xs plm-text-warm-500">{label}</div>
+    <div className="plm-px-2 plm-text-center first:plm-pl-0 last:plm-pr-0">
+      <div
+        className="plm-font-display plm-text-2xl plm-font-bold plm-tabular-nums plm-leading-none"
+        style={{ color: accent || '#1A1A1A' }}
+      >
+        {value}
+      </div>
+      <div className="plm-text-[10px] plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-mt-1.5">
+        {label}
+      </div>
     </div>
   );
 }

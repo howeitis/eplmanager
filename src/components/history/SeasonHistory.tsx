@@ -123,22 +123,22 @@ export function SeasonHistoryScreen() {
           <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
             Trophy Cabinet
           </h3>
-          <div className="plm-flex plm-flex-wrap plm-gap-2">
+          <div className="plm-flex plm-flex-wrap plm-gap-3">
             {trophies.map((t, i) => {
               const startYear = 2025 + (t.season - 1);
               const yearLabel = `Season ${t.season}, ${startYear.toString().slice(-2)}/${(startYear + 1).toString().slice(-2)}`;
               const trophyImg = t.type === 'league' ? '/trophies/epl trophy.png' : '/trophies/fa cup trophy.png';
               return (
-                <div key={i} className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded plm-px-3 plm-py-2 plm-text-center">
+                <div key={i} className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded plm-px-4 plm-py-3 plm-text-center plm-w-32">
                   <img
                     src={trophyImg}
                     alt={t.award}
-                    className={`${t.type === 'league' ? 'plm-w-14 plm-h-14' : 'plm-w-10 plm-h-10'} plm-mx-auto plm-object-contain`}
+                    className="plm-w-20 plm-h-20 plm-mx-auto plm-object-contain"
                   />
-                  <div className="plm-text-[10px] plm-font-bold plm-text-amber-700 plm-uppercase plm-mt-1">
+                  <div className="plm-text-[10px] plm-font-bold plm-text-amber-700 plm-uppercase plm-mt-2">
                     {t.award}
                   </div>
-                  <div className="plm-text-[10px] plm-text-amber-600">{yearLabel}</div>
+                  <div className="plm-text-[10px] plm-text-amber-600 plm-mt-0.5">{yearLabel}</div>
                 </div>
               );
             })}

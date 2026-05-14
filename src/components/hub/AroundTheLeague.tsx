@@ -180,8 +180,8 @@ export function AroundTheLeague() {
           </Card>
 
           <Card
-            title="Recent Results"
-            subtitle={recentMonthData.month ? `${PHASE_MONTH_LABEL[recentMonthData.month]} Recap` : 'No matches yet'}
+            title={recentMonthData.month ? `${PHASE_MONTH_LABEL[recentMonthData.month]!.toUpperCase()}'S RESULTS` : 'NO MATCHES YET'}
+            subtitle="Looking back"
             accent={accent}
           >
             <RecentResultsList fixtures={recentMonthData.played} playerClubId={playerClubId} />

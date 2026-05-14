@@ -73,20 +73,17 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
         />
       )}
 
-      {/* Desktop: League table on the left, sticky */}
+      {/* Desktop: League table on the left, sticky — unboxed, EPL logo header */}
       <div className="plm-relative plm-hidden lg:plm-block lg:plm-w-[520px] lg:plm-flex-shrink-0" style={{ zIndex: 1 }}>
         <div className="lg:plm-sticky lg:plm-top-6">
-          <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
-            <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
-              <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
-                Standings
-              </p>
-              <h2 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
-                Premier League
-              </h2>
-            </header>
-            <LeagueTable />
-          </div>
+          <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
+            <img
+              src="/english-premier-league-logo.svg"
+              alt="Premier League"
+              className="plm-h-10 plm-w-auto"
+            />
+          </header>
+          <LeagueTable />
         </div>
       </div>
 
@@ -233,19 +230,16 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           </button>
         )}
 
-        {/* Mobile: League table */}
-        <div className="lg:plm-hidden">
-          <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
-            <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
-              <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
-                Standings
-              </p>
-              <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
-                Premier League
-              </h2>
-            </header>
-            <LeagueTable compact />
-          </div>
+        {/* Mobile: League table — unboxed, full-bleed, EPL logo header */}
+        <div className="lg:plm-hidden plm--mx-4 plm-px-4">
+          <header className="plm-mb-3 plm-pb-3 plm-border-b plm-border-warm-200">
+            <img
+              src="/english-premier-league-logo.svg"
+              alt="Premier League"
+              className="plm-h-9 plm-w-auto"
+            />
+          </header>
+          <LeagueTable compact />
         </div>
 
         {/* Around the League — snap-scrolling deck: Next Month, Recent Results,

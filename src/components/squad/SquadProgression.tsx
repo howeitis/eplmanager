@@ -5,24 +5,6 @@ import { useModalParams } from '../../hooks/useModalParams';
 
 type ProgressionSort = 'form_trend' | 'goals';
 
-/** Compute trend arrow from last 3+ form entries */
-function getTrendArrow(formHistory: number[]): string {
-  if (formHistory.length < 3) return '\u2192'; // flat arrow for < 3 entries
-  const last3 = formHistory.slice(-3);
-  const diff = last3[2] - last3[0];
-  if (diff >= 4) return '\u2197\u2197';
-  if (diff >= 2) return '\u2197';
-  if (diff <= -4) return '\u2198\u2198';
-  if (diff <= -2) return '\u2198';
-  return '\u2192';
-}
-
-function getTrendColor(arrow: string): string {
-  if (arrow.includes('\u2197')) return 'plm-text-emerald-600';
-  if (arrow.includes('\u2198')) return 'plm-text-red-600';
-  return 'plm-text-warm-400';
-}
-
 /** Micro sparkline SVG for form history */
 function FormSparkline({ formHistory }: { formHistory: number[] }) {
   if (formHistory.length === 0) {
@@ -147,7 +129,6 @@ export function SquadProgression() {
               <th scope="col" className="plm-text-left plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-8">Pos</th>
               <th scope="col" className="plm-text-left plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider">Name</th>
               <th scope="col" className="plm-text-center plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-20">Sparkline</th>
-              <th scope="col" className="plm-text-center plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-10">Trend</th>
               <th scope="col" className="plm-text-center plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-8">Form</th>
               <th scope="col" className="plm-text-center plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-8">G</th>
               <th scope="col" className="plm-text-center plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-8">A</th>
@@ -181,9 +162,6 @@ export function SquadProgression() {
 }
 
 function DesktopProgressionRow({ player, onOpenModal }: { player: Player; onOpenModal: () => void }) {
-  const arrow = getTrendArrow(player.formHistory);
-  const trendColor = getTrendColor(arrow);
-
   return (
     <tr
       onClick={onOpenModal}
@@ -197,11 +175,6 @@ function DesktopProgressionRow({ player, onOpenModal }: { player: Player; onOpen
         <div className="plm-flex plm-justify-center">
           <FormSparkline formHistory={player.formHistory} />
         </div>
-      </td>
-      <td className="plm-py-2 plm-text-center">
-        {player.formHistory.length >= 3 && (
-          <span className={`plm-text-base plm-font-bold ${trendColor}`}>{arrow}</span>
-        )}
       </td>
       <td className="plm-py-2 plm-text-center">
         <FormBadgeSmall form={player.form} />
