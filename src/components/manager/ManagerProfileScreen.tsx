@@ -135,7 +135,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
               {manager.name}
             </h1>
             <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
-              {currentClub ? `Managing ${currentClub.name}` : 'Between clubs'}
+              {currentClub?.name ?? 'Between clubs'}
             </p>
           </div>
         </div>
@@ -148,16 +148,12 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
           <span>Rep {manager.reputation}</span>
         </div>
 
-        <div className="plm-mt-3 plm-flex plm-flex-wrap plm-gap-2">
-          <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.15em] plm-bg-warm-100 plm-text-warm-700 plm-px-2.5 plm-py-1 plm-rounded-full">
-            {PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy}
-          </span>
-          <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.15em] plm-bg-warm-100 plm-text-warm-700 plm-px-2.5 plm-py-1 plm-rounded-full">
-            {manager.preferredFormation}
-          </span>
-          <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.15em] plm-bg-warm-100 plm-text-warm-700 plm-px-2.5 plm-py-1 plm-rounded-full">
-            {BACKGROUND_LABELS[manager.playingBackground] || manager.playingBackground}
-          </span>
+        <div className="plm-mt-1 plm-flex plm-flex-wrap plm-gap-x-3 plm-gap-y-1 plm-text-sm plm-text-warm-600">
+          <span>{PHILOSOPHY_LABELS[manager.philosophy] || manager.philosophy}</span>
+          <span aria-hidden>&middot;</span>
+          <span>{manager.preferredFormation}</span>
+          <span aria-hidden>&middot;</span>
+          <span>{BACKGROUND_LABELS[manager.playingBackground] || manager.playingBackground}</span>
         </div>
 
         {manager.bio && (
@@ -315,6 +311,18 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
         >
           Resign Position
         </button>
+      )}
+
+      {/* Club-color ambient glow — anchored to bottom, mirrors the top glow */}
+      {currentClub && (
+        <div
+          aria-hidden
+          className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+          style={{
+            background: `linear-gradient(to top, ${currentClub.colors.primary}38 0%, ${currentClub.colors.primary}1F 28%, ${currentClub.colors.primary}0A 55%, transparent 100%)`,
+            zIndex: 0,
+          }}
+        />
       )}
 
       {/* Resign confirmation modals */}

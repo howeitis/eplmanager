@@ -219,7 +219,7 @@ export function RetroPlayerCard({
   };
 
   const fontSizes: Record<string, Record<string, string>> = {
-    sm: { ovr: 'plm-text-2xl', name: 'plm-text-xs', stat: 'plm-text-[6.5px]', pos: 'plm-text-[8px]', emoji: 'plm-text-3xl' },
+    sm: { ovr: 'plm-text-2xl', name: 'plm-text-xs', stat: 'plm-text-[7.5px]', pos: 'plm-text-[8px]', emoji: 'plm-text-3xl' },
     md: { ovr: 'plm-text-3xl', name: 'plm-text-sm', stat: 'plm-text-[10px]', pos: 'plm-text-[9px]', emoji: 'plm-text-4xl' },
     lg: { ovr: 'plm-text-4xl', name: 'plm-text-base', stat: 'plm-text-xs', pos: 'plm-text-[10px]', emoji: 'plm-text-5xl' },
     xl: { ovr: 'plm-text-5xl', name: 'plm-text-xl', stat: 'plm-text-sm', pos: 'plm-text-xs', emoji: 'plm-text-7xl' },

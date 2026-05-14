@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { CLUBS } from '../../data/clubs';
 import type { Player, Position } from '../../types/entities';
 import type { Formation, Mentality } from '../../engine/matchSim';
 import { FormationPicker } from './FormationPicker';
@@ -10,6 +11,13 @@ import { useModalParams } from '../../hooks/useModalParams';
 import type { XISwap } from '../../engine/startingXI';
 import { refreshPlayerValue } from '../../engine/transfers';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
+
+function isLightColor(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160;
+}
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 type SortKey = 'position' | 'overall' | 'age' | 'form' | 'name';
@@ -50,9 +58,11 @@ export function SquadScreen({
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
   const [squadView, setSquadView] = useState<SquadView>('roster');
+  const [tacticsOpen, setTacticsOpen] = useState(true);
   const { openModal } = useModalParams();
 
   const playerClub = clubs.find((c) => c.id === manager?.clubId);
+  const clubData = CLUBS.find((c) => c.id === manager?.clubId);
 
   const allPlayers = useMemo(() => {
     if (!playerClub) return [];
@@ -97,25 +107,24 @@ export function SquadScreen({
   return (
     <div className="plm-space-y-4 plm-w-full">
 
-      {/* Advance to next month banner */}
+      {/* Advance to next month — editorial stylized button matching the hub */}
       {onAdvance && advanceLabel && (
-        <div className="plm-bg-charcoal plm-rounded-lg plm-px-4 plm-py-3 plm-flex plm-items-center plm-justify-between plm-gap-3">
-          <div className="plm-min-w-0">
-            <p className="plm-text-sm plm-font-semibold plm-text-white plm-truncate">
-              {advanceLabel}
-            </p>
-            {isJanuaryWindow && (
-              <p className="plm-text-xs plm-text-amber-400 plm-mt-0.5">
-                Transfer window is open — sign before the deadline!
-              </p>
-            )}
-          </div>
+        <div className="plm-space-y-1.5">
           <button
             onClick={onAdvance}
-            className="plm-flex-shrink-0 plm-px-4 plm-py-2 plm-bg-white plm-text-charcoal plm-rounded-lg plm-text-xs plm-font-bold plm-uppercase plm-tracking-wide hover:plm-bg-warm-200 plm-transition-colors plm-min-h-[44px] plm-min-w-[80px]"
+            className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-transition-all plm-duration-200 plm-min-h-[44px]"
+            style={{
+              backgroundColor: clubData?.colors.primary || '#1A1A1A',
+              color: isLightColor(clubData?.colors.primary || '#1A1A1A') ? '#1A1A1A' : '#FFFFFF',
+            }}
           >
-            Advance
+            {advanceLabel}
           </button>
+          {isJanuaryWindow && (
+            <p className="plm-text-[10px] plm-text-amber-700 plm-text-center plm-uppercase plm-tracking-[0.15em] plm-font-medium">
+              Transfer window is open — sign before the deadline
+            </p>
+          )}
         </div>
       )}
 
@@ -164,30 +173,54 @@ export function SquadScreen({
         </div>
       )}
 
-      {/* Formation & Mentality */}
+      {/* Formation & Mentality — collapsible */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-3">
-          Tactics
-        </h2>
-        <div className="plm-grid plm-grid-cols-1 md:plm-grid-cols-2 plm-gap-4">
-          <FormationPicker
-            formation={formation}
-            onFormationChange={onFormationChange}
-            roster={allPlayers}
-          />
-          <MentalitySelector
-            mentality={mentality}
-            onMentalityChange={onMentalityChange}
-          />
-        </div>
-        {/* Starting XI Pitch View */}
-        <div className="plm-mt-4 plm-pt-4 plm-border-t plm-border-warm-100">
-          <StartingXIPicker
-            formation={formation}
-            xiNotifications={xiNotifications}
-            onDismissNotifications={onDismissNotifications}
-          />
-        </div>
+        <button
+          onClick={() => setTacticsOpen((v) => !v)}
+          aria-expanded={tacticsOpen}
+          className="plm-w-full plm-flex plm-items-center plm-justify-between plm-min-h-[44px] plm-text-left"
+        >
+          <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal">
+            Tactics
+          </h2>
+          <span className="plm-flex plm-items-center plm-gap-2 plm-text-warm-500">
+            <span className="plm-text-[10px] plm-uppercase plm-tracking-[0.15em] plm-font-medium">
+              {tacticsOpen ? 'Hide' : 'Show'}
+            </span>
+            <svg
+              className={`plm-w-4 plm-h-4 plm-transition-transform ${tacticsOpen ? 'plm-rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </button>
+        {tacticsOpen && (
+          <div className="plm-mt-3">
+            <div className="plm-grid plm-grid-cols-1 md:plm-grid-cols-2 plm-gap-4">
+              <FormationPicker
+                formation={formation}
+                onFormationChange={onFormationChange}
+                roster={allPlayers}
+              />
+              <MentalitySelector
+                mentality={mentality}
+                onMentalityChange={onMentalityChange}
+              />
+            </div>
+            {/* Starting XI Pitch View */}
+            <div className="plm-mt-4 plm-pt-4 plm-border-t plm-border-warm-100">
+              <StartingXIPicker
+                formation={formation}
+                xiNotifications={xiNotifications}
+                onDismissNotifications={onDismissNotifications}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* View Toggle: Roster / Progression */}

@@ -133,7 +133,7 @@ export function SeasonHistoryScreen() {
                   <img
                     src={trophyImg}
                     alt={t.award}
-                    className="plm-w-20 plm-h-20 plm-mx-auto plm-object-contain"
+                    className={`${t.type === 'league' ? 'plm-w-28 plm-h-28 plm--my-2' : 'plm-w-20 plm-h-20'} plm-mx-auto plm-object-contain`}
                   />
                   <div className="plm-text-[10px] plm-font-bold plm-text-amber-700 plm-uppercase plm-mt-2">
                     {t.award}

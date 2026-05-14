@@ -76,7 +76,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
       {/* Desktop: League table on the left, sticky — unboxed, EPL logo header */}
       <div className="plm-relative plm-hidden lg:plm-block lg:plm-w-[520px] lg:plm-flex-shrink-0" style={{ zIndex: 1 }}>
         <div className="lg:plm-sticky lg:plm-top-6">
-          <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
+          <header className="plm-mb-1.5 plm-pb-1.5 plm-border-b plm-border-warm-200">
             <img
               src="/english-premier-league-logo.svg"
               alt="Premier League"
@@ -232,7 +232,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
         {/* Mobile: League table — unboxed, full-bleed, EPL logo header */}
         <div className="lg:plm-hidden plm--mx-4 plm-px-4">
-          <header className="plm-mb-3 plm-pb-3 plm-border-b plm-border-warm-200">
+          <header className="plm-mb-1 plm-pb-1.5 plm-border-b plm-border-warm-200">
             <img
               src="/english-premier-league-logo.svg"
               alt="Premier League"
@@ -247,8 +247,8 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
             section has no outer wrapper. */}
         <AroundTheLeague />
 
-        {/* In Form — top 5 by form, excluding injured */}
-        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
+        {/* In Form — unboxed, full-bleed to match Around the League */}
+        <div className="plm--mx-4 plm-px-4 md:plm--mx-6 md:plm-px-6">
           <InFormScroller />
           <button
             onClick={() => onNavigate('squad')}
@@ -257,6 +257,18 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
             View Full Squad &rarr;
           </button>
         </div>
+
+        {/* Club-color ambient glow — mirrors the top glow, anchored to bottom */}
+        {clubData && (
+          <div
+            aria-hidden
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+            style={{
+              background: `linear-gradient(to top, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
+              zIndex: 0,
+            }}
+          />
+        )}
       </div>
       {tutorial.show && <TutorialModal tab="hub" onClose={tutorial.onClose} />}
     </div>
