@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
-import { useNavigation } from '../../hooks/useNavigation';
 import { useModalParams } from '../../hooks/useModalParams';
 import { CLUBS } from '../../data/clubs';
 import { getClubLogoUrl } from '../../data/assets';
@@ -28,7 +27,6 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
   const clubs = useGameStore((s) => s.clubs);
   const leagueTable = useGameStore((s) => s.leagueTable);
   const budgets = useGameStore((s) => s.budgets);
-  const { navigateBack } = useNavigation();
   const { openModal } = useModalParams();
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
@@ -95,15 +93,6 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
         }}
       />
 
-      {/* Back button */}
-      <button
-        onClick={navigateBack}
-        className="plm-relative plm-text-sm plm-text-warm-500 hover:plm-text-charcoal plm-transition-colors plm-min-h-[44px] plm-inline-flex plm-items-center plm-gap-1"
-        style={{ zIndex: 1 }}
-      >
-        &larr; Back
-      </button>
-
       {/* Unboxed editorial masthead */}
       <section className="plm-relative" style={{ zIndex: 1 }}>
         <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
@@ -141,20 +130,6 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
 
       {/* Roster */}
       <div className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
-        <div className="plm-flex plm-items-center plm-gap-2 plm-mb-3">
-          {getClubLogoUrl(clubData.id) && (
-            <img
-              src={getClubLogoUrl(clubData.id)}
-              alt=""
-              aria-hidden
-              className="plm-w-7 plm-h-7 plm-object-contain plm-flex-shrink-0"
-            />
-          )}
-          <span className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-tabular-nums">
-            {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-
         {/* Filters */}
         <div className="plm-flex plm-flex-wrap plm-items-center plm-gap-1.5 plm-mb-3" role="group" aria-label="Filter by position">
           <span className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-[0.15em] plm-font-semibold plm-mr-1">FILTER:</span>
@@ -166,7 +141,7 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
               className={`plm-px-3 plm-py-1.5 plm-text-xs plm-font-medium plm-rounded plm-transition-colors plm-min-h-[44px] plm-min-w-[44px] ${
                 filterPos === pos
                   ? 'plm-bg-charcoal plm-text-white'
-                  : 'plm-bg-warm-100 plm-text-warm-600 hover:plm-bg-warm-200'
+                  : 'plm-bg-transparent plm-text-warm-500 hover:plm-text-charcoal'
               }`}
             >
               {pos}

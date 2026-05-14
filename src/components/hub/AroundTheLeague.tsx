@@ -457,46 +457,41 @@ function GoldenBootList({
         return (
           <div
             key={r.playerId}
-            className="plm-grid plm-grid-cols-[14px_1fr_28px] plm-gap-2 plm-items-center plm-py-2 plm-border-b plm-border-warm-200 last:plm-border-b-0"
+            className="plm-flex plm-items-center plm-gap-2 plm-py-1.5 plm-border-b plm-border-warm-200 last:plm-border-b-0"
           >
-            <span className="plm-font-display plm-font-bold plm-text-[11px] plm-text-warm-500 plm-tabular-nums">
+            <span className="plm-font-display plm-font-bold plm-text-[11px] plm-text-warm-500 plm-tabular-nums plm-w-[14px] plm-flex-shrink-0">
               {i + 1}
             </span>
-            <div className="plm-min-w-0">
-              <button
-                type="button"
-                onClick={() => onOpenPlayer(r.playerId, r.clubId)}
-                aria-label={`View ${r.name}`}
-                className="plm-font-display plm-font-bold plm-text-[13.5px] plm-text-charcoal plm-leading-tight plm-truncate plm-m-0 plm-block plm-text-left plm-w-full hover:plm-underline"
-              >
-                {r.name}
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenClub(r.clubId)}
-                aria-label={`View ${club?.name}`}
-                className="plm-flex plm-items-center plm-gap-1.5 plm-mt-0.5 plm-text-left hover:plm-opacity-80 plm-transition-opacity"
-              >
-                {getClubLogoUrl(r.clubId) ? (
-                  <img
-                    src={getClubLogoUrl(r.clubId)}
-                    alt=""
-                    className="plm-w-4 plm-h-4 plm-object-contain plm-flex-shrink-0"
-                    aria-hidden
-                  />
-                ) : (
-                  <span
-                    className="plm-inline-block plm-w-1.5 plm-h-1.5 plm-rounded-full"
-                    style={{ backgroundColor: club?.colors.primary }}
-                    aria-hidden
-                  />
-                )}
-                <span className="plm-text-[9.5px] plm-uppercase plm-tracking-[0.1em] plm-font-bold plm-text-warm-500 plm-truncate">
-                  {club?.name}
-                </span>
-              </button>
-            </div>
-            <span className="plm-font-display plm-font-extrabold plm-text-[17px] plm-text-charcoal plm-tabular-nums plm-text-right">
+            <button
+              type="button"
+              onClick={() => onOpenClub(r.clubId)}
+              aria-label={`View ${club?.name}`}
+              className="plm-flex-shrink-0 plm-p-0 plm-bg-transparent plm-border-0 hover:plm-opacity-80 plm-transition-opacity"
+            >
+              {getClubLogoUrl(r.clubId) ? (
+                <img
+                  src={getClubLogoUrl(r.clubId)}
+                  alt=""
+                  className="plm-w-[22px] plm-h-[22px] plm-object-contain plm-block"
+                  aria-hidden
+                />
+              ) : (
+                <span
+                  className="plm-block plm-w-[22px] plm-h-[22px] plm-rounded-full"
+                  style={{ backgroundColor: club?.colors.primary }}
+                  aria-hidden
+                />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenPlayer(r.playerId, r.clubId)}
+              aria-label={`View ${r.name}`}
+              className="plm-font-display plm-font-bold plm-text-[13.5px] plm-text-charcoal plm-leading-tight plm-truncate plm-flex-1 plm-min-w-0 plm-text-left plm-p-0 plm-bg-transparent plm-border-0 hover:plm-underline"
+            >
+              {r.name}
+            </button>
+            <span className="plm-font-display plm-font-extrabold plm-text-[14px] plm-text-charcoal plm-tabular-nums">
               {r.goals}
             </span>
           </div>

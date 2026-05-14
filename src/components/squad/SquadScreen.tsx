@@ -276,7 +276,7 @@ export function SquadScreen({
               className={`plm-px-3 plm-py-1.5 plm-text-xs plm-font-medium plm-rounded plm-transition-colors plm-min-h-[44px] plm-min-w-[44px] ${
                 filterPos === pos
                   ? 'plm-bg-charcoal plm-text-white'
-                  : 'plm-bg-warm-100 plm-text-warm-600 hover:plm-bg-warm-200'
+                  : 'plm-bg-transparent plm-text-warm-500 hover:plm-text-charcoal'
               }`}
             >
               {pos}
