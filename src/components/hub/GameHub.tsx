@@ -5,8 +5,7 @@ import { getClubLogoUrl, getNationalTeamLogoUrl } from '../../data/assets';
 import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { InFormScroller } from './InFormScroller';
-import { GoalScorersWidget } from './GoalScorersWidget';
-import { RivalsWatch } from './RivalsWatch';
+import { AroundTheLeague } from './AroundTheLeague';
 import { LeagueTable } from '../shared/LeagueTable';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 import type { NavTab } from '../shared/BottomNav';
@@ -59,23 +58,41 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
     || currentPhase === 'january_deadline';
 
   return (
-    <div className="plm-flex plm-flex-col lg:plm-flex-row plm-gap-6 plm-w-full">
+    <div className="plm-relative plm-flex plm-flex-col lg:plm-flex-row plm-gap-6 plm-w-full">
+      {/* Club-color ambient glow — soft radial tint at the top of the hub
+          using the player's primary club color. Sits behind all content. */}
+      {clubData && (
+        <div
+          aria-hidden
+          className="plm-pointer-events-none plm-absolute plm-inset-x-0 plm--top-16 plm-h-[320px]"
+          style={{
+            background: `radial-gradient(60% 100% at 50% 0%, ${clubData.colors.primary}33 0%, ${clubData.colors.primary}14 35%, transparent 75%)`,
+            zIndex: 0,
+          }}
+        />
+      )}
+
       {/* Desktop: League table on the left, sticky */}
-      <div className="plm-hidden lg:plm-block lg:plm-w-[520px] lg:plm-flex-shrink-0">
+      <div className="plm-relative plm-hidden lg:plm-block lg:plm-w-[520px] lg:plm-flex-shrink-0" style={{ zIndex: 1 }}>
         <div className="lg:plm-sticky lg:plm-top-6">
-          <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-            <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-3">
-              Premier League
-            </h2>
+          <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
+            <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
+              <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+                Standings
+              </p>
+              <h2 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+                Premier League
+              </h2>
+            </header>
             <LeagueTable />
           </div>
         </div>
       </div>
 
       {/* Main content column */}
-      <div className="plm-flex-1 plm-min-w-0 plm-space-y-4">
+      <div className="plm-relative plm-flex-1 plm-min-w-0 plm-space-y-4" style={{ zIndex: 1 }}>
         {/* Phase indicator */}
-        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
           <PhaseIndicator phase={currentPhase} seasonNumber={seasonNumber} />
         </div>
 
@@ -83,7 +100,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
         {currentPhase === 'july_advance' && julyNarrative && (() => {
           const crestUrl = julyWinnerNationality ? getNationalTeamLogoUrl(julyWinnerNationality) : null;
           return (
-            <div className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded-lg plm-p-4">
+            <div className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded-2xl plm-p-4">
               <h3 className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-amber-700 plm-mb-1.5">
                 Summer Headlines
               </h3>
@@ -103,7 +120,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
         {/* Deadline day banner */}
         {(currentPhase === 'august_deadline' || currentPhase === 'january_deadline') && (
-          <div className="plm-bg-red-50 plm-border plm-border-red-200 plm-rounded-lg plm-p-4">
+          <div className="plm-bg-red-50 plm-border plm-border-red-200 plm-rounded-2xl plm-p-4">
             <h3 className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-red-700 plm-mb-1.5">
               Transfer Deadline Day
             </h3>
@@ -115,7 +132,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
         {/* Shortlist transfer notifications */}
         {shortlistNotifications.length > 0 && !dismissedNotifications && (
-          <div className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded-lg plm-p-4">
+          <div className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded-2xl plm-p-4">
             <div className="plm-flex plm-items-start plm-justify-between plm-gap-2">
               <div className="plm-flex-1 plm-min-w-0">
                 <h3 className="plm-text-xs plm-font-semibold plm-uppercase plm-tracking-wider plm-text-amber-700 plm-mb-1.5">
@@ -143,58 +160,65 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           </div>
         )}
 
-        {/* Club stats row */}
-        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-          <div className="plm-flex plm-items-center plm-gap-3 plm-mb-3">
+        {/* Club identity & stats */}
+        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
+          <div className="plm-flex plm-items-start plm-gap-4">
             {playerClub && (
               getClubLogoUrl(playerClub.id) ? (
                 <img
                   src={getClubLogoUrl(playerClub.id)}
                   alt={playerClub.name}
-                  className="plm-w-10 plm-h-10 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5 plm-border-2"
+                  className="plm-w-14 plm-h-14 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5 plm-border-2"
                   style={{ borderColor: playerClub.colors.secondary }}
                 />
               ) : (
                 <div
-                  className="plm-w-10 plm-h-10 plm-rounded-full plm-flex-shrink-0 plm-border-2"
+                  className="plm-w-14 plm-h-14 plm-rounded-full plm-flex-shrink-0 plm-border-2"
                   style={{ backgroundColor: playerClub.colors.primary, borderColor: playerClub.colors.secondary }}
                 />
               )
             )}
             <div className="plm-min-w-0 plm-flex-1">
-              <h1 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-truncate">
+              <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+                The Club
+              </p>
+              <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate plm-mt-0.5">
                 {playerClub?.name}
               </h1>
-              <p className="plm-text-xs plm-text-warm-500 plm-truncate">
-                {manager?.name}
+              <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate plm-mt-0.5">
+                Managed by {manager?.name}
               </p>
-              <ReputationGauge reputation={manager?.reputation ?? 0} accent={clubData?.colors.primary} />
-              {playerClub && (
-                <ClubReputationGauge
-                  reputation={clubReputation[playerClub.id] ?? 50}
-                  tier={playerClub.tier}
-                  accent={clubData?.colors.primary}
-                />
-              )}
             </div>
           </div>
-          <div className="plm-grid plm-grid-cols-4 plm-gap-2">
-            <StatBox label="Pos" value={position || '-'} />
-            <StatBox label="Pts" value={playerRow?.points ?? 0} />
+
+          <div className="plm-mt-4 plm-pt-4 plm-border-t plm-border-warm-200 plm-space-y-3">
+            <ReputationGauge reputation={manager?.reputation ?? 0} accent={clubData?.colors.primary} />
+            {playerClub && (
+              <ClubReputationGauge
+                reputation={clubReputation[playerClub.id] ?? 50}
+                tier={playerClub.tier}
+                accent={clubData?.colors.primary}
+              />
+            )}
+          </div>
+
+          <div className="plm-mt-4 plm-pt-4 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-4 plm-divide-x plm-divide-warm-200">
+            <StatBox label="Position" value={position || '-'} />
+            <StatBox label="Points" value={playerRow?.points ?? 0} />
             <StatBox label="Squad" value={playerClub?.roster.filter((p) => !p.isTemporary).length || 0} />
             <StatBox label="Budget" value={`£${playerBudget.toFixed(0)}M`} accent />
           </div>
         </div>
 
         {/* Board status */}
-        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
           <BoardStatus />
         </div>
 
-        {/* Advance button */}
+        {/* Advance button — editorial: rounded chrome, uppercase tracking */}
         <button
           onClick={onAdvance}
-          className="plm-w-full plm-py-3.5 plm-rounded-lg plm-font-body plm-font-semibold plm-text-sm plm-transition-all plm-duration-200 plm-min-h-[44px]"
+          className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-transition-all plm-duration-200 plm-min-h-[44px]"
           style={{
             backgroundColor: clubData?.colors.primary || '#1A1A1A',
             color: isLightColor(clubData?.colors.primary || '#1A1A1A') ? '#1A1A1A' : '#FFFFFF',
@@ -207,7 +231,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
         {isTransferWindow && (
           <button
             onClick={() => onNavigate('transfers')}
-            className="plm-w-full plm-py-3 plm-rounded-lg plm-font-body plm-font-semibold plm-text-sm plm-bg-white plm-border plm-border-warm-300 plm-text-charcoal hover:plm-bg-warm-50 plm-transition-colors plm-min-h-[44px]"
+            className="plm-w-full plm-py-3 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-bg-white plm-border plm-border-warm-300 plm-text-charcoal hover:plm-bg-warm-50 plm-transition-colors plm-min-h-[44px]"
           >
             Open Transfer Center
           </button>
@@ -215,26 +239,27 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
         {/* Mobile: League table */}
         <div className="lg:plm-hidden">
-          <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-            <h2 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
-              Premier League
-            </h2>
+          <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
+            <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
+              <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+                Standings
+              </p>
+              <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+                Premier League
+              </h2>
+            </header>
             <LeagueTable compact />
           </div>
         </div>
 
-        {/* Rivals tracker — head-to-head positions vs your derby rivals */}
-        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-          <RivalsWatch />
-        </div>
-
-        {/* Goal Scorers leaderboard */}
-        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-          <GoalScorersWidget />
+        {/* Around the League — compressed standings snapshot replacing the
+            separate Rivals + Goal Scorers cards. */}
+        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
+          <AroundTheLeague />
         </div>
 
         {/* In Form — top 5 by form, excluding injured */}
-        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+        <div className="plm-bg-white plm-border plm-border-warm-200 plm-rounded-2xl plm-p-5">
           <InFormScroller />
           <button
             onClick={() => onNavigate('squad')}
@@ -251,12 +276,12 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
 function StatBox({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (
-    <div className="plm-bg-warm-50 plm-rounded plm-p-2 plm-text-center">
-      <div className="plm-text-[10px] plm-text-warm-400 plm-font-medium plm-uppercase plm-tracking-wider">
-        {label}
-      </div>
-      <div className={`plm-text-lg plm-font-bold plm-tabular-nums ${accent ? 'plm-text-emerald-700' : 'plm-text-charcoal'}`}>
+    <div className="plm-px-2 plm-text-center first:plm-pl-0 last:plm-pr-0">
+      <div className={`plm-font-display plm-text-2xl plm-font-bold plm-tabular-nums plm-leading-none ${accent ? 'plm-text-emerald-700' : 'plm-text-charcoal'}`}>
         {value}
+      </div>
+      <div className="plm-text-[10px] plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-mt-1.5">
+        {label}
       </div>
     </div>
   );
@@ -277,14 +302,14 @@ function ReputationGauge({ reputation, accent }: { reputation: number; accent?: 
     reputation >= 40 ? 'Respected' :
     reputation >= 20 ? 'Up-and-coming' : 'Untested';
   return (
-    <div className="plm-mt-1.5">
-      <div className="plm-flex plm-items-center plm-justify-between plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-wider plm-font-semibold">
-        <span>Manager Reputation</span>
-        <span className="plm-tabular-nums plm-text-charcoal">{reputation} · {standing}</span>
+    <div>
+      <div className="plm-flex plm-items-baseline plm-justify-between plm-text-[10px] plm-uppercase plm-tracking-[0.15em] plm-font-medium">
+        <span className="plm-text-warm-500">Manager Reputation</span>
+        <span className="plm-tabular-nums plm-text-charcoal plm-font-semibold">{reputation} · {standing}</span>
       </div>
-      <div className="plm-mt-1 plm-h-1.5 plm-w-full plm-rounded-full plm-bg-warm-100 plm-overflow-hidden">
+      <div className="plm-mt-1.5 plm-h-px plm-w-full plm-bg-warm-200 plm-relative">
         <div
-          className="plm-h-full plm-rounded-full plm-transition-all plm-duration-700"
+          className="plm-absolute plm-inset-y-0 plm-left-0 plm-h-px plm-transition-all plm-duration-700"
           style={{ width: `${pct}%`, backgroundColor: accent || '#1A1A1A' }}
         />
       </div>
@@ -313,20 +338,20 @@ function ClubReputationGauge({ reputation, tier, accent }: {
   // single linear value but a position within a hierarchy.
   const tickPositions = [38, 55, 72, 88]; // matches TIER_REP_THRESHOLDS in clubReputation.ts
   return (
-    <div className="plm-mt-3">
-      <div className="plm-flex plm-items-center plm-justify-between plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-wider plm-font-semibold">
-        <span>Club Reputation</span>
-        <span className="plm-tabular-nums plm-text-charcoal">Tier {tier} · {label}</span>
+    <div>
+      <div className="plm-flex plm-items-baseline plm-justify-between plm-text-[10px] plm-uppercase plm-tracking-[0.15em] plm-font-medium">
+        <span className="plm-text-warm-500">Club Reputation</span>
+        <span className="plm-tabular-nums plm-text-charcoal plm-font-semibold">Tier {tier} · {label}</span>
       </div>
-      <div className="plm-mt-1 plm-relative plm-h-1.5 plm-w-full plm-rounded-full plm-bg-warm-100 plm-overflow-hidden">
+      <div className="plm-mt-1.5 plm-relative plm-h-px plm-w-full plm-bg-warm-200">
         <div
-          className="plm-h-full plm-rounded-full plm-transition-all plm-duration-700"
+          className="plm-absolute plm-inset-y-0 plm-left-0 plm-h-px plm-transition-all plm-duration-700"
           style={{ width: `${pct}%`, backgroundColor: accent || '#1A1A1A' }}
         />
         {tickPositions.map((p) => (
           <span
             key={p}
-            className="plm-absolute plm-top-0 plm-h-full plm-w-px plm-bg-warm-300/80"
+            className="plm-absolute plm--top-1 plm-h-3 plm-w-px plm-bg-warm-300"
             style={{ left: `${p}%` }}
             aria-hidden
           />

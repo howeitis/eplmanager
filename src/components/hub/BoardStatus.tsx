@@ -37,14 +37,14 @@ export function BoardStatus() {
   return (
     <div role="status" aria-label={`Board expectation: ${boardExpectation.description}. Status: ${statusLabel}`} className="plm-flex plm-items-start plm-justify-between plm-gap-3">
       <div className="plm-min-w-0 plm-flex-1">
-        <p className="plm-text-xs plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-wider">
+        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
           Board Expectation
         </p>
-        <p className="plm-text-sm plm-text-charcoal plm-mt-0.5 plm-break-words">
+        <p className="plm-font-display plm-text-base plm-text-charcoal plm-leading-snug plm-mt-1 plm-break-words">
           {boardExpectation.description}
         </p>
       </div>
-      <span className={`plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-px-2 plm-py-1 plm-rounded plm-whitespace-nowrap plm-flex-shrink-0 ${statusColor}`}>
+      <span className={`plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.18em] plm-px-2.5 plm-py-1 plm-rounded-full plm-whitespace-nowrap plm-flex-shrink-0 plm-mt-1 ${statusColor}`}>
         {statusLabel}
       </span>
     </div>

@@ -52,9 +52,14 @@ export function RivalsWatch() {
 
   return (
     <div>
-      <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
-        Rivals Watch
-      </h3>
+      <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
+        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+          Derby Watch
+        </p>
+        <h3 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+          Rivals
+        </h3>
+      </header>
       <ul className="plm-space-y-2">
         {rivals.map(({ clubId, row, position }) => {
           const club = clubDataMap.get(clubId);

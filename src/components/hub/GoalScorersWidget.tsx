@@ -103,9 +103,14 @@ export function GoalScorersWidget({ variant = 'hub' }: { variant?: 'hub' | 'squa
   if (isPreMatch(currentPhase) || !hasMatchesPlayed(currentPhase)) {
     return (
       <div className={variant === 'hub' ? '' : 'plm-mt-4'}>
-        <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-2">
-          Goal Scorers
-        </h3>
+        <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
+          <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+            Scoring Charts
+          </p>
+          <h3 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+            Goal Scorers
+          </h3>
+        </header>
         <p className="plm-text-sm plm-text-warm-500">No matches played yet.</p>
       </div>
     );
@@ -114,9 +119,14 @@ export function GoalScorersWidget({ variant = 'hub' }: { variant?: 'hub' | 'squa
   if (topScorers.length === 0) {
     return (
       <div className={variant === 'hub' ? '' : 'plm-mt-4'}>
-        <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-2">
-          Goal Scorers
-        </h3>
+        <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200">
+          <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+            Scoring Charts
+          </p>
+          <h3 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+            Goal Scorers
+          </h3>
+        </header>
         <p className="plm-text-sm plm-text-warm-500">No goals scored yet.</p>
       </div>
     );

@@ -34,17 +34,17 @@ export function PhaseIndicator({ phase, seasonNumber }: PhaseIndicatorProps) {
     || phase === 'january_deadline';
 
   return (
-    <div className="plm-flex plm-items-center plm-justify-between">
-      <div>
-        <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal">
-          {display.month}
-        </h2>
-        <p className="plm-text-xs plm-text-warm-500 plm-font-body plm-mt-0.5">
+    <div className="plm-flex plm-items-start plm-justify-between plm-gap-3">
+      <div className="plm-min-w-0">
+        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
           Season {seasonNumber} &middot; {startYear}/{endYear.toString().slice(-2)}
         </p>
+        <h2 className="plm-font-display plm-text-3xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+          {display.month}
+        </h2>
       </div>
       {isWindow && (
-        <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-px-2 plm-py-1 plm-bg-amber-50 plm-text-amber-700 plm-rounded plm-border plm-border-amber-200">
+        <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.18em] plm-px-2.5 plm-py-1 plm-bg-amber-50 plm-text-amber-700 plm-rounded-full plm-border plm-border-amber-200 plm-flex-shrink-0 plm-mt-1">
           Window Open
         </span>
       )}

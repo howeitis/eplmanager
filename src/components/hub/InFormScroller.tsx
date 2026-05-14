@@ -24,16 +24,21 @@ export function InFormScroller() {
 
   return (
     <div>
-      <div className="plm-flex plm-items-center plm-justify-between plm-mb-3">
-        <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal">
-          In Form
-        </h3>
+      <header className="plm-mb-4 plm-pb-3 plm-border-b plm-border-warm-200 plm-flex plm-items-end plm-justify-between plm-gap-3">
+        <div className="plm-min-w-0">
+          <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+            This Month
+          </p>
+          <h3 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+            In Form
+          </h3>
+        </div>
         {inForm.length > 0 && (
-          <span className="plm-text-xs plm-text-warm-500">
+          <span className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-text-warm-500 plm-flex-shrink-0 plm-mb-1">
             Top {inForm.length}
           </span>
         )}
-      </div>
+      </header>
 
       {inForm.length === 0 ? (
         <p className="plm-text-xs plm-text-warm-500 plm-italic plm-py-3 plm-text-center">
