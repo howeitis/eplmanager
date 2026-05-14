@@ -919,8 +919,8 @@ export function generateFeaturedSlots(
   const bargain = pickByArchetype(rng, candidates, 'bargain', usedIds, targetOverall);
   if (bargain) { slots.push({ playerId: bargain.playerId, archetype: 'bargain' }); usedIds.add(bargain.playerId); }
 
-  // Slots 4-6: Weighted random biased toward user club's overall
-  for (let i = 0; i < 3; i++) {
+  // Slots 4-12: Weighted random biased toward user club's overall
+  for (let i = 0; i < 9; i++) {
     const pick = pickWeightedRandom(rng, candidates, usedIds, targetOverall);
     if (pick) { slots.push({ playerId: pick.playerId, archetype: 'trending' }); usedIds.add(pick.playerId); }
   }

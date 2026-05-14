@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { TransferOffer, Club } from '../../types/entities';
 import { useModalParams } from '../../hooks/useModalParams';
+import { getClubLogoUrl } from '../../data/assets';
 
 interface IncomingOffersProps {
   offers: TransferOffer[];
@@ -116,10 +117,19 @@ export function IncomingOffers({ offers, clubs, playerClubId, onRespond }: Incom
                   }`}
                 >
                   <div className="plm-flex plm-items-center plm-gap-2 plm-mb-2">
-                    <div
-                      className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
-                      style={{ backgroundColor: getClubColor(offer.toClubId) }}
-                    />
+                    {getClubLogoUrl(offer.toClubId) ? (
+                      <img
+                        src={getClubLogoUrl(offer.toClubId)}
+                        alt=""
+                        aria-hidden
+                        className="plm-w-5 plm-h-5 plm-object-contain plm-flex-shrink-0"
+                      />
+                    ) : (
+                      <div
+                        className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
+                        style={{ backgroundColor: getClubColor(offer.toClubId) }}
+                      />
+                    )}
                     <div className="plm-flex-1 plm-min-w-0 plm-text-xs plm-text-gray-700 plm-truncate">
                       <span className="plm-font-medium">{getClubName(offer.toClubId)}</span>
                       {group.offers.length > 1 && idx === 0 && (

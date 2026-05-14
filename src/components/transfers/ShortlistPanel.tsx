@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useModalParams } from '../../hooks/useModalParams';
 import { refreshPlayerValue } from '../../engine/transfers';
+import { getClubLogoUrl } from '../../data/assets';
 import type { Club, Player, Position } from '../../types/entities';
 
 type ShortlistStatus = 'at_club' | 'transferred' | 'signed' | 'retired';
@@ -253,10 +254,19 @@ function ShortlistRow({
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenModal(player.id, club.id); } }}
       >
         <span className="plm-text-amber-500 plm-text-sm plm-flex-shrink-0" aria-hidden="true">★</span>
-        <div
-          className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
-          style={{ backgroundColor: club.colors.primary }}
-        />
+        {getClubLogoUrl(club.id) ? (
+          <img
+            src={getClubLogoUrl(club.id)}
+            alt=""
+            aria-hidden
+            className="plm-w-6 plm-h-6 plm-object-contain plm-flex-shrink-0"
+          />
+        ) : (
+          <div
+            className="plm-w-3 plm-h-3 plm-rounded-full plm-flex-shrink-0"
+            style={{ backgroundColor: club.colors.primary }}
+          />
+        )}
         <div className="plm-flex-1 plm-min-w-0">
           <div className="plm-text-sm plm-font-semibold plm-text-gray-900 plm-truncate">
             {player.name}

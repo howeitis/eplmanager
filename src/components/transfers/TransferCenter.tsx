@@ -14,7 +14,7 @@ import {
 } from '../../engine/transfers';
 import { resetProgressionForTransfer } from '../../engine/playerGen';
 import { getBackgroundEffects } from '../../engine/managerBackground';
-import { countActiveFilters } from './MarketBoard';
+import { CLUBS } from '../../data/clubs';
 import type {
   Player,
   Club,
@@ -22,13 +22,14 @@ import type {
   TransferRecord,
   MarketListing,
 } from '../../types/entities';
-import { MarketBoard } from './MarketBoard';
+import { FeaturedRow } from './FeaturedRow';
 import { SquadPanel } from './SquadPanel';
 import { IncomingOffers } from './IncomingOffers';
 import { OutgoingOffers } from './OutgoingOffers';
 import { TransferTicker } from './TransferTicker';
 import { TransferLedger } from './TransferLedger';
 import { ShortlistPanel } from './ShortlistPanel';
+import { ScrollPipIndicator } from '../shared/ScrollPipIndicator';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 
 type TransferTab = 'market' | 'squad' | 'incoming' | 'outgoing' | 'ticker' | 'ledger' | 'shortlist';
@@ -37,9 +38,10 @@ interface TransferCenterProps {
   onClose: () => void;
 }
 
-export function TransferCenter({ onClose }: TransferCenterProps) {
+export function TransferCenter({ onClose: _onClose }: TransferCenterProps) {
   const [activeTab, setActiveTab] = useState<TransferTab>('market');
   const [initialized, setInitialized] = useState(false);
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
 
   const manager = useGameStore((s) => s.manager);
   const clubs = useGameStore((s) => s.clubs);
@@ -50,7 +52,6 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
   const transferOffers = useGameStore((s) => s.transferOffers);
   const marketListings = useGameStore((s) => s.marketListings);
   const tickerMessages = useGameStore((s) => s.tickerMessages);
-  const marketFilters = useGameStore((s) => s.marketFilters);
   const featuredSlots = useGameStore((s) => s.featuredSlots);
   const featuredRefillIndex = useGameStore((s) => s.featuredRefillIndex);
   const saveSlot = useGameStore((s) => s.saveSlot);
@@ -515,16 +516,8 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
       .filter(Boolean) as { player: Player; club: Club; listing: MarketListing }[];
   }, [marketListings, clubs]);
 
-  const activeFilterCount = countActiveFilters(marketFilters);
-
-  const tabs: { key: TransferTab; label: string; badge?: number; pill?: string }[] = [
-    {
-      key: 'market',
-      label: 'Market',
-      pill: activeTab !== 'market' && activeFilterCount > 0
-        ? `Filters Active (${activeFilterCount})`
-        : undefined,
-    },
+  const tabs: { key: TransferTab; label: string; badge?: number }[] = [
+    { key: 'market', label: 'Market' },
     { key: 'squad', label: 'Squad' },
     { key: 'incoming', label: 'Incoming', badge: incomingOffers.length || undefined },
     { key: 'outgoing', label: 'Outgoing', badge: outgoingOffers.length || undefined },
@@ -533,38 +526,61 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
     { key: 'ticker', label: 'Ticker' },
   ];
 
+  const clubData = CLUBS.find((c) => c.id === playerClubId);
+  const accent = clubData?.colors.primary;
+
   return (
-    <div className="plm-min-h-screen plm-bg-gray-50">
-      {/* Header */}
-      <div className="plm-bg-white plm-border-b plm-border-gray-200 plm-px-4 plm-py-3">
-        <div className="plm-max-w-6xl plm-mx-auto plm-flex plm-items-center plm-justify-between">
-          <div>
-            <button
-              onClick={onClose}
-              aria-label="Back to Hub"
-              className="plm-text-sm plm-text-gray-500 hover:plm-text-gray-700 plm-mb-1 plm-min-h-[44px] plm-inline-flex plm-items-center"
-            >
-              &larr; Back to Hub
-            </button>
-            <h1 className="plm-text-lg plm-font-bold plm-text-gray-900">
-              Transfer Center
+    <div className="plm-relative plm-space-y-4 plm-w-full">
+      {/* Club-color ambient glow — mirrors the game hub masthead */}
+      {clubData && (
+        <div
+          aria-hidden
+          className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
+          style={{
+            background: `linear-gradient(to bottom, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
+            zIndex: 0,
+          }}
+        />
+      )}
+
+      {/* Unboxed editorial masthead */}
+      <section className="plm-relative" style={{ zIndex: 1 }}>
+        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+          Transfer Center
+        </p>
+        <div className="plm-mt-2 plm-flex plm-items-end plm-justify-between plm-gap-4">
+          <div className="plm-min-w-0">
+            <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
+              {windowType === 'summer' ? 'Summer Window' : 'January Window'}
             </h1>
-            <p className="plm-text-xs plm-text-gray-500">
-              {windowType === 'summer' ? 'Summer' : 'January'} Window &middot; Season {seasonNumber}
+            <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
+              Season {seasonNumber} &middot; {playerClub?.name}
             </p>
           </div>
-          <div className="plm-text-right">
-            <div className="plm-text-xs plm-text-gray-400">Budget</div>
-            <div className="plm-text-lg plm-font-bold plm-text-green-700">
+          <div className="plm-text-right plm-flex-shrink-0">
+            <div className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-[0.15em] plm-font-medium">
+              Budget
+            </div>
+            <div
+              className="plm-font-display plm-text-2xl plm-font-bold plm-tabular-nums plm-leading-none plm-mt-1"
+              style={{ color: accent || '#047857' }}
+            >
               &pound;{playerBudget.toFixed(1)}M
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Tab nav (all breakpoints) */}
-      <div className="plm-bg-white plm-border-b plm-border-gray-200 plm-sticky plm-top-0 plm-z-20">
-        <div className="plm-max-w-6xl plm-mx-auto plm-px-2 plm-overflow-x-auto">
+      {/* Tab nav — horizontal scroll on mobile with scroll pips */}
+      <div className="plm-relative" style={{ zIndex: 1 }}>
+        <div className="md:plm-hidden plm-px-1 plm-flex plm-items-center plm-justify-end plm-mb-1.5">
+          <ScrollPipIndicator count={tabs.length} scrollRef={tabsScrollRef} accent={accent} />
+        </div>
+        <div
+          ref={tabsScrollRef}
+          className="plm-border-b plm-border-warm-200 plm-overflow-x-auto plm-snap-x plm-snap-mandatory plm-no-scrollbar"
+          style={{ scrollbarWidth: 'none' }}
+        >
           <div className="plm-flex plm-gap-1 plm-min-w-max" role="tablist" aria-label="Transfer sections">
             {tabs.map((tab) => (
               <button
@@ -572,21 +588,17 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
                 role="tab"
                 aria-selected={activeTab === tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`plm-px-3 md:plm-px-4 plm-py-3 plm-text-sm plm-font-medium plm-whitespace-nowrap plm-border-b-2 plm-transition-colors plm-min-h-[44px] ${
+                className={`plm-snap-start plm-px-3 md:plm-px-4 plm-py-3 plm-text-sm plm-font-medium plm-whitespace-nowrap plm-border-b-2 plm-transition-colors plm-min-h-[44px] ${
                   activeTab === tab.key
-                    ? 'plm-border-gray-900 plm-text-gray-900'
-                    : 'plm-border-transparent plm-text-gray-500 hover:plm-text-gray-700'
+                    ? 'plm-border-charcoal plm-text-charcoal'
+                    : 'plm-border-transparent plm-text-warm-500 hover:plm-text-warm-700'
                 }`}
+                style={activeTab === tab.key && accent ? { borderColor: accent, color: '#1A1A1A' } : undefined}
               >
                 {tab.label}
                 {tab.badge && (
                   <span className="plm-ml-1 plm-bg-red-500 plm-text-white plm-text-xs plm-rounded-full plm-px-1.5 plm-py-0.5" aria-label={`${tab.badge} pending`}>
                     {tab.badge}
-                  </span>
-                )}
-                {tab.pill && (
-                  <span className="plm-ml-1 plm-bg-blue-100 plm-text-blue-700 plm-text-[10px] plm-font-medium plm-rounded-full plm-px-1.5 plm-py-0.5">
-                    {tab.pill}
                   </span>
                 )}
               </button>
@@ -595,19 +607,13 @@ export function TransferCenter({ onClose }: TransferCenterProps) {
         </div>
       </div>
 
-      {/* Content — single active module on all breakpoints */}
-      <div className={`${
-        activeTab === 'squad' || activeTab === 'incoming' || activeTab === 'outgoing' || activeTab === 'shortlist'
-          ? 'plm-max-w-6xl'
-          : 'plm-max-w-4xl'
-      } plm-mx-auto plm-px-4 plm-py-4`}>
+      {/* Content */}
+      <div className="plm-relative plm-pt-2" style={{ zIndex: 1 }}>
         {activeTab === 'market' && (
-          <MarketBoard
+          <FeaturedRow
             listings={marketPlayersWithListings}
-            budget={playerBudget}
-            onMakeOffer={handleMakeOffer}
-            playerClubId={playerClubId}
             clubs={clubs}
+            playerClubId={playerClubId}
           />
         )}
         {activeTab === 'squad' && playerClub && (

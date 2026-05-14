@@ -7,9 +7,8 @@ import {
   generateFeaturedSlots,
   refillFeaturedSlot,
 } from '../transfers';
-import { applyMarketFilters, countActiveFilters } from '../../components/transfers/MarketBoard';
-import { DEFAULT_MARKET_FILTERS, type MarketFilters, type FeaturedSlot } from '../../store/marketSlice';
-import type { Club, Player, MarketListing } from '../../types/entities';
+import type { FeaturedSlot } from '../../store/marketSlice';
+import type { Club, MarketListing } from '../../types/entities';
 
 const GAME_SEED = 'test-74-seed-featured';
 
@@ -26,126 +25,6 @@ function setupMarket(clubs: Club[], playerClubId: string) {
   return generateMarketListings(rng, clubs, playerClubId);
 }
 
-function buildListingsWithPlayers(listings: MarketListing[], clubs: Club[]) {
-  return listings
-    .map((listing) => {
-      const club = clubs.find((c) => c.id === listing.clubId);
-      const player = club?.roster.find((p) => p.id === listing.playerId);
-      if (!player || !club) return null;
-      return { player, club, listing };
-    })
-    .filter(Boolean) as { player: Player; club: Club; listing: MarketListing }[];
-}
-
-// ─── Part A: Filters ───
-
-describe('Market Filters', () => {
-  let clubs: Club[];
-  let listings: MarketListing[];
-  let listingsWithPlayers: { player: Player; club: Club; listing: MarketListing }[];
-
-  beforeEach(() => {
-    clubs = setupClubs();
-    listings = setupMarket(clubs, 'ARS');
-    listingsWithPlayers = buildListingsWithPlayers(listings, clubs);
-  });
-
-  it('returns all players with default filters', () => {
-    const result = applyMarketFilters(listingsWithPlayers, DEFAULT_MARKET_FILTERS, 999);
-    expect(result.length).toBe(listingsWithPlayers.length);
-  });
-
-  it('position filter works for a single position', () => {
-    // Find a position that actually has listings with this seed
-    const positions = [...new Set(listingsWithPlayers.map((r) => r.player.position))];
-    expect(positions.length).toBeGreaterThan(0);
-    const testPos = positions[0];
-    const filters: MarketFilters = { ...DEFAULT_MARKET_FILTERS, positions: [testPos] };
-    const result = applyMarketFilters(listingsWithPlayers, filters, 999);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result.every((r) => r.player.position === testPos)).toBe(true);
-  });
-
-  it('multi-position filter works for ST and MF', () => {
-    const filters: MarketFilters = { ...DEFAULT_MARKET_FILTERS, positions: ['ST', 'MF'] };
-    const result = applyMarketFilters(listingsWithPlayers, filters, 999);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result.every((r) => r.player.position === 'ST' || r.player.position === 'MF')).toBe(true);
-  });
-
-  it('age range filter limits results', () => {
-    const filters: MarketFilters = { ...DEFAULT_MARKET_FILTERS, ageMin: 22, ageMax: 28 };
-    const result = applyMarketFilters(listingsWithPlayers, filters, 999);
-    expect(result.every((r) => r.player.age >= 22 && r.player.age <= 28)).toBe(true);
-  });
-
-  it('overall range filter limits results', () => {
-    const filters: MarketFilters = { ...DEFAULT_MARKET_FILTERS, overallMin: 65, overallMax: 75 };
-    const result = applyMarketFilters(listingsWithPlayers, filters, 999);
-    expect(result.every((r) => r.player.overall >= 65 && r.player.overall <= 75)).toBe(true);
-  });
-
-  it('max price filter works', () => {
-    const filters: MarketFilters = { ...DEFAULT_MARKET_FILTERS, maxPrice: 10 };
-    const result = applyMarketFilters(listingsWithPlayers, filters, 999);
-    expect(result.every((r) => r.listing.askingPrice <= 10)).toBe(true);
-    expect(result.length).toBeLessThan(listingsWithPlayers.length);
-  });
-
-  it('stat threshold filters correctly', () => {
-    const filters: MarketFilters = {
-      ...DEFAULT_MARKET_FILTERS,
-      statThresholds: { ATK: 75, DEF: 0, MOV: 0, PWR: 0, MEN: 0, SKL: 0 },
-    };
-    const result = applyMarketFilters(listingsWithPlayers, filters, 999);
-    expect(result.every((r) => r.player.stats.ATK >= 75)).toBe(true);
-  });
-
-  it('name search is case-insensitive', () => {
-    // Pick a real player name from the listings
-    if (listingsWithPlayers.length === 0) return;
-    const targetName = listingsWithPlayers[0].player.name;
-    const partial = targetName.slice(0, 3).toLowerCase();
-    const filters: MarketFilters = { ...DEFAULT_MARKET_FILTERS, nameSearch: partial };
-    const result = applyMarketFilters(listingsWithPlayers, filters, 999);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result.every((r) => r.player.name.toLowerCase().includes(partial))).toBe(true);
-  });
-
-  it('combined filters: ST, age 22-28, min ATK 75, max price £30M', () => {
-    const filters: MarketFilters = {
-      ...DEFAULT_MARKET_FILTERS,
-      positions: ['ST'],
-      ageMin: 22,
-      ageMax: 28,
-      maxPrice: 30,
-      statThresholds: { ATK: 75, DEF: 0, MOV: 0, PWR: 0, MEN: 0, SKL: 0 },
-    };
-    const result = applyMarketFilters(listingsWithPlayers, filters, 999);
-    for (const r of result) {
-      expect(r.player.position).toBe('ST');
-      expect(r.player.age).toBeGreaterThanOrEqual(22);
-      expect(r.player.age).toBeLessThanOrEqual(28);
-      expect(r.player.stats.ATK).toBeGreaterThanOrEqual(75);
-      expect(r.listing.askingPrice).toBeLessThanOrEqual(30);
-    }
-  });
-
-  it('countActiveFilters returns 0 for defaults', () => {
-    expect(countActiveFilters(DEFAULT_MARKET_FILTERS)).toBe(0);
-  });
-
-  it('countActiveFilters counts non-default filters', () => {
-    const filters: MarketFilters = {
-      ...DEFAULT_MARKET_FILTERS,
-      positions: ['ST'],
-      ageMin: 20,
-      nameSearch: 'test',
-    };
-    expect(countActiveFilters(filters)).toBe(3);
-  });
-});
-
 // ─── Part C: Featured Player Rotation ───
 
 describe('Featured Player Rotation', () => {
@@ -157,10 +36,10 @@ describe('Featured Player Rotation', () => {
     listings = setupMarket(clubs, 'ARS');
   });
 
-  it('generates up to 6 featured slots', () => {
+  it('generates up to 12 featured slots', () => {
     const rng = new SeededRNG(`${GAME_SEED}-featured-summer_window`);
     const slots = generateFeaturedSlots(rng, listings, clubs);
-    expect(slots.length).toBeLessThanOrEqual(6);
+    expect(slots.length).toBeLessThanOrEqual(12);
     expect(slots.length).toBeGreaterThan(0);
   });
 
@@ -170,7 +49,7 @@ describe('Featured Player Rotation', () => {
     if (slots.length >= 1) expect(slots[0].archetype).toBe('star');
     if (slots.length >= 2) expect(slots[1].archetype).toBe('prospect');
     if (slots.length >= 3) expect(slots[2].archetype).toBe('bargain');
-    // Slots 4-6 are trending (weighted random)
+    // Slots 4+ are trending (weighted random)
     for (let i = 3; i < slots.length; i++) {
       expect(slots[i].archetype).toBe('trending');
     }

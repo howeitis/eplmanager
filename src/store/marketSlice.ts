@@ -1,28 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { GameState } from '../types/store';
-import type { TransferOffer, TransferRecord, MarketListing, Position } from '../types/entities';
-
-export interface MarketFilters {
-  positions: Position[];
-  ageMin: number;
-  ageMax: number;
-  overallMin: number;
-  overallMax: number;
-  statThresholds: { ATK: number; DEF: number; MOV: number; PWR: number; MEN: number; SKL: number };
-  maxPrice: number | null; // null = no limit (use budget)
-  nameSearch: string;
-}
-
-export const DEFAULT_MARKET_FILTERS: MarketFilters = {
-  positions: [],
-  ageMin: 17,
-  ageMax: 35,
-  overallMin: 0,
-  overallMax: 99,
-  statThresholds: { ATK: 0, DEF: 0, MOV: 0, PWR: 0, MEN: 0, SKL: 0 },
-  maxPrice: null,
-  nameSearch: '',
-};
+import type { TransferOffer, TransferRecord, MarketListing } from '../types/entities';
 
 export interface FeaturedSlot {
   playerId: string;
@@ -37,7 +15,6 @@ export interface MarketSlice {
   tickerMessages: string[];
   shortlist: string[];
   shortlistNotifications: string[];
-  marketFilters: MarketFilters;
   featuredSlots: FeaturedSlot[];
   featuredRefillIndex: number;
 
@@ -62,8 +39,6 @@ export interface MarketSlice {
   clearShortlist: () => void;
   addShortlistNotification: (message: string) => void;
   clearShortlistNotifications: () => void;
-  setMarketFilters: (filters: Partial<MarketFilters>) => void;
-  resetMarketFilters: () => void;
   setFeaturedSlots: (slots: FeaturedSlot[]) => void;
   setFeaturedRefillIndex: (index: number) => void;
 }
@@ -76,7 +51,6 @@ export const createMarketSlice: StateCreator<GameState, [], [], MarketSlice> = (
   tickerMessages: [],
   shortlist: [],
   shortlistNotifications: [],
-  marketFilters: { ...DEFAULT_MARKET_FILTERS },
   featuredSlots: [],
   featuredRefillIndex: 0,
 
@@ -223,16 +197,6 @@ export const createMarketSlice: StateCreator<GameState, [], [], MarketSlice> = (
 
   clearShortlistNotifications: () => {
     set({ shortlistNotifications: [] });
-  },
-
-  setMarketFilters: (filters) => {
-    set((state) => ({
-      marketFilters: { ...state.marketFilters, ...filters },
-    }));
-  },
-
-  resetMarketFilters: () => {
-    set({ marketFilters: { ...DEFAULT_MARKET_FILTERS } });
   },
 
   setFeaturedSlots: (slots) => {

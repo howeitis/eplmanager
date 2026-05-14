@@ -1,4 +1,5 @@
 import type { TransferOffer, Club } from '../../types/entities';
+import { getClubLogoUrl } from '../../data/assets';
 
 interface OutgoingOffersProps {
   offers: TransferOffer[];
@@ -51,16 +52,26 @@ export function OutgoingOffers({ offers, clubs, budget, onAcceptCounter }: Outgo
             key={offer.id}
             className={`plm-rounded-lg plm-border plm-p-3 ${STATUS_STYLES[offer.status] || 'plm-bg-gray-50 plm-border-gray-200'}`}
           >
-            <div className="plm-flex plm-items-center plm-justify-between plm-mb-1">
-              <div>
-                <div className="plm-text-sm plm-font-semibold">
-                  {offer.playerName}
-                </div>
-                <div className="plm-text-xs plm-opacity-75">
-                  {offer.playerPosition} &middot; {offer.playerOverall} OVR &middot; {offer.playerAge} &middot; from {getClubName(offer.fromClubId)}
+            <div className="plm-flex plm-items-center plm-justify-between plm-gap-2 plm-mb-1">
+              <div className="plm-flex plm-items-center plm-gap-2 plm-min-w-0">
+                {getClubLogoUrl(offer.fromClubId) ? (
+                  <img
+                    src={getClubLogoUrl(offer.fromClubId)}
+                    alt=""
+                    aria-hidden
+                    className="plm-w-7 plm-h-7 plm-object-contain plm-flex-shrink-0"
+                  />
+                ) : null}
+                <div className="plm-min-w-0">
+                  <div className="plm-text-sm plm-font-semibold plm-truncate">
+                    {offer.playerName}
+                  </div>
+                  <div className="plm-text-xs plm-opacity-75 plm-truncate">
+                    {offer.playerPosition} &middot; {offer.playerOverall} OVR &middot; {offer.playerAge} &middot; from {getClubName(offer.fromClubId)}
+                  </div>
                 </div>
               </div>
-              <span className="plm-text-xs plm-font-medium plm-px-2 plm-py-0.5 plm-rounded plm-bg-white plm-bg-opacity-50">
+              <span className="plm-text-xs plm-font-medium plm-px-2 plm-py-0.5 plm-rounded plm-bg-white plm-bg-opacity-50 plm-flex-shrink-0">
                 {STATUS_LABELS[offer.status]}
               </span>
             </div>

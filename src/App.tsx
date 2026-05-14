@@ -473,7 +473,6 @@ function App() {
       state.clearMarketListings();
       state.setFeaturedSlots([]);
       state.setFeaturedRefillIndex(0);
-      state.resetMarketFilters();
 
       // Replenish AI squads after window closes
       const windowRng = new SeededRNG(`${sSeed}-window-replenish-${currentPhase}`);
@@ -1440,7 +1439,7 @@ function App() {
         />
 
         <main className="plm-flex-1 plm-min-w-0 plm-px-4 plm-py-4 md:plm-px-6 md:plm-py-6 plm-pb-20 md:plm-pb-6">
-          <div className="plm-max-w-5xl plm-mx-auto">
+          <div className="plm-max-w-7xl plm-mx-auto">
             {gameView === 'hub' && (
               <GameHub
                 onNavigate={handleNavigate}

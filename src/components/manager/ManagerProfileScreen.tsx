@@ -5,6 +5,7 @@ import { getClubLogoUrl } from '../../data/assets';
 import { ManagerCard } from '../shared/ManagerCard';
 import { getManagerFaceUri } from '../../utils/avatarFace';
 import { saveGame } from '../../utils/save';
+import { isLightColor } from '../../utils/tierColors';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
 
 const ACCOMPLISHMENT_ICONS: Record<string, string> = {
@@ -256,26 +257,32 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
         </section>
       )}
 
-      {/* Save Button */}
+      {/* Save Button — editorial advance-button style, club-colored */}
       <button
         onClick={handleSave}
         disabled={saving || !saveSlot}
-        className={`plm-w-full plm-py-3.5 plm-rounded-lg plm-font-body plm-font-semibold plm-text-sm plm-transition-all plm-duration-200 plm-min-h-[44px] plm-border ${
-          saved
-            ? 'plm-bg-emerald-50 plm-border-emerald-300 plm-text-emerald-700'
-            : 'plm-bg-charcoal plm-text-white plm-border-charcoal hover:plm-bg-charcoal-light'
-        } disabled:plm-opacity-50 disabled:plm-cursor-not-allowed`}
+        className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-transition-all plm-duration-200 plm-min-h-[44px] disabled:plm-opacity-50 disabled:plm-cursor-not-allowed"
+        style={{
+          backgroundColor: saved ? '#ECFDF5' : (currentClub?.colors.primary || '#1A1A1A'),
+          color: saved
+            ? '#047857'
+            : isLightColor(currentClub?.colors.primary || '#1A1A1A')
+              ? '#1A1A1A'
+              : '#FFFFFF',
+        }}
       >
-        {saving ? 'Saving...' : saved ? 'Game Saved!' : 'Save Game'}
+        {saving ? 'Saving…' : saved ? 'Game Saved' : 'Save Game'}
       </button>
 
-      {/* Resign Button */}
+      {/* Resign Button — editorial advance-button style, white with alarms */}
       {onResign && (
         <button
           onClick={() => setResignStep(1)}
-          className="plm-w-full plm-py-3 plm-rounded-lg plm-font-body plm-font-semibold plm-text-sm plm-transition-all plm-duration-200 plm-min-h-[44px] plm-border plm-border-red-200 plm-bg-white plm-text-red-700 hover:plm-bg-red-50"
+          className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-bg-white plm-border plm-border-red-200 plm-text-red-700 hover:plm-bg-red-50 plm-transition-colors plm-min-h-[44px] plm-flex plm-items-center plm-justify-center plm-gap-2"
         >
-          Resign Position
+          <span aria-hidden>🚨</span>
+          <span>Resign Position</span>
+          <span aria-hidden>🚨</span>
         </button>
       )}
 

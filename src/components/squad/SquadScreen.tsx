@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
 import type { Player, Position } from '../../types/entities';
@@ -58,7 +58,15 @@ export function SquadScreen({
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
   const [squadView, setSquadView] = useState<SquadView>('roster');
-  const [tacticsOpen, setTacticsOpen] = useState(true);
+  const [tacticsOpen, setTacticsOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const stored = window.sessionStorage.getItem('plm-squad-tactics-open');
+    return stored === null ? true : stored === '1';
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.sessionStorage.setItem('plm-squad-tactics-open', tacticsOpen ? '1' : '0');
+  }, [tacticsOpen]);
   const { openModal } = useModalParams();
 
   const playerClub = clubs.find((c) => c.id === manager?.clubId);
@@ -102,14 +110,12 @@ export function SquadScreen({
     return allPlayers.some((p) => xiPlayerIds.includes(p.id) && p.injured);
   }, [allPlayers, startingXI]);
 
-  const isJanuaryWindow = currentPhase === 'january_window' || currentPhase === 'january' || currentPhase === 'january_deadline';
-
   return (
     <div className="plm-space-y-4 plm-w-full">
 
       {/* Advance to next month — editorial stylized button matching the hub */}
       {onAdvance && advanceLabel && (
-        <div className="plm-space-y-1.5">
+        <div className="plm-space-y-2">
           <button
             onClick={onAdvance}
             className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-transition-all plm-duration-200 plm-min-h-[44px]"
@@ -120,46 +126,38 @@ export function SquadScreen({
           >
             {advanceLabel}
           </button>
-          {isJanuaryWindow && (
-            <p className="plm-text-[10px] plm-text-amber-700 plm-text-center plm-uppercase plm-tracking-[0.15em] plm-font-medium">
-              Transfer window is open — sign before the deadline
-            </p>
+          {currentPhase === 'august_deadline' && onGoToTransfers && (
+            <button
+              onClick={onGoToTransfers}
+              className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-bg-amber-50 plm-border plm-border-amber-200 plm-text-amber-800 hover:plm-bg-amber-100 plm-transition-colors plm-min-h-[44px]"
+            >
+              Transfer Deadline Day — Last Chance to Sign
+            </button>
           )}
-        </div>
-      )}
-
-      {/* August deadline warning */}
-      {currentPhase === 'august_deadline' && (
-        <div className="plm-bg-amber-50 plm-border plm-border-amber-300 plm-rounded-lg plm-px-4 plm-py-4">
-          <div className="plm-flex plm-items-start plm-gap-3">
-            <span className="plm-text-2xl plm-flex-shrink-0" aria-hidden="true">⏰</span>
-            <div className="plm-flex-1 plm-min-w-0">
-              <p className="plm-text-sm plm-font-bold plm-text-amber-900">
-                Transfer Deadline Day — Last Chance to Sign!
-              </p>
-              <p className="plm-text-xs plm-text-amber-700 plm-mt-0.5">
-                The window closes when you advance. Any unsigned targets will be gone until January.
-              </p>
-              <div className="plm-flex plm-gap-2 plm-mt-3">
-                {onAdvance && (
-                  <button
-                    onClick={onAdvance}
-                    className="plm-flex-1 plm-px-3 plm-py-2 plm-bg-charcoal plm-text-white plm-rounded-lg plm-text-xs plm-font-bold plm-min-h-[44px] hover:plm-bg-warm-700 plm-transition-colors"
-                  >
-                    Advance to September
-                  </button>
-                )}
-                {onGoToTransfers && (
-                  <button
-                    onClick={onGoToTransfers}
-                    className="plm-flex-1 plm-px-3 plm-py-2 plm-bg-amber-500 plm-text-white plm-rounded-lg plm-text-xs plm-font-bold plm-min-h-[44px] hover:plm-bg-amber-600 plm-transition-colors"
-                  >
-                    🛒 Go to Transfer Market
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          {currentPhase === 'january_deadline' && onGoToTransfers && (
+            <button
+              onClick={onGoToTransfers}
+              className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-bg-amber-50 plm-border plm-border-amber-200 plm-text-amber-800 hover:plm-bg-amber-100 plm-transition-colors plm-min-h-[44px]"
+            >
+              January Deadline Day — Last Chance to Sign
+            </button>
+          )}
+          {(currentPhase === 'january_window' || currentPhase === 'january') && onGoToTransfers && (
+            <button
+              onClick={onGoToTransfers}
+              className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-bg-amber-50 plm-border plm-border-amber-200 plm-text-amber-800 hover:plm-bg-amber-100 plm-transition-colors plm-min-h-[44px]"
+            >
+              Transfer Window Open — Sign Before the Deadline
+            </button>
+          )}
+          {currentPhase === 'summer_window' && onGoToTransfers && (
+            <button
+              onClick={onGoToTransfers}
+              className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-bg-amber-50 plm-border plm-border-amber-200 plm-text-amber-800 hover:plm-bg-amber-100 plm-transition-colors plm-min-h-[44px]"
+            >
+              Summer Window Open — Shape Your Squad
+            </button>
+          )}
         </div>
       )}
 
@@ -358,12 +356,12 @@ function DesktopPlayerRow({ player, isInXI, captainId, onOpenModal }: { player: 
       } ${player.injured ? 'plm-bg-red-50/50' : ''}`}
     >
       <td className="plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase">{player.position}</td>
-      <td className="plm-py-2">
+      <td className="plm-py-2 plm-whitespace-nowrap">
         <div className="plm-flex plm-items-center plm-gap-1.5">
           {isInXI && (
             <span className="plm-w-1.5 plm-h-1.5 plm-rounded-full plm-bg-emerald-500 plm-flex-shrink-0" title="Starting XI" />
           )}
-          <span className="plm-text-sm plm-font-medium plm-text-charcoal">
+          <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-whitespace-nowrap">
             {player.name}
           </span>
           {player.id === captainId && (
