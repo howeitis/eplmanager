@@ -219,13 +219,21 @@ export function RetroPlayerCard({
   };
 
   const fontSizes: Record<string, Record<string, string>> = {
-    sm: { ovr: 'plm-text-2xl', name: 'plm-text-xs', stat: 'plm-text-[9px]', pos: 'plm-text-[8px]', emoji: 'plm-text-3xl' },
+    sm: { ovr: 'plm-text-2xl', name: 'plm-text-xs', stat: 'plm-text-[8px]', pos: 'plm-text-[8px]', emoji: 'plm-text-3xl' },
     md: { ovr: 'plm-text-3xl', name: 'plm-text-sm', stat: 'plm-text-[10px]', pos: 'plm-text-[9px]', emoji: 'plm-text-4xl' },
     lg: { ovr: 'plm-text-4xl', name: 'plm-text-base', stat: 'plm-text-xs', pos: 'plm-text-[10px]', emoji: 'plm-text-5xl' },
     xl: { ovr: 'plm-text-5xl', name: 'plm-text-xl', stat: 'plm-text-sm', pos: 'plm-text-xs', emoji: 'plm-text-7xl' },
   };
 
   const fs = fontSizes[size];
+
+  // Meta line (nationality · age · club) is denser than the bare position
+  // label on sm cards — give it its own font-size + spacing so the line
+  // doesn't have to auto-scale into illegibility.
+  const metaPos = size === 'sm' ? 'plm-text-[7px]' : fs.pos;
+  const metaLetterSpacing = size === 'sm' ? '0.12em' : '0.18em';
+  const metaColumnGap =
+    size === 'xl' ? 14 : size === 'lg' ? 10 : size === 'sm' ? 5 : 8;
 
   // Portrait box height — kept tight against the avatar so the bio paragraph
   // below has more breathing room.
@@ -681,14 +689,14 @@ export function RetroPlayerCard({
           ref={metaInnerRef}
           className="plm-flex plm-justify-center plm-items-center plm-whitespace-nowrap"
           style={{
-            columnGap: size === 'xl' ? 14 : size === 'lg' ? 10 : 8,
+            columnGap: metaColumnGap,
             transform: metaScale < 1 ? `scale(${metaScale})` : undefined,
             transformOrigin: 'center',
           }}
         >
           <span
-            className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
-            style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+            className={`${metaPos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
+            style={{ color: foilStampColor, letterSpacing: metaLetterSpacing }}
           >
             {getNationalityLabel(player.nationality)}
           </span>
@@ -704,8 +712,8 @@ export function RetroPlayerCard({
             }}
           />
           <span
-            className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
-            style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+            className={`${metaPos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
+            style={{ color: foilStampColor, letterSpacing: metaLetterSpacing }}
           >
             Age {player.age}
           </span>
@@ -723,8 +731,8 @@ export function RetroPlayerCard({
                 }}
               />
               <span
-                className={`${fs.pos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
-                style={{ color: foilStampColor, letterSpacing: '0.18em' }}
+                className={`${metaPos} plm-uppercase plm-font-semibold plm-whitespace-nowrap`}
+                style={{ color: foilStampColor, letterSpacing: metaLetterSpacing }}
               >
                 {shortenClubName(clubName)}
               </span>

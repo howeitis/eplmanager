@@ -59,14 +59,15 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
 
   return (
     <div className="plm-relative plm-flex plm-flex-col lg:plm-flex-row plm-gap-6 plm-w-full">
-      {/* Club-color ambient glow — soft radial tint at the top of the hub
-          using the player's primary club color. Sits behind all content. */}
+      {/* Club-color ambient glow — soft linear wash across the entire top
+          of the hub using the player's primary club color. Sits behind all
+          content. */}
       {clubData && (
         <div
           aria-hidden
           className="plm-pointer-events-none plm-absolute plm-inset-x-0 plm--top-16 plm-h-[320px]"
           style={{
-            background: `radial-gradient(60% 100% at 50% 0%, ${clubData.colors.primary}33 0%, ${clubData.colors.primary}14 35%, transparent 75%)`,
+            background: `linear-gradient(to bottom, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
             zIndex: 0,
           }}
         />
@@ -179,10 +180,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
               )
             )}
             <div className="plm-min-w-0 plm-flex-1">
-              <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
-                The Club
-              </p>
-              <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate plm-mt-0.5">
+              <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
                 {playerClub?.name}
               </h1>
               <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate plm-mt-0.5">

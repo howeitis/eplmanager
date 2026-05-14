@@ -86,6 +86,18 @@ function PositionDelta({ delta }: { delta: number }) {
 }
 
 function sortRows(table: LeagueTableRow[]): LeagueTableRow[] {
+  // Pre-season — no games played — sort alphabetically by club name so the
+  // table reads predictably instead of mirroring whatever order the store
+  // happens to have. Once results land, the standard points/GD/GF sort
+  // takes over.
+  const anyPlayed = table.some((r) => r.played > 0);
+  if (!anyPlayed) {
+    return [...table].sort((a, b) => {
+      const an = clubDataMap.get(a.clubId)?.name ?? a.clubId;
+      const bn = clubDataMap.get(b.clubId)?.name ?? b.clubId;
+      return an.localeCompare(bn);
+    });
+  }
   return [...table].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
