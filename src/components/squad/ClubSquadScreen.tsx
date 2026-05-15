@@ -92,6 +92,14 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
           zIndex: 0,
         }}
       />
+      <div
+        aria-hidden
+        className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+        style={{
+          background: `linear-gradient(to top, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
+          zIndex: 0,
+        }}
+      />
 
       {/* Unboxed editorial masthead */}
       <section className="plm-relative" style={{ zIndex: 1 }}>
@@ -121,7 +129,7 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
           </div>
         </div>
 
-        <div className="md:plm-hidden plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
+        <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
           <MastheadStat label="Position" value={position ? ordinal(position) : '-'} />
           <MastheadStat label="Squad" value={filteredPlayers.length} />
           <MastheadStat label="Budget" value={`£${budget.toFixed(0)}M`} accent={clubData.colors.primary} />
@@ -228,16 +236,15 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
         </div>
 
         {/* Mobile list — flat, no boxes */}
-        <ul className="md:plm-hidden plm-divide-y plm-divide-warm-100">
+        <div className="md:plm-hidden plm-divide-y plm-divide-warm-100">
           {filteredPlayers.map((player) => (
-            <li key={player.id}>
-              <MobilePlayerRow
-                player={player}
-                onOpenModal={() => openWithBrowse(player.id)}
-              />
-            </li>
+            <MobilePlayerRow
+              key={player.id}
+              player={player}
+              onOpenModal={() => openWithBrowse(player.id)}
+            />
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );
