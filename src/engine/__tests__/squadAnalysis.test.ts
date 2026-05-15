@@ -85,13 +85,15 @@ describe('Squad Analysis', () => {
   describe('analyzeSquad — position quality', () => {
     it('detects strong position group when avg exceeds tier median + 4', () => {
       const clubs = buildClubs('test-pos-quality-1');
-      // Create a tier 3 club with very strong CBs
+      // Create a tier 3 club with very strong CBs. CB overalls are bumped so
+      // the strength check (avg ≥ tier-CB-median + 4) clears regardless of
+      // small seed-driven median variance across the generated league.
       const roster: Player[] = [
         makePlayer({ name: 'GK1', position: 'GK', overall: 68 }),
         makePlayer({ name: 'GK2', position: 'GK', overall: 62 }),
-        makePlayer({ name: 'CB1', position: 'CB', overall: 82 }), // Very high for tier 3
-        makePlayer({ name: 'CB2', position: 'CB', overall: 80 }), // Very high for tier 3
-        makePlayer({ name: 'CB3', position: 'CB', overall: 65 }),
+        makePlayer({ name: 'CB1', position: 'CB', overall: 88 }), // Very high for tier 3
+        makePlayer({ name: 'CB2', position: 'CB', overall: 85 }), // Very high for tier 3
+        makePlayer({ name: 'CB3', position: 'CB', overall: 70 }),
         makePlayer({ name: 'FB1', position: 'FB', overall: 68 }),
         makePlayer({ name: 'FB2', position: 'FB', overall: 66 }),
         makePlayer({ name: 'MF1', position: 'MF', overall: 68 }),

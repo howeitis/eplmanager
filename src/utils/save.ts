@@ -16,8 +16,12 @@ const METADATA_KEY = 'epl-manager-save-metadata';
  *  v1 — implicit (pre-versioning). previousLeagueTable and clubReputation
  *       were optional; some saves omit them entirely.
  *  v2 — schemaVersion introduced. Migration backfills the optional fields.
+ *  v3 — goalkeeper stats relabelled (DIV/HAN/KIC/REF/MEN/POS) and equal-
+ *       weighted into overall. Migration reshapes every existing GK's
+ *       six stat slots so the new average equals the stored overall,
+ *       preserving rating continuity across the schema change.
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export interface SaveData {
   schemaVersion: number;
@@ -82,7 +86,96 @@ export function migrateSaveData(raw: RawSaveData): SaveData {
     version = 2;
   }
 
+  if (version < 3) {
+    // v2 → v3: GK stats are now equally-weighted into overall. Reshape every
+    // existing keeper so the new equal-weighted average equals the stored
+    // overall — preserving rating continuity. Outfield players are untouched.
+    data = { ...data, clubs: reshapeGoalkeeperStats(data.clubs) };
+    version = 3;
+  }
+
   return { ...data, schemaVersion: version } as SaveData;
+}
+
+const GK_STAT_SLOTS = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'] as const;
+
+/**
+ * v2 → v3 helper. For every GK in every club roster, recompute their six
+ * stats so the flat average matches the stored overall. We start by shifting
+ * the existing biased values uniformly; if clamping at 1/99 throws the
+ * average off, we top up the slots that still have headroom until the
+ * average lands. statsSnapshotSeasonStart gets the same treatment so the
+ * aging report doesn't show phantom +/- changes after the migration.
+ */
+function reshapeGoalkeeperStats(clubs: unknown): unknown {
+  if (!Array.isArray(clubs)) return clubs;
+  return clubs.map((club) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const c = club as Record<string, any>;
+    const roster = Array.isArray(c?.roster) ? c.roster : null;
+    if (!roster) return club;
+
+    const newRoster = roster.map((player) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const p = player as Record<string, any>;
+      if (p?.position !== 'GK' || !p?.stats || typeof p.overall !== 'number') return player;
+      const target = Math.round(p.overall);
+      return {
+        ...p,
+        stats: reshapeToEqualWeightedAverage(p.stats, target),
+        statsSnapshotSeasonStart: p.statsSnapshotSeasonStart
+          ? reshapeToEqualWeightedAverage(p.statsSnapshotSeasonStart, target)
+          : undefined,
+      };
+    });
+
+    return { ...c, roster: newRoster };
+  });
+}
+
+/**
+ * Take a six-stat object and adjust each slot so the flat average lands on
+ * `target`. Pure utility — no rng. Used by the v2 → v3 migration and only
+ * exported for tests.
+ */
+export function reshapeToEqualWeightedAverage(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  stats: any,
+  target: number,
+): Record<string, number> {
+  // Snapshot inputs and clamp to the legal range, falling back to the
+  // target value if a slot is missing or non-numeric. Defensive against
+  // arbitrary disk shapes.
+  const values: Record<string, number> = {};
+  for (const k of GK_STAT_SLOTS) {
+    const raw = stats?.[k];
+    const n = typeof raw === 'number' && Number.isFinite(raw) ? raw : target;
+    values[k] = Math.max(1, Math.min(99, Math.round(n)));
+  }
+
+  // Uniform shift toward target.
+  const avg = (values.ATK + values.DEF + values.MOV + values.PWR + values.MEN + values.SKL) / 6;
+  const delta = Math.round(target - avg);
+  if (delta !== 0) {
+    for (const k of GK_STAT_SLOTS) {
+      values[k] = Math.max(1, Math.min(99, values[k] + delta));
+    }
+  }
+
+  // Top up / trim to hit target exactly, distributing the leftover +/- 1's
+  // across slots that still have headroom (or capacity to give).
+  let leftover = target * 6 - (values.ATK + values.DEF + values.MOV + values.PWR + values.MEN + values.SKL);
+  let guard = 0;
+  while (leftover !== 0 && guard < 60) {
+    guard++;
+    for (const k of GK_STAT_SLOTS) {
+      if (leftover > 0 && values[k] < 99) { values[k]++; leftover--; }
+      else if (leftover < 0 && values[k] > 1) { values[k]--; leftover++; }
+      if (leftover === 0) break;
+    }
+  }
+
+  return values;
 }
 
 /**

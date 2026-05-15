@@ -5,6 +5,7 @@ import { CLUBS } from '../../data/clubs';
 import { getClubLogoUrl } from '../../data/assets';
 import type { Player, Position } from '../../types/entities';
 import { ShortlistStar } from '../shared/ShortlistStar';
+import { STAT_KEYS, getStatLongName } from '../../utils/statLabels';
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 type SortKey = 'position' | 'overall' | 'age' | 'form';
@@ -94,7 +95,7 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
       />
       <div
         aria-hidden
-        className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+        className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm-bottom-0 plm-h-[256px]"
         style={{
           background: `linear-gradient(to top, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
           zIndex: 0,
@@ -219,12 +220,15 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
                   </td>
                   <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.age}</td>
                   <td className="plm-py-2 plm-text-center plm-font-bold plm-tabular-nums">{player.overall}</td>
-                  <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.ATK}</td>
-                  <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.DEF}</td>
-                  <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.MOV}</td>
-                  <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.PWR}</td>
-                  <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.MEN}</td>
-                  <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.SKL}</td>
+                  {STAT_KEYS.map((key) => (
+                    <td
+                      key={key}
+                      className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums"
+                      title={player.position === 'GK' ? getStatLongName(player.position, key) : undefined}
+                    >
+                      {player.stats[key]}
+                    </td>
+                  ))}
                   <td className="plm-py-2 plm-text-center">
                     <FormBadge form={player.form} />
                   </td>

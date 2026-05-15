@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import type { AgingResult } from '../../engine/aging';
 import type { Player, PlayerStats } from '../../types/entities';
-
-const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
+import { STAT_KEYS, getStatLabel } from '../../utils/statLabels';
 
 type AgingSort = 'risers' | 'decliners' | 'age';
 
@@ -167,7 +166,7 @@ export function AgingReport({ agingResults }: AgingReportProps) {
               <div className="plm-grid plm-grid-cols-6 plm-gap-1">
                 {STAT_KEYS.map((key) => (
                   <div key={key} className="plm-text-center">
-                    <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase">{key}</div>
+                    <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase">{getStatLabel(player.position, key)}</div>
                     <div className="plm-text-xs plm-font-bold plm-tabular-nums">{player.stats[key]}</div>
                     <StatDelta delta={statDeltas[key]} />
                   </div>

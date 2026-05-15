@@ -3,6 +3,7 @@ import {
   migrateSaveData,
   validateSaveData,
   extractSaveData,
+  reshapeToEqualWeightedAverage,
   CURRENT_SCHEMA_VERSION,
   SaveCorruptedError,
 } from '../save';
@@ -136,6 +137,80 @@ describe('extractSaveData', () => {
     expect(extracted.previousLeagueTable).toEqual([]);
     expect(extracted.clubReputation).toEqual({});
     expect(extracted.startingXIHistory).toEqual([]);
+  });
+});
+
+describe('v2 → v3 goalkeeper migration', () => {
+  it('reshapes existing GK stats so the equal-weighted average equals stored overall', () => {
+    // v2-era GK with biased stats (high DEF/PWR/MEN, low ATK/MOV/SKL).
+    // Old position-weighted formula produced overall=78. Under the new equal
+    // formula the same stats would average to (60+92+65+88+85+60)/6 = 75 —
+    // the migration must reshape them so the equal average comes back to 78.
+    const v2: Record<string, unknown> = {
+      schemaVersion: 2,
+      clubs: [
+        {
+          id: 'test-club',
+          roster: [
+            {
+              id: 'gk1',
+              position: 'GK',
+              overall: 78,
+              stats: { ATK: 60, DEF: 92, MOV: 65, PWR: 88, MEN: 85, SKL: 60 },
+              statsSnapshotSeasonStart: { ATK: 60, DEF: 92, MOV: 65, PWR: 88, MEN: 85, SKL: 60 },
+            },
+            // Outfield player should be left alone.
+            {
+              id: 'st1',
+              position: 'ST',
+              overall: 82,
+              stats: { ATK: 90, DEF: 50, MOV: 85, PWR: 80, MEN: 75, SKL: 80 },
+            },
+          ],
+        },
+      ],
+      fixtures: Array.from({ length: 380 }, (_, i) => ({ id: i })),
+      manager: { name: 'Howe' },
+      gameSeed: 'seed',
+      seasonNumber: 1,
+    };
+
+    const migrated = migrateSaveData(v2);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const club = (migrated.clubs as any[])[0];
+    const gk = club.roster.find((p: { id: string }) => p.id === 'gk1');
+    const st = club.roster.find((p: { id: string }) => p.id === 'st1');
+
+    // GK: equal-weighted average lands exactly on stored overall.
+    const gkAvg = (gk.stats.ATK + gk.stats.DEF + gk.stats.MOV + gk.stats.PWR + gk.stats.MEN + gk.stats.SKL) / 6;
+    expect(gkAvg).toBe(78);
+
+    // Snapshot reshaped too so the aging report doesn't show phantom shifts.
+    const snapAvg =
+      (gk.statsSnapshotSeasonStart.ATK + gk.statsSnapshotSeasonStart.DEF +
+        gk.statsSnapshotSeasonStart.MOV + gk.statsSnapshotSeasonStart.PWR +
+        gk.statsSnapshotSeasonStart.MEN + gk.statsSnapshotSeasonStart.SKL) / 6;
+    expect(snapAvg).toBe(78);
+
+    // Outfield player untouched.
+    expect(st.stats).toEqual({ ATK: 90, DEF: 50, MOV: 85, PWR: 80, MEN: 75, SKL: 80 });
+  });
+
+  it('reshapeToEqualWeightedAverage hits target across the legal range', () => {
+    for (const target of [45, 60, 75, 85, 95]) {
+      const out = reshapeToEqualWeightedAverage(
+        { ATK: 60, DEF: 90, MOV: 60, PWR: 85, MEN: 80, SKL: 55 },
+        target,
+      );
+      const avg = (out.ATK + out.DEF + out.MOV + out.PWR + out.MEN + out.SKL) / 6;
+      expect(avg).toBe(target);
+      for (const k of ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'] as const) {
+        expect(out[k]).toBeGreaterThanOrEqual(1);
+        expect(out[k]).toBeLessThanOrEqual(99);
+      }
+    }
   });
 });
 

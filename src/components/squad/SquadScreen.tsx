@@ -10,8 +10,8 @@ import { StartingXIPicker } from './StartingXIPicker';
 import { SquadProgression } from './SquadProgression';
 import { useModalParams } from '../../hooks/useModalParams';
 import type { XISwap } from '../../engine/startingXI';
-import { refreshPlayerValue } from '../../engine/transfers';
 import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
+import { STAT_KEYS, getStatLongName } from '../../utils/statLabels';
 
 function isLightColor(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -55,7 +55,6 @@ export function SquadScreen({
   const captainId = useGameStore((s) => s.captainId);
   const saveSlot = useGameStore((s) => s.saveSlot);
   const tutorial = useFirstVisitTutorial('squad', saveSlot);
-  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
   const [squadView, setSquadView] = useState<SquadView>('roster');
@@ -139,7 +138,7 @@ export function SquadScreen({
           />
           <div
             aria-hidden
-            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm-bottom-0 plm-h-[256px]"
             style={{
               background: `linear-gradient(to top, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
               zIndex: 0,
@@ -363,7 +362,7 @@ export function SquadScreen({
           </table>
         </div>
 
-        {/* Mobile: flat divider-stack with tap-to-expand detail */}
+        {/* Mobile: flat divider-stack. Tap a row to open the full player card. */}
         <div className="md:plm-hidden plm-divide-y plm-divide-warm-100">
           {filteredPlayers.map((player) => {
             const isInXI = Object.values(startingXI).includes(player.id);
@@ -373,10 +372,6 @@ export function SquadScreen({
                 player={player}
                 captainId={captainId}
                 isInXI={isInXI}
-                expanded={expandedPlayerId === player.id}
-                onToggle={() =>
-                  setExpandedPlayerId(expandedPlayerId === player.id ? null : player.id)
-                }
                 onOpenModal={() => openModal(player.id, playerClub!.id)}
               />
             );
@@ -460,12 +455,15 @@ function DesktopPlayerRow({ player, isInXI, captainId, onOpenModal }: { player: 
       </td>
       <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.age}</td>
       <td className="plm-py-2 plm-text-center plm-font-bold plm-tabular-nums">{player.overall}</td>
-      <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.ATK}</td>
-      <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.DEF}</td>
-      <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.MOV}</td>
-      <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.PWR}</td>
-      <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.MEN}</td>
-      <td className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums">{player.stats.SKL}</td>
+      {STAT_KEYS.map((key) => (
+        <td
+          key={key}
+          className="plm-py-2 plm-text-center plm-text-warm-600 plm-tabular-nums"
+          title={player.position === 'GK' ? getStatLongName(player.position, key) : undefined}
+        >
+          {player.stats[key]}
+        </td>
+      ))}
       <td className="plm-py-2 plm-text-center">
         <FormBadge form={player.form} />
       </td>
@@ -478,95 +476,52 @@ function MobilePlayerCard({
   player,
   captainId,
   isInXI,
-  expanded,
-  onToggle,
   onOpenModal,
 }: {
   player: Player;
   captainId?: string | null;
   isInXI: boolean;
-  expanded: boolean;
-  onToggle: () => void;
   onOpenModal: () => void;
 }) {
+  // Tap-to-open. The mini-stats dropdown has been retired in favor of the
+  // full player card modal — one canonical surface for player detail.
   return (
-    <div className={player.isTemporary ? 'plm-opacity-40' : ''}>
-      <button
-        onClick={onToggle}
-        aria-expanded={expanded}
-        aria-label={`${player.name}, ${player.position}, overall ${player.overall}`}
-        className="plm-w-full plm-flex plm-items-center plm-gap-2 plm-py-2.5 plm-min-h-[44px] plm-text-left"
-      >
-        {isInXI && (
-          <span className="plm-w-1.5 plm-h-1.5 plm-rounded-full plm-bg-emerald-500 plm-flex-shrink-0" title="Starting XI" />
-        )}
-        <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-text-warm-400 plm-w-5 plm-tracking-wider">
-          {player.position}
-        </span>
-        <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
-          {player.name}
-          <span className="plm-text-warm-400 plm-font-normal plm-ml-1">({player.age})</span>
-        </span>
-        {player.id === captainId && (
-          <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-py-0.5 plm-rounded" title="Captain">C</span>
-        )}
-        {player.injured && (
-          <span
-            className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-py-0.5 plm-rounded plm-font-semibold plm-tabular-nums"
-            title={`Out ${player.injuryWeeks} month${player.injuryWeeks === 1 ? '' : 's'}`}
-          >
-            INJ {player.injuryWeeks}m
-          </span>
-        )}
-        {player.isTemporary && (
-          <span className="plm-text-[9px] plm-bg-warm-200 plm-text-warm-500 plm-px-1 plm-py-0.5 plm-rounded plm-uppercase">Fill-in</span>
-        )}
-        <FormBadge form={player.form} />
-        <span className="plm-text-sm plm-font-bold plm-text-charcoal plm-tabular-nums plm-w-6 plm-text-right">
-          {player.overall}
-        </span>
-      </button>
-
-      {expanded && (
-        <div className="plm-pb-3 plm-pt-1 plm-space-y-2">
-          <div className="plm-grid plm-grid-cols-3 plm-gap-x-3 plm-text-[11px]">
-            <StatCell label="Age" value={player.age} />
-            <StatCell label="Trait" value={player.trait} />
-            <StatCell label="Value" value={`£${refreshPlayerValue(player).toFixed(1)}M`} />
-          </div>
-          <div className="plm-grid plm-grid-cols-6 plm-gap-1">
-            {(['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'] as const).map((stat) => (
-              <div key={stat} className="plm-text-center">
-                <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase plm-tracking-wider">{stat}</div>
-                <div className="plm-text-sm plm-font-bold plm-tabular-nums">{player.stats[stat]}</div>
-              </div>
-            ))}
-          </div>
-          {!player.isTemporary && (
-            <div className="plm-grid plm-grid-cols-3 plm-gap-x-3 plm-text-[11px] plm-pt-1.5 plm-border-t plm-border-warm-100">
-              <StatCell label="Goals" value={player.goals} />
-              <StatCell label="Assists" value={player.assists} />
-              <StatCell label="CS" value={player.cleanSheets} />
-            </div>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onOpenModal(); }}
-            className="plm-w-full plm-py-2 plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.18em] plm-text-warm-600 hover:plm-text-charcoal plm-transition-colors plm-min-h-[44px]"
-          >
-            View Full Details &rarr;
-          </button>
-        </div>
+    <button
+      onClick={onOpenModal}
+      aria-label={`${player.name}, ${player.position}, overall ${player.overall}`}
+      className={`plm-w-full plm-flex plm-items-center plm-gap-2 plm-py-2.5 plm-min-h-[44px] plm-text-left ${
+        player.isTemporary ? 'plm-opacity-40' : ''
+      }`}
+    >
+      {isInXI && (
+        <span className="plm-w-1.5 plm-h-1.5 plm-rounded-full plm-bg-emerald-500 plm-flex-shrink-0" title="Starting XI" />
       )}
-    </div>
-  );
-}
-
-function StatCell({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div>
-      <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase plm-tracking-wider">{label}</div>
-      <div className="plm-text-xs plm-font-semibold plm-text-charcoal plm-truncate">{value}</div>
-    </div>
+      <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-text-warm-400 plm-w-5 plm-tracking-wider">
+        {player.position}
+      </span>
+      <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
+        {player.name}
+        <span className="plm-text-warm-400 plm-font-normal plm-ml-1">({player.age})</span>
+      </span>
+      {player.id === captainId && (
+        <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-py-0.5 plm-rounded" title="Captain">C</span>
+      )}
+      {player.injured && (
+        <span
+          className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-py-0.5 plm-rounded plm-font-semibold plm-tabular-nums"
+          title={`Out ${player.injuryWeeks} month${player.injuryWeeks === 1 ? '' : 's'}`}
+        >
+          INJ {player.injuryWeeks}m
+        </span>
+      )}
+      {player.isTemporary && (
+        <span className="plm-text-[9px] plm-bg-warm-200 plm-text-warm-500 plm-px-1 plm-py-0.5 plm-rounded plm-uppercase">Fill-in</span>
+      )}
+      <FormBadge form={player.form} />
+      <span className="plm-text-sm plm-font-bold plm-text-charcoal plm-tabular-nums plm-w-6 plm-text-right">
+        {player.overall}
+      </span>
+    </button>
   );
 }
 

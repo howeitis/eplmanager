@@ -2,9 +2,18 @@ import type { Player, PlayerStats, Position, Trait, ClubData, NationalityWeight,
 import { SeededRNG } from '../utils/rng';
 import { getNamePool } from '../data/namePool';
 
-// Position weight tables for overall rating calculation
+// Position weight tables for overall rating calculation.
+//
+// Goalkeepers have their own six attributes (Diving, Handling, Kicking,
+// Reflexes, Mentality, Position) and every one matters equally — a GK's
+// overall is the flat average of all six. Outfield positions keep the
+// existing position-weighted formula.
+const GK_EQUAL_WEIGHT = 1 / 6;
 const POSITION_WEIGHTS: Record<Position, Record<keyof PlayerStats, number>> = {
-  GK: { ATK: 0.05, DEF: 0.35, MOV: 0.10, PWR: 0.20, MEN: 0.20, SKL: 0.10 },
+  GK: {
+    ATK: GK_EQUAL_WEIGHT, DEF: GK_EQUAL_WEIGHT, MOV: GK_EQUAL_WEIGHT,
+    PWR: GK_EQUAL_WEIGHT, MEN: GK_EQUAL_WEIGHT, SKL: GK_EQUAL_WEIGHT,
+  },
   CB: { ATK: 0.05, DEF: 0.30, MOV: 0.10, PWR: 0.25, MEN: 0.20, SKL: 0.10 },
   FB: { ATK: 0.10, DEF: 0.20, MOV: 0.25, PWR: 0.15, MEN: 0.10, SKL: 0.20 },
   MF: { ATK: 0.15, DEF: 0.15, MOV: 0.15, PWR: 0.10, MEN: 0.20, SKL: 0.25 },
@@ -12,9 +21,11 @@ const POSITION_WEIGHTS: Record<Position, Record<keyof PlayerStats, number>> = {
   ST: { ATK: 0.35, DEF: 0.05, MOV: 0.20, PWR: 0.15, MEN: 0.15, SKL: 0.10 },
 };
 
-// Stat emphasis by position (which stats tend to be higher)
+// Stat emphasis by position (which stats tend to be higher).
+// Empty for GK — every keeper attribute weighs the same, so we don't bias
+// individual slots; variance comes from the random spread alone.
 const POSITION_STAT_BIAS: Record<Position, Partial<Record<keyof PlayerStats, number>>> = {
-  GK: { DEF: 15, PWR: 10, MEN: 8 },
+  GK: {},
   CB: { DEF: 15, PWR: 12, MEN: 5 },
   FB: { MOV: 12, SKL: 8, DEF: 5 },
   MF: { SKL: 12, MEN: 10, MOV: 5 },

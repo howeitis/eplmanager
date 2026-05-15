@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
 import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl, getNationalTeamLogoUrl, getBrandLogoUrl, getAssetBasePath } from '../../data/assets';
 import { generateScoutSummaryParts } from '../../engine/scoutSummary';
+import { getStatLabel } from '../../utils/statLabels';
 import { getPlayerFaceUri } from '../../utils/avatarFace';
 import { CLUBS } from '../../data/clubs';
 import {
@@ -26,8 +27,10 @@ function hashPlayerId(id: string): number {
 
 const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
 
-// Emoji stickers that match each stat
-const STAT_EMOJI: Record<string, string> = {
+// Emoji stickers that match each stat slot. Keys are storage names; the
+// label rendered on the card is position-aware (getStatLabel) so a GK shows
+// DIV/HAN/KIC/REF/MEN/POS while reusing the same six slots underneath.
+const STAT_EMOJI_OUTFIELD: Record<string, string> = {
   ATK: '⚡',
   DEF: '🛡️',
   MOV: '💨',
@@ -35,6 +38,18 @@ const STAT_EMOJI: Record<string, string> = {
   MEN: '🧠',
   SKL: '✨',
 };
+const STAT_EMOJI_GK: Record<string, string> = {
+  ATK: '🪂', // Diving
+  DEF: '🧤', // Handling
+  MOV: '🦵', // Kicking
+  PWR: '⚡', // Reflexes
+  MEN: '🧠', // Mentality
+  SKL: '🎯', // Position
+};
+function getStatEmoji(position: string, key: string): string {
+  const table = position === 'GK' ? STAT_EMOJI_GK : STAT_EMOJI_OUTFIELD;
+  return table[key] || '⭐';
+}
 
 // ─── Serial number from hash ───
 // Denominator is fixed at 8500 for every player so it stays constant across
@@ -525,7 +540,7 @@ export function RetroPlayerCard({
           }}
         >
           <span style={{ fontSize: size === 'xl' ? 16 : size === 'lg' ? 13 : 11 }}>
-            {STAT_EMOJI[heroStat.key] || '⭐'}
+            {getStatEmoji(player.position, heroStat.key)}
           </span>
         </div>
       )}
@@ -748,6 +763,7 @@ export function RetroPlayerCard({
           const value = player.stats[stat];
           const isElite =
             heroStat?.key === stat && value >= ELITE_STAT_THRESHOLD;
+          const label = getStatLabel(player.position, stat);
           return (
             <div key={stat} className="plm-flex plm-flex-col plm-items-center plm-justify-center">
               <span
@@ -758,7 +774,7 @@ export function RetroPlayerCard({
                   opacity: isElite ? 1 : 0.85,
                 }}
               >
-                {stat}
+                {label}
               </span>
               <span
                 className={`${fs.stat} plm-font-black plm-tabular-nums plm-leading-none plm-mt-0.5`}

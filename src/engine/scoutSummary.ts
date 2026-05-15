@@ -1,4 +1,4 @@
-import type { Player, PlayerStats, TransferRecord, Trait } from '../types/entities';
+import type { Player, PlayerStats, Position, TransferRecord, Trait } from '../types/entities';
 
 /**
  * Procedural "Scout Summary" generator — a Mad Libs engine that
@@ -170,7 +170,7 @@ function getTransferSentence(
   return `A bargain addition at £${playerTransfer.fee.toFixed(1)}M — low risk, potentially high reward.`;
 }
 
-function getHeroStatSentence(stats: PlayerStats): string | null {
+function getHeroStatSentence(stats: PlayerStats, position: Position): string | null {
   const entries: [string, number][] = [
     ['ATK', stats.ATK],
     ['DEF', stats.DEF],
@@ -181,6 +181,18 @@ function getHeroStatSentence(stats: PlayerStats): string | null {
   ];
   const best = entries.reduce((a, b) => (b[1] > a[1] ? b : a));
   if (best[1] < 85) return null;
+
+  if (position === 'GK') {
+    const gkMap: Record<string, string> = {
+      ATK: `Acrobatic when called upon — a ${best[1]} Diving rating means corners and crosses bring out the best in him.`,
+      DEF: `Magnificent with the ball in his gloves — a ${best[1]} Handling rating; he claims everything that flies into the box.`,
+      MOV: `Distributes like a quarterback — ${best[1]} Kicking puts every clearance and short pass on a sixpence.`,
+      PWR: `Cat-like reflexes — a ${best[1]} Reflexes rating means he's saving shots he has no right to reach.`,
+      MEN: `Ice in his veins — ${best[1]} Mentality; he's the calmest man on the pitch when the game is on the line.`,
+      SKL: `Reads the game superbly — a ${best[1]} Positioning rating; strikers find him in their face before they've taken their shot.`,
+    };
+    return gkMap[best[0]] || null;
+  }
 
   const heroMap: Record<string, string> = {
     ATK: `His finishing is lethal — a ${best[1]} ATK rating puts him among the deadliest in the league.`,
@@ -222,7 +234,7 @@ export function generateScoutSummaryParts(
   bioParts.push(getAgePreamble(player.age, player.overall));
   bioParts.push(getTraitPhrase(player.trait, player.overall));
 
-  const heroStat = getHeroStatSentence(player.stats);
+  const heroStat = getHeroStatSentence(player.stats, player.position);
   if (heroStat) bioParts.push(heroStat);
 
   const transferLine = context?.recentTransfers

@@ -12,11 +12,12 @@ import { SigningCelebrationModal } from './SigningCelebrationModal';
 import type { SigningCelebrationData } from './SigningCelebrationModal';
 import { RetroPlayerCard } from './RetroPlayerCard';
 import { InteractiveCard } from './InteractiveCard';
-import type { Club, Player, PlayerStats, TransferRecord } from '../../types/entities';
+import type { Club, Player, TransferRecord } from '../../types/entities';
 import { getClubLogoUrl } from '../../data/assets';
+import { STAT_KEYS, getStatLabel, getStatLongName } from '../../utils/statLabels';
 
-const STAT_KEYS: (keyof PlayerStats)[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
-
+// Slot colors carry across positions — for GK the slot still represents the
+// same column of the underlying storage, just labelled differently.
 const STAT_COLORS: Record<string, string> = {
   ATK: 'plm-bg-red-500',
   DEF: 'plm-bg-blue-500',
@@ -397,10 +398,15 @@ export function PlayerDetailModal() {
                 {STAT_KEYS.map((stat) => {
                   const value = player.stats[stat];
                   const pct = Math.round((value / 99) * 100);
+                  const label = getStatLabel(player.position, stat);
+                  const longName = getStatLongName(player.position, stat);
                   return (
                     <div key={stat} className="plm-flex plm-items-center plm-gap-2">
-                      <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-500 plm-w-8 plm-text-right">
-                        {stat}
+                      <span
+                        className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-text-warm-500 plm-w-8 plm-text-right"
+                        title={longName}
+                      >
+                        {label}
                       </span>
                       <div className="plm-flex-1 plm-h-2.5 plm-bg-warm-100 plm-rounded-full plm-overflow-hidden">
                         <div

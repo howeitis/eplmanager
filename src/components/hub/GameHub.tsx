@@ -74,7 +74,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
           />
           <div
             aria-hidden
-            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm-bottom-0 plm-h-[256px]"
             style={{
               background: `linear-gradient(to top, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
               zIndex: 0,
