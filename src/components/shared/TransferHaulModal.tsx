@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import type { TransferRecord } from '../../types/entities';
 
 interface TransferHaulModalProps {
@@ -9,7 +10,6 @@ interface TransferHaulModalProps {
 
 export function TransferHaulModal({ transfers, onDismiss }: TransferHaulModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const clubs = useGameStore((s) => s.clubs);
   const manager = useGameStore((s) => s.manager);
@@ -28,54 +28,7 @@ export function TransferHaulModal({ transfers, onDismiss }: TransferHaulModalPro
 
   const totalSpent = sorted.reduce((sum, t) => sum + t.fee, 0);
 
-  useEffect(() => {
-    previousFocusRef.current = document.activeElement as HTMLElement;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onDismiss();
-        return;
-      }
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    requestAnimationFrame(() => {
-      const btn = dialogRef.current?.querySelector<HTMLElement>('button');
-      btn?.focus();
-    });
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-      previousFocusRef.current?.focus();
-    };
-  }, [onDismiss]);
-
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) {
-        onDismiss();
-      }
-    },
-    [onDismiss],
-  );
+  const { handleBackdropClick } = useModalDismiss(dialogRef, onDismiss);
 
   return (
     <div

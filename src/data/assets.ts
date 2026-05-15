@@ -132,7 +132,7 @@ export function getNationalityLabel(nationality: string): string {
 
 /** Brand logo path. Honors the configured asset base path. */
 export function getBrandLogoUrl(): string {
-  return `${assetBasePath}/eplmanager_logo_clean.png`;
+  return `${assetBasePath}/eplmanager_logo_clean.webp`;
 }
 
 /** Hero image used on TitleScreen / SaveSlotSelect. Honors the asset base path. */

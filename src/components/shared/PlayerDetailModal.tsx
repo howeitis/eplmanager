@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useModalParams, useModalBrowseList, navigateModalTo } from '../../hooks/useModalParams';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import {
   refreshPlayerValue,
   evaluateOffer,
@@ -52,7 +53,6 @@ export function PlayerDetailModal() {
   const { playerId, clubId, closeModal, isOpen } = useModalParams();
   const browseList = useModalBrowseList();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const clubs = useGameStore((s) => s.clubs);
   const manager = useGameStore((s) => s.manager);
@@ -144,67 +144,11 @@ export function PlayerDetailModal() {
     }
   }, [isOpen]);
 
-  // Focus trap + Esc handler
-  useEffect(() => {
-    if (!isOpen || !player) return;
-
-    previousFocusRef.current = document.activeElement as HTMLElement;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle Esc if celebration modal is showing (it handles its own)
-      if (celebrationData) return;
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeModal();
-        return;
-      }
-
-      // Focus trap
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    // Focus the dialog
-    requestAnimationFrame(() => {
-      const firstButton = dialogRef.current?.querySelector<HTMLElement>('button');
-      firstButton?.focus();
-    });
-
-    // Prevent body scroll
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-      previousFocusRef.current?.focus();
-    };
-  }, [isOpen, closeModal, player, celebrationData]);
-
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (celebrationData) return;
-      if (e.target === e.currentTarget) {
-        closeModal();
-      }
-    },
-    [closeModal, celebrationData],
-  );
+  // The celebration modal manages its own dismiss plumbing when visible, so we
+  // disable the trap here to avoid double-handling Escape / backdrop clicks.
+  const { handleBackdropClick } = useModalDismiss(dialogRef, closeModal, {
+    enabled: isOpen && !!player && !celebrationData,
+  });
 
   const handleCelebrationDismiss = useCallback(() => {
     setCelebrationData(null);

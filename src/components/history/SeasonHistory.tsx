@@ -196,11 +196,13 @@ export function SeasonHistoryScreen() {
               const trophyImg = getTrophyImageUrl(t.type);
               return (
                 <div key={i} className="plm-w-24 plm-flex plm-flex-col plm-items-center plm-text-center">
-                  <img
-                    src={trophyImg}
-                    alt={t.award}
-                    className={`${t.type === 'league' ? 'plm-w-24 plm-h-24' : 'plm-w-20 plm-h-20'} plm-object-contain`}
-                  />
+                  <div className="plm-w-24 plm-h-24 plm-flex plm-items-center plm-justify-center">
+                    <img
+                      src={trophyImg}
+                      alt={t.award}
+                      className="plm-max-w-full plm-max-h-full plm-object-contain"
+                    />
+                  </div>
                   <div className="plm-text-[10px] plm-font-semibold plm-text-charcoal plm-uppercase plm-tracking-[0.12em] plm-mt-1.5">
                     {t.award}
                   </div>

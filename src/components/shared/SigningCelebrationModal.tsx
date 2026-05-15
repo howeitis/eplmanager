@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { useModalDismiss } from '../../hooks/useModalDismiss';
 import { isRival } from '../../engine/transfers';
 import { RetroPlayerCard } from './RetroPlayerCard';
 import { Confetti } from './Confetti';
@@ -62,7 +63,6 @@ function getFlavorLine(
 
 export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const clubs = useGameStore((s) => s.clubs);
   const manager = useGameStore((s) => s.manager);
@@ -74,55 +74,7 @@ export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationM
     ? getFlavorLine(data.player, data.fee, marketValue, buyerClub, data.fromClubId, clubs)
     : `${data.player.name} has signed. The squad grows stronger.`;
 
-  // Focus trap + Esc handler — Esc does NOT dismiss (must click Continue)
-  useEffect(() => {
-    previousFocusRef.current = document.activeElement as HTMLElement;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onDismiss();
-        return;
-      }
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    requestAnimationFrame(() => {
-      const btn = dialogRef.current?.querySelector<HTMLElement>('button');
-      btn?.focus();
-    });
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-      previousFocusRef.current?.focus();
-    };
-  }, [onDismiss]);
-
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) {
-        onDismiss();
-      }
-    },
-    [onDismiss],
-  );
+  const { handleBackdropClick } = useModalDismiss(dialogRef, onDismiss);
 
   const clubColors = buyerClub?.colors;
   const isGoldSigning = data.player.overall >= 80;
@@ -144,29 +96,40 @@ export function SigningCelebrationModal({ data, onDismiss }: SigningCelebrationM
       <div
         ref={dialogRef}
         className={[
-          'plm-relative plm-bg-white plm-w-full plm-overflow-hidden',
+          'plm-relative plm-bg-white plm-w-full plm-flex plm-flex-col plm-overflow-hidden',
           // Mobile: bottom sheet
-          'plm-rounded-t-2xl plm-pb-6',
-          // Desktop: centered modal
-          'md:plm-rounded-xl md:plm-max-w-md md:plm-mx-auto md:plm-pb-6',
+          'plm-rounded-t-2xl plm-max-h-[92vh]',
+          // Desktop: centered modal, height-bounded so Continue button never escapes the viewport
+          'md:plm-rounded-xl md:plm-max-w-md md:plm-mx-auto md:plm-max-h-[90vh]',
           // Entrance animation
           'plm-animate-slide-up',
         ].join(' ')}
       >
         {/* Accent bar */}
         <div
-          className="plm-h-1.5 plm-w-full"
+          className="plm-h-1.5 plm-w-full plm-flex-shrink-0"
           style={{ backgroundColor: clubColors?.primary || '#1a1a2e' }}
         />
 
+        {/* Close button (top-right) */}
+        <button
+          onClick={onDismiss}
+          aria-label="Close"
+          className="plm-absolute plm-top-3 plm-right-3 plm-z-10 plm-w-9 plm-h-9 plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-warm-500 plm-bg-white/70 plm-backdrop-blur-sm hover:plm-bg-warm-100 hover:plm-text-warm-700 plm-transition-colors plm-min-h-[44px] plm-min-w-[44px]"
+        >
+          <svg className="plm-w-5 plm-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         {/* Drag handle (mobile) */}
-        <div className="md:plm-hidden plm-flex plm-justify-center plm-pt-3 plm-pb-1">
+        <div className="md:plm-hidden plm-flex plm-justify-center plm-pt-3 plm-pb-1 plm-flex-shrink-0">
           <div className="plm-w-10 plm-h-1 plm-rounded-full plm-bg-warm-300" />
         </div>
 
-        <div className="plm-px-6 plm-pt-5 plm-text-center">
+        <div className="plm-px-6 plm-pt-5 plm-pb-6 plm-text-center plm-overflow-y-auto plm-overscroll-contain">
           {/* Headline */}
-          <h2 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight">
+          <h2 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-pr-8">
             Welcome to {buyerClub?.name || 'the Club'}!
           </h2>
 

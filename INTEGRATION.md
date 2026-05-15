@@ -59,7 +59,7 @@ host-site/public/games/epl-manager/
 ├── Premier League Clubs Logos/
 ├── national flags/
 ├── National team logos/
-├── eplmanager_logo_clean.png
+├── eplmanager_logo_clean.webp
 └── epl_manager_hero.webp
 ```
 
