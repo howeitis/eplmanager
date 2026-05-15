@@ -206,42 +206,6 @@ export function SquadScreen({
         </div>
       )}
 
-      {/* Editorial masthead — eyebrow, headline, subhead, stat strip */}
-      <section className="plm-relative plm-pt-1" style={{ zIndex: 1 }}>
-        <div className="plm-flex plm-items-start plm-gap-3">
-          {clubData && getClubLogoUrl(clubData.id) ? (
-            <img
-              src={getClubLogoUrl(clubData.id)}
-              alt=""
-              aria-hidden
-              className="plm-w-12 plm-h-12 plm-flex-shrink-0 plm-object-contain"
-            />
-          ) : clubData ? (
-            <div
-              className="plm-w-12 plm-h-12 plm-flex-shrink-0"
-              style={{ backgroundColor: clubData.colors.primary }}
-            />
-          ) : null}
-          <div className="plm-min-w-0 plm-flex-1">
-            <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
-              Tactical Centre
-            </p>
-            <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
-              Squad
-            </h1>
-            <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-mt-0.5">
-              Shape the team, name your eleven, manage the roster.
-            </p>
-          </div>
-        </div>
-
-        <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
-          <SquadStat label="Squad" value={squadSummary.count} />
-          <SquadStat label="Avg OVR" value={squadSummary.avgOvr} accent={clubData?.colors.primary} />
-          <SquadStat label="Avg Age" value={squadSummary.avgAge.toFixed(1)} />
-        </div>
-      </section>
-
       {/* Desktop: two-column split — tactics/XI on left, squad list on right */}
       <div className="plm-relative plm-flex plm-flex-col lg:plm-flex-row plm-gap-8 plm-items-start" style={{ zIndex: 1 }}>
 
@@ -252,22 +216,17 @@ export function SquadScreen({
         <button
           onClick={() => setTacticsOpen((v) => !v)}
           aria-expanded={tacticsOpen}
-          className="plm-w-full plm-flex plm-items-center plm-justify-between plm-min-h-[44px] plm-text-left"
+          className="plm-w-full plm-flex plm-items-center plm-justify-between plm-min-h-[32px] plm-text-left"
         >
-          <div>
-            <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
-              Setup
-            </p>
-            <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
-              Tactics
-            </h2>
-          </div>
-          <span className="plm-flex plm-items-center plm-gap-2 plm-text-warm-500">
-            <span className="plm-text-[10px] plm-uppercase plm-tracking-[0.18em] plm-font-semibold">
+          <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+            Tactics
+          </p>
+          <span className="plm-flex plm-items-center plm-gap-1 plm-text-warm-500">
+            <span className="plm-text-[9px] plm-uppercase plm-tracking-[0.15em] plm-font-semibold">
               {tacticsOpen ? 'Hide' : 'Show'}
             </span>
             <svg
-              className={`plm-w-4 plm-h-4 plm-transition-transform ${tacticsOpen ? 'plm-rotate-180' : ''}`}
+              className={`plm-w-3 plm-h-3 plm-transition-transform ${tacticsOpen ? 'plm-rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -426,6 +385,44 @@ export function SquadScreen({
       </div>}
       </div>
       </div>
+
+      {/* Editorial masthead — moved below the working area so tactics stay
+          within reach at the top, and the summary closes the page out. */}
+      <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+        <div className="plm-flex plm-items-start plm-gap-3">
+          {clubData && getClubLogoUrl(clubData.id) ? (
+            <img
+              src={getClubLogoUrl(clubData.id)}
+              alt=""
+              aria-hidden
+              className="plm-w-12 plm-h-12 plm-flex-shrink-0 plm-object-contain"
+            />
+          ) : clubData ? (
+            <div
+              className="plm-w-12 plm-h-12 plm-flex-shrink-0"
+              style={{ backgroundColor: clubData.colors.primary }}
+            />
+          ) : null}
+          <div className="plm-min-w-0 plm-flex-1">
+            <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+              Tactical Centre
+            </p>
+            <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+              Squad
+            </h1>
+            <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-mt-0.5">
+              Shape the team, name your eleven, manage the roster.
+            </p>
+          </div>
+        </div>
+
+        <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
+          <SquadStat label="Squad" value={squadSummary.count} />
+          <SquadStat label="Avg OVR" value={squadSummary.avgOvr} accent={clubData?.colors.primary} />
+          <SquadStat label="Avg Age" value={squadSummary.avgAge.toFixed(1)} />
+        </div>
+      </section>
+
       {tutorial.show && <TutorialModal tab="squad" onClose={tutorial.onClose} />}
     </div>
   );
