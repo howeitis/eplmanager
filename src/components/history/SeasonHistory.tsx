@@ -143,7 +143,7 @@ export function SeasonHistoryScreen() {
           />
           <div
             aria-hidden
-            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm-bottom-0 plm-h-[256px]"
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-20 md:plm-bottom-0 plm-h-[336px] md:plm-h-[256px]"
             style={{
               background: `linear-gradient(to top, ${playerClub.colors.primary}38 0%, ${playerClub.colors.primary}1F 28%, ${playerClub.colors.primary}0A 55%, transparent 100%)`,
               zIndex: 0,
