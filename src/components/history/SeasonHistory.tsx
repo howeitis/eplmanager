@@ -10,27 +10,24 @@ export function SeasonHistoryScreen() {
   const seasonHistories = useGameStore((s) => s.seasonHistories);
   const manager = useGameStore((s) => s.manager);
   const playerClubId = manager?.clubId;
+  const playerClub = clubDataMap.get(playerClubId || '');
   const saveSlot = useGameStore((s) => s.saveSlot);
   const firstVisit = useFirstVisitTutorial('history', saveSlot);
-  // Which tab's tutorial to show in the review viewer (null = picker closed).
   const [reviewTab, setReviewTab] = useState<TutorialTab | null>(null);
-  // Whether the "pick a tab" menu is visible.
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // All-time records
   const records = useMemo(() => {
     let mostGoals = { name: '', goals: 0, season: 0 };
     let highestPoints = { club: '', points: 0, season: 0 };
-    let longestStreak = 0;
+    const longestStreak = 0;
 
     for (const history of seasonHistories) {
-      // Top scorer per season
       for (const ps of history.playerStats) {
         if (ps.goals > mostGoals.goals) {
           mostGoals = { name: ps.playerName, goals: ps.goals, season: history.seasonNumber };
         }
       }
-      // Champion points
       if (history.finalTable.length > 0) {
         const sorted = [...history.finalTable].sort((a, b) => b.points - a.points);
         if (sorted[0].points > highestPoints.points) {
@@ -57,7 +54,6 @@ export function SeasonHistoryScreen() {
         result.push({ season: history.seasonNumber, award: 'League Champion', type: 'league' });
       }
     }
-    // FA Cup wins from manager accomplishments
     if (manager?.accomplishments) {
       for (const acc of manager.accomplishments) {
         if (acc.type === 'fa-cup' && acc.clubId === playerClubId) {
@@ -65,7 +61,6 @@ export function SeasonHistoryScreen() {
         }
       }
     }
-    // Sort by season, then league before fa-cup
     result.sort((a, b) => a.season - b.season || (a.type === 'league' ? -1 : 1));
     return result;
   }, [seasonHistories, playerClubId, manager?.accomplishments]);
@@ -73,10 +68,10 @@ export function SeasonHistoryScreen() {
   const tutorialButton = (
     <button
       onClick={() => setPickerOpen(true)}
-      className="plm-inline-flex plm-items-center plm-gap-1.5 plm-px-3 plm-py-2 plm-rounded-full plm-border plm-border-blue-200 plm-bg-blue-50 plm-text-blue-700 plm-text-xs plm-font-semibold hover:plm-bg-blue-100 plm-min-h-[36px]"
+      className="plm-inline-flex plm-items-center plm-gap-1.5 plm-text-[10px] plm-uppercase plm-tracking-[0.18em] plm-font-semibold plm-text-warm-500 hover:plm-text-charcoal plm-min-h-[36px]"
     >
-      <span aria-hidden="true">❓</span>
-      <span>New here? How it works</span>
+      <span aria-hidden="true">?</span>
+      <span>How it works</span>
     </button>
   );
 
@@ -98,82 +93,160 @@ export function SeasonHistoryScreen() {
 
   if (seasonHistories.length === 0) {
     return (
-      <div className="plm-w-full">
-        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-8 plm-text-center">
-          <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-2">
-            Season History
-          </h2>
-          <p className="plm-text-sm plm-text-warm-500 plm-mb-4">
-            No completed seasons yet. History will appear after your first full season.
+      <div className="plm-relative plm-w-full plm-space-y-4">
+        {playerClub && (
+          <div
+            aria-hidden
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
+            style={{
+              background: `linear-gradient(to bottom, ${playerClub.colors.primary}38 0%, ${playerClub.colors.primary}1F 28%, ${playerClub.colors.primary}0A 55%, transparent 100%)`,
+              zIndex: 0,
+            }}
+          />
+        )}
+        <section className="plm-relative plm-pt-1" style={{ zIndex: 1 }}>
+          <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+            Archive
           </p>
-          <div className="plm-flex plm-justify-center">{tutorialButton}</div>
-        </div>
+          <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-1">
+            Season History
+          </h1>
+          <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-mt-1">
+            No completed seasons yet. The archive opens after your first full campaign.
+          </p>
+          <div className="plm-mt-4">{tutorialButton}</div>
+        </section>
         {tutorialModal}
       </div>
     );
   }
 
+  const accent = playerClub?.colors.primary || '#1A1A1A';
+  // Strongest single-club performance for the masthead callout
+  const headlineSeasons = seasonHistories.length;
+  const yourTitles = trophies.filter((t) => t.type === 'league').length;
+  const yourCups = trophies.filter((t) => t.type === 'fa-cup').length;
+
   return (
-    <div className="plm-space-y-4 plm-w-full">
-      <div className="plm-flex plm-justify-end">{tutorialButton}</div>
+    <div className="plm-relative plm-w-full plm-space-y-6">
+      {/* Club-color ambient glow — mirrors the hub masthead */}
+      {playerClub && (
+        <>
+          <div
+            aria-hidden
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
+            style={{
+              background: `linear-gradient(to bottom, ${playerClub.colors.primary}38 0%, ${playerClub.colors.primary}1F 28%, ${playerClub.colors.primary}0A 55%, transparent 100%)`,
+              zIndex: 0,
+            }}
+          />
+          <div
+            aria-hidden
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+            style={{
+              background: `linear-gradient(to top, ${playerClub.colors.primary}38 0%, ${playerClub.colors.primary}1F 28%, ${playerClub.colors.primary}0A 55%, transparent 100%)`,
+              zIndex: 0,
+            }}
+          />
+        </>
+      )}
+
       {tutorialModal}
-      {/* Trophy Cabinet */}
+
+      {/* Editorial masthead */}
+      <section className="plm-relative plm-pt-1" style={{ zIndex: 1 }}>
+        <div className="plm-flex plm-items-start plm-justify-between plm-gap-3">
+          <div className="plm-min-w-0">
+            <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+              Archive
+            </p>
+            <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-1">
+              Season History
+            </h1>
+            <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-mt-1">
+              {manager?.name ? `${manager.name}'s reign in numbers` : 'Your reign in numbers'}
+            </p>
+          </div>
+          <div className="plm-flex-shrink-0 plm-pt-1">{tutorialButton}</div>
+        </div>
+
+        <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
+          <MastheadStat label="Seasons" value={headlineSeasons} />
+          <MastheadStat label="Titles" value={yourTitles} accent={yourTitles > 0 ? accent : undefined} />
+          <MastheadStat label="FA Cups" value={yourCups} accent={yourCups > 0 ? accent : undefined} />
+        </div>
+      </section>
+
+      {/* Trophy Cabinet — unboxed editorial row */}
       {trophies.length > 0 && (
-        <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-          <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
-            Trophy Cabinet
-          </h3>
-          <div className="plm-flex plm-flex-wrap plm-gap-3">
+        <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+          <div className="plm-flex plm-items-baseline plm-justify-between plm-mb-3">
+            <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal">
+              Trophy Cabinet
+            </h2>
+            <span className="plm-text-[10px] plm-uppercase plm-tracking-[0.18em] plm-text-warm-500 plm-font-semibold plm-tabular-nums">
+              {trophies.length} {trophies.length === 1 ? 'honour' : 'honours'}
+            </span>
+          </div>
+          <div className="plm-flex plm-flex-wrap plm-gap-4">
             {trophies.map((t, i) => {
               const startYear = 2025 + (t.season - 1);
-              const yearLabel = `Season ${t.season}, ${startYear.toString().slice(-2)}/${(startYear + 1).toString().slice(-2)}`;
+              const yearLabel = `${startYear.toString().slice(-2)}/${(startYear + 1).toString().slice(-2)}`;
               const trophyImg = t.type === 'league' ? '/trophies/epl trophy.png' : '/trophies/fa cup trophy.png';
               return (
-                <div key={i} className="plm-bg-amber-50 plm-border plm-border-amber-200 plm-rounded plm-px-4 plm-py-3 plm-text-center plm-w-32">
+                <div key={i} className="plm-w-24 plm-flex plm-flex-col plm-items-center plm-text-center">
                   <img
                     src={trophyImg}
                     alt={t.award}
-                    className={`${t.type === 'league' ? 'plm-w-28 plm-h-28 plm--my-2' : 'plm-w-20 plm-h-20'} plm-mx-auto plm-object-contain`}
+                    className={`${t.type === 'league' ? 'plm-w-24 plm-h-24' : 'plm-w-20 plm-h-20'} plm-object-contain`}
                   />
-                  <div className="plm-text-[10px] plm-font-bold plm-text-amber-700 plm-uppercase plm-mt-2">
+                  <div className="plm-text-[10px] plm-font-semibold plm-text-charcoal plm-uppercase plm-tracking-[0.12em] plm-mt-1.5">
                     {t.award}
                   </div>
-                  <div className="plm-text-[10px] plm-text-amber-600 plm-mt-0.5">{yearLabel}</div>
+                  <div className="plm-font-display plm-italic plm-text-[11px] plm-text-warm-500 plm-mt-0.5 plm-tabular-nums">
+                    Season {t.season} &middot; {yearLabel}
+                  </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* All-time Records */}
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
-          All-Time Records
-        </h3>
-        <div className="plm-grid plm-grid-cols-1 sm:plm-grid-cols-2 plm-gap-2">
-          {records.mostGoals.goals > 0 && (
-            <RecordCard
-              label="Most Goals in a Season"
-              value={`${records.mostGoals.name} (${records.mostGoals.goals})`}
-              sub={`Season ${records.mostGoals.season}`}
-            />
-          )}
-          {records.highestPoints.points > 0 && (
-            <RecordCard
-              label="Highest Points Total"
-              value={`${records.highestPoints.club} (${records.highestPoints.points})`}
-              sub={`Season ${records.highestPoints.season}`}
-            />
-          )}
-        </div>
-      </div>
+      {/* All-time Records — magazine pull-quote feel */}
+      {(records.mostGoals.goals > 0 || records.highestPoints.points > 0) && (
+        <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+          <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-3">
+            All-Time Records
+          </h2>
+          <div className="plm-grid plm-grid-cols-1 sm:plm-grid-cols-2 plm-gap-x-8 plm-gap-y-4">
+            {records.mostGoals.goals > 0 && (
+              <RecordLine
+                label="Most Goals in a Season"
+                value={`${records.mostGoals.name}`}
+                tail={`${records.mostGoals.goals} goals`}
+                sub={`Season ${records.mostGoals.season}`}
+                accent={accent}
+              />
+            )}
+            {records.highestPoints.points > 0 && (
+              <RecordLine
+                label="Highest Points Total"
+                value={records.highestPoints.club}
+                tail={`${records.highestPoints.points} pts`}
+                sub={`Season ${records.highestPoints.season}`}
+                accent={accent}
+              />
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Season-by-Season Log */}
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
+      <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+        <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-3">
           Season Log
-        </h3>
+        </h2>
 
         {/* Desktop table */}
         <div className="plm-hidden md:plm-block plm-overflow-x-auto">
@@ -196,12 +269,30 @@ export function SeasonHistoryScreen() {
           </table>
         </div>
 
-        {/* Mobile cards */}
-        <div className="md:plm-hidden plm-space-y-2">
+        {/* Mobile rows — flat list with hairline dividers */}
+        <ul className="md:plm-hidden plm-divide-y plm-divide-warm-100">
           {seasonHistories.map((h) => (
-            <HistoryCard key={h.seasonNumber} history={h} playerClubId={playerClubId} />
+            <li key={h.seasonNumber}>
+              <HistoryCard history={h} playerClubId={playerClubId} />
+            </li>
           ))}
-        </div>
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function MastheadStat({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
+  return (
+    <div className="plm-px-2 plm-text-center first:plm-pl-0 last:plm-pr-0">
+      <div
+        className="plm-font-display plm-text-2xl plm-font-bold plm-tabular-nums plm-leading-none"
+        style={{ color: accent || '#1A1A1A' }}
+      >
+        {value}
+      </div>
+      <div className="plm-text-[10px] plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-mt-1.5">
+        {label}
       </div>
     </div>
   );
@@ -220,7 +311,6 @@ function HistoryRow({
   const playerRow = sorted.find((r) => r.clubId === playerClubId);
   const playerPos = sorted.findIndex((r) => r.clubId === playerClubId) + 1;
 
-  // Top scorer
   let topScorer = { name: '', goals: 0 };
   for (const ps of history.playerStats) {
     if (ps.goals > topScorer.goals) {
@@ -232,12 +322,12 @@ function HistoryRow({
 
   return (
     <tr className="plm-border-b plm-border-warm-100 hover:plm-bg-warm-50">
-      <td className="plm-py-2 plm-text-warm-600">{startYear}/{(startYear + 1).toString().slice(-2)}</td>
+      <td className="plm-py-2 plm-text-warm-600 plm-tabular-nums">{startYear}/{(startYear + 1).toString().slice(-2)}</td>
       <td className="plm-py-2">
         <div className="plm-flex plm-items-center plm-gap-1.5">
           <div className="plm-w-2.5 plm-h-2.5 plm-rounded-full" style={{ backgroundColor: championClub?.colors.primary }} />
           <span className="plm-font-medium">{championClub?.name}</span>
-          <span className="plm-text-warm-400 plm-text-xs">({champion?.points} pts)</span>
+          <span className="plm-text-warm-400 plm-text-xs plm-tabular-nums">({champion?.points} pts)</span>
         </div>
       </td>
       <td className="plm-py-2 plm-text-warm-600">
@@ -264,29 +354,58 @@ function HistoryCard({
   const startYear = 2025 + (history.seasonNumber - 1);
 
   return (
-    <div className="plm-rounded plm-border plm-border-warm-100 plm-p-3">
-      <div className="plm-flex plm-items-center plm-justify-between plm-mb-1.5">
-        <span className="plm-text-sm plm-font-bold">{startYear}/{(startYear + 1).toString().slice(-2)}</span>
-        <span className="plm-text-xs plm-font-bold plm-tabular-nums">
-          You: {playerPos ? `${playerPos}${getOrdinal(playerPos)} — ${playerRow?.points} pts` : '-'}
+    <div className="plm-py-3">
+      <div className="plm-flex plm-items-center plm-justify-between plm-mb-1">
+        <span className="plm-font-display plm-text-base plm-font-bold plm-tabular-nums">
+          {startYear}/{(startYear + 1).toString().slice(-2)}
+        </span>
+        <span className="plm-text-xs plm-font-semibold plm-tabular-nums">
+          {playerPos ? `${playerPos}${getOrdinal(playerPos)} · ${playerRow?.points} pts` : '-'}
         </span>
       </div>
       <div className="plm-flex plm-items-center plm-gap-1.5 plm-text-xs plm-text-warm-600">
-        <div className="plm-w-2.5 plm-h-2.5 plm-rounded-full" style={{ backgroundColor: championClub?.colors.primary }} />
-        <span>Champion: {championClub?.name} ({champion?.points} pts)</span>
+        <div className="plm-w-2 plm-h-2 plm-rounded-full plm-flex-shrink-0" style={{ backgroundColor: championClub?.colors.primary }} />
+        <span className="plm-truncate">
+          Champion: {championClub?.name}{' '}
+          <span className="plm-text-warm-400 plm-tabular-nums">({champion?.points} pts)</span>
+        </span>
       </div>
     </div>
   );
 }
 
-function RecordCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+function RecordLine({
+  label,
+  value,
+  tail,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  tail: string;
+  sub: string;
+  accent: string;
+}) {
   return (
-    <div className="plm-bg-warm-50 plm-rounded plm-p-3">
-      <div className="plm-text-[10px] plm-font-semibold plm-text-warm-400 plm-uppercase plm-tracking-wider plm-mb-1">
+    <div>
+      <div className="plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-[0.15em]">
         {label}
       </div>
-      <div className="plm-text-sm plm-font-bold plm-text-charcoal">{value}</div>
-      <div className="plm-text-[10px] plm-text-warm-500">{sub}</div>
+      <div className="plm-flex plm-items-baseline plm-justify-between plm-gap-2 plm-mt-1.5 plm-pb-2 plm-border-b plm-border-warm-200">
+        <span className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-truncate">
+          {value}
+        </span>
+        <span
+          className="plm-font-display plm-text-lg plm-font-bold plm-tabular-nums plm-flex-shrink-0"
+          style={{ color: accent }}
+        >
+          {tail}
+        </span>
+      </div>
+      <div className="plm-text-[10px] plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-mt-1.5">
+        {sub}
+      </div>
     </div>
   );
 }
@@ -298,8 +417,6 @@ function getOrdinal(n: number): string {
 }
 
 // ─── Tutorial review picker ────────────────────────────────────────────────
-// Shown from the "New here?" button. Lets the user jump into any tab's
-// tutorial from one place.
 const TUTORIAL_OPTIONS: { tab: TutorialTab; label: string; icon: string }[] = [
   { tab: 'hub', label: 'Game Hub', icon: '🏟' },
   { tab: 'squad', label: 'Squad', icon: '👥' },
@@ -357,4 +474,3 @@ function TutorialPicker({
     </div>
   );
 }
-

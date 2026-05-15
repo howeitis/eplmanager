@@ -29,32 +29,28 @@ export function DesktopSidebar({ activeTab, onNavigate, onBack }: DesktopSidebar
 
   return (
     <aside className="plm-hidden md:plm-flex plm-flex-col plm-w-56 plm-min-h-screen plm-bg-white plm-border-r plm-border-warm-200 plm-flex-shrink-0">
-      {/* Club header */}
-      <div className="plm-p-4 plm-border-b plm-border-warm-200">
-        <div className="plm-flex plm-items-center plm-gap-2.5">
+      {/* Club header — crest sits unboxed above the nav */}
+      <div className="plm-px-4 plm-pt-5 plm-pb-3 plm-border-b plm-border-warm-200">
+        <div className="plm-flex plm-flex-col plm-items-center plm-text-center plm-gap-2">
           {playerClub && (
             getClubLogoUrl(playerClub.id) ? (
               <img
                 src={getClubLogoUrl(playerClub.id)}
                 alt={playerClub.name}
-                className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-object-contain plm-bg-white plm-p-0.5 plm-border-2"
-                style={{ borderColor: playerClub.colors.secondary }}
+                className="plm-w-16 plm-h-16 plm-object-contain plm-flex-shrink-0"
               />
             ) : (
               <div
-                className="plm-w-8 plm-h-8 plm-rounded-full plm-flex-shrink-0 plm-border-2"
-                style={{
-                  backgroundColor: playerClub.colors.primary,
-                  borderColor: playerClub.colors.secondary,
-                }}
+                className="plm-w-16 plm-h-16 plm-flex-shrink-0"
+                style={{ backgroundColor: playerClub.colors.primary }}
               />
             )
           )}
-          <div className="plm-min-w-0">
+          <div className="plm-min-w-0 plm-w-full">
             <div className="plm-font-display plm-font-bold plm-text-sm plm-text-charcoal plm-truncate">
               {playerClub?.name}
             </div>
-            <div className="plm-text-[11px] plm-text-warm-500">
+            <div className="plm-text-[11px] plm-text-warm-500 plm-truncate">
               {manager?.name}
             </div>
           </div>

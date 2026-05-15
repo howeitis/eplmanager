@@ -112,11 +112,32 @@ export function SquadScreen({
   }, [allPlayers, startingXI]);
 
   return (
-    <div className="plm-space-y-4 plm-w-full">
+    <div className="plm-relative plm-space-y-4 plm-w-full">
+      {/* Club-color ambient glow — mirrors the hub masthead */}
+      {clubData && (
+        <>
+          <div
+            aria-hidden
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--top-16 plm-h-[320px]"
+            style={{
+              background: `linear-gradient(to bottom, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
+              zIndex: 0,
+            }}
+          />
+          <div
+            aria-hidden
+            className="plm-pointer-events-none plm-absolute plm--left-4 plm--right-4 md:plm--left-6 md:plm--right-6 plm--bottom-16 plm-h-[320px]"
+            style={{
+              background: `linear-gradient(to top, ${clubData.colors.primary}38 0%, ${clubData.colors.primary}1F 28%, ${clubData.colors.primary}0A 55%, transparent 100%)`,
+              zIndex: 0,
+            }}
+          />
+        </>
+      )}
 
       {/* Advance to next month — editorial stylized button matching the hub */}
       {onAdvance && advanceLabel && (
-        <div className="plm-space-y-2">
+        <div className="plm-relative plm-space-y-2" style={{ zIndex: 1 }}>
           <button
             onClick={onAdvance}
             className="plm-w-full plm-py-4 plm-rounded-2xl plm-font-body plm-font-semibold plm-text-xs plm-uppercase plm-tracking-[0.18em] plm-transition-all plm-duration-200 plm-min-h-[44px]"
@@ -164,7 +185,7 @@ export function SquadScreen({
 
       {/* Injured starter banner */}
       {hasInjuredStarter && (
-        <div className="plm-bg-red-50 plm-border plm-border-red-200 plm-rounded-lg plm-px-4 plm-py-3 plm-flex plm-items-center plm-gap-2">
+        <div className="plm-relative plm-bg-red-50 plm-border plm-border-red-200 plm-rounded-lg plm-px-4 plm-py-3 plm-flex plm-items-center plm-gap-2" style={{ zIndex: 1 }}>
           <span className="plm-text-red-500 plm-text-lg plm-flex-shrink-0" aria-hidden="true">!</span>
           <p className="plm-text-sm plm-text-red-800 plm-font-medium">
             One or more starters are injured. Review your Starting XI before advancing.
@@ -173,7 +194,7 @@ export function SquadScreen({
       )}
 
       {/* Desktop: two-column split — tactics/XI on left, squad list on right */}
-      <div className="plm-flex plm-flex-col lg:plm-flex-row plm-gap-4 plm-items-start">
+      <div className="plm-relative plm-flex plm-flex-col lg:plm-flex-row plm-gap-4 plm-items-start" style={{ zIndex: 1 }}>
 
       {/* Left column: Tactics + Starting XI */}
       <div className="plm-w-full lg:plm-w-[520px] lg:plm-flex-shrink-0 plm-space-y-4">

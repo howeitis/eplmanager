@@ -1443,7 +1443,7 @@ function App() {
           onBack={() => setScreen('save_select')}
         />
 
-        <main className="plm-flex-1 plm-min-w-0 plm-px-4 plm-py-4 md:plm-px-6 md:plm-py-6 plm-pb-20 md:plm-pb-6">
+        <main className="plm-flex-1 plm-min-w-0 plm-px-4 md:plm-px-6 plm-pb-20 md:plm-pb-0">
           <div className="plm-max-w-7xl plm-mx-auto">
             {gameView === 'hub' && (
               <GameHub

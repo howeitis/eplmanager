@@ -232,13 +232,13 @@ export const CLUBS: ClubData[] = [
   // Tier 4 — Mid-Table
   {
     id: 'fulham',
-    kit: { pattern: 'plain', accent: '#000000' },
+    kit: { pattern: 'plain', accent: '#FFFFFF' },
     logo: 'fulham.png',
     name: 'Fulham',
     shortName: 'FUL',
     tier: 4,
     budget: 50,
-    colors: { primary: '#FFFFFF', secondary: '#000000' },
+    colors: { primary: '#000000', secondary: '#FFFFFF' },
     rivalries: [],
     namePool: [
       { nationality: 'english', weight: 30 },

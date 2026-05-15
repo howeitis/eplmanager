@@ -103,7 +103,7 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
   };
 
   const selectClass = 'plm-w-full plm-bg-white plm-border plm-border-gray-200 plm-rounded-lg plm-px-3 plm-py-2.5 plm-text-gray-900 plm-text-sm focus:plm-outline-none focus:plm-ring-2 focus:plm-ring-gray-400 plm-min-h-[44px]';
-  const inputClass = selectClass;
+  const inputClass = `${selectClass} plm-appearance-none plm-shadow-none`;
   const labelClass = 'plm-block plm-text-sm plm-font-medium plm-text-gray-700 plm-mb-1';
   const errorClass = 'plm-text-xs plm-text-red-500 plm-mt-1';
 

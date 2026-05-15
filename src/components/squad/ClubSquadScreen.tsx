@@ -121,7 +121,7 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
           </div>
         </div>
 
-        <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
+        <div className="md:plm-hidden plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
           <MastheadStat label="Position" value={position ? ordinal(position) : '-'} />
           <MastheadStat label="Squad" value={filteredPlayers.length} />
           <MastheadStat label="Budget" value={`£${budget.toFixed(0)}M`} accent={clubData.colors.primary} />
@@ -227,22 +227,23 @@ export function ClubSquadScreen({ clubId }: ClubSquadScreenProps) {
           </table>
         </div>
 
-        {/* Mobile cards */}
-        <div className="md:plm-hidden plm-space-y-1">
+        {/* Mobile list — flat, no boxes */}
+        <ul className="md:plm-hidden plm-divide-y plm-divide-warm-100">
           {filteredPlayers.map((player) => (
-            <MobilePlayerCard
-              key={player.id}
-              player={player}
-              onOpenModal={() => openWithBrowse(player.id)}
-            />
+            <li key={player.id}>
+              <MobilePlayerRow
+                player={player}
+                onOpenModal={() => openWithBrowse(player.id)}
+              />
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   );
 }
 
-function MobilePlayerCard({
+function MobilePlayerRow({
   player,
   onOpenModal,
 }: {
@@ -252,10 +253,8 @@ function MobilePlayerCard({
   return (
     <button
       onClick={onOpenModal}
-      className={`plm-w-full plm-rounded plm-border plm-border-warm-100 plm-transition-all plm-bg-white plm-text-left plm-flex plm-items-center plm-gap-2 plm-p-3 plm-min-h-[44px] ${
-        player.injured ? 'plm-border-red-200 plm-bg-red-50/30' : ''
-      }`}
-      aria-label={`${player.name}, ${player.position}, overall ${player.overall}`}
+      className="plm-w-full plm-text-left plm-flex plm-items-center plm-gap-2 plm-py-2.5 plm-min-h-[44px]"
+      aria-label={`${player.name}, age ${player.age}, ${player.position}, overall ${player.overall}`}
     >
       <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-text-warm-400 plm-w-5 plm-tracking-wider">
         {player.position}
@@ -263,6 +262,7 @@ function MobilePlayerCard({
       <ShortlistStar playerId={player.id} />
       <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
         {player.name}
+        <span className="plm-text-warm-400 plm-font-normal plm-ml-1">({player.age})</span>
       </span>
       {player.injured && (
         <span className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-py-0.5 plm-rounded plm-font-semibold">
