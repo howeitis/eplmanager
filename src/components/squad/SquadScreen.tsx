@@ -111,6 +111,19 @@ export function SquadScreen({
     return allPlayers.some((p) => xiPlayerIds.includes(p.id) && p.injured);
   }, [allPlayers, startingXI]);
 
+  // Squad summary for the masthead stat strip
+  const squadSummary = useMemo(() => {
+    const permanent = allPlayers.filter((p) => !p.isTemporary);
+    if (permanent.length === 0) return { count: 0, avgOvr: 0, avgAge: 0 };
+    const sumOvr = permanent.reduce((s, p) => s + p.overall, 0);
+    const sumAge = permanent.reduce((s, p) => s + p.age, 0);
+    return {
+      count: permanent.length,
+      avgOvr: Math.round(sumOvr / permanent.length),
+      avgAge: Math.round((sumAge / permanent.length) * 10) / 10,
+    };
+  }, [allPlayers]);
+
   return (
     <div className="plm-relative plm-space-y-4 plm-w-full">
       {/* Club-color ambient glow — mirrors the hub masthead */}
@@ -193,23 +206,64 @@ export function SquadScreen({
         </div>
       )}
 
+      {/* Editorial masthead — eyebrow, headline, subhead, stat strip */}
+      <section className="plm-relative plm-pt-1" style={{ zIndex: 1 }}>
+        <div className="plm-flex plm-items-start plm-gap-3">
+          {clubData && getClubLogoUrl(clubData.id) ? (
+            <img
+              src={getClubLogoUrl(clubData.id)}
+              alt=""
+              aria-hidden
+              className="plm-w-12 plm-h-12 plm-flex-shrink-0 plm-object-contain"
+            />
+          ) : clubData ? (
+            <div
+              className="plm-w-12 plm-h-12 plm-flex-shrink-0"
+              style={{ backgroundColor: clubData.colors.primary }}
+            />
+          ) : null}
+          <div className="plm-min-w-0 plm-flex-1">
+            <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+              Tactical Centre
+            </p>
+            <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+              Squad
+            </h1>
+            <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-mt-0.5">
+              Shape the team, name your eleven, manage the roster.
+            </p>
+          </div>
+        </div>
+
+        <div className="plm-mt-5 plm-pt-5 plm-border-t plm-border-warm-200 plm-grid plm-grid-cols-3 plm-divide-x plm-divide-warm-200">
+          <SquadStat label="Squad" value={squadSummary.count} />
+          <SquadStat label="Avg OVR" value={squadSummary.avgOvr} accent={clubData?.colors.primary} />
+          <SquadStat label="Avg Age" value={squadSummary.avgAge.toFixed(1)} />
+        </div>
+      </section>
+
       {/* Desktop: two-column split — tactics/XI on left, squad list on right */}
-      <div className="plm-relative plm-flex plm-flex-col lg:plm-flex-row plm-gap-4 plm-items-start" style={{ zIndex: 1 }}>
+      <div className="plm-relative plm-flex plm-flex-col lg:plm-flex-row plm-gap-8 plm-items-start" style={{ zIndex: 1 }}>
 
       {/* Left column: Tactics + Starting XI */}
-      <div className="plm-w-full lg:plm-w-[520px] lg:plm-flex-shrink-0 plm-space-y-4">
+      <div className="plm-w-full lg:plm-w-[520px] lg:plm-flex-shrink-0 plm-space-y-6">
       {/* Tactics — collapsible (formation + mentality only) */}
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+      <section className="plm-pt-5 plm-border-t plm-border-warm-200">
         <button
           onClick={() => setTacticsOpen((v) => !v)}
           aria-expanded={tacticsOpen}
           className="plm-w-full plm-flex plm-items-center plm-justify-between plm-min-h-[44px] plm-text-left"
         >
-          <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal">
-            Tactics
-          </h2>
+          <div>
+            <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+              Setup
+            </p>
+            <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+              Tactics
+            </h2>
+          </div>
           <span className="plm-flex plm-items-center plm-gap-2 plm-text-warm-500">
-            <span className="plm-text-[10px] plm-uppercase plm-tracking-[0.15em] plm-font-medium">
+            <span className="plm-text-[10px] plm-uppercase plm-tracking-[0.18em] plm-font-semibold">
               {tacticsOpen ? 'Hide' : 'Show'}
             </span>
             <svg
@@ -236,33 +290,42 @@ export function SquadScreen({
             />
           </div>
         )}
-      </div>
+      </section>
 
       {/* Starting XI — always visible */}
-      <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
+      <section className="plm-pt-5 plm-border-t plm-border-warm-200">
         <StartingXIPicker
           formation={formation}
           xiNotifications={xiNotifications}
           onDismissNotifications={onDismissNotifications}
         />
-      </div>
+      </section>
       </div>
 
       {/* Right column: squad list */}
-      <div className="plm-w-full lg:plm-flex-1 plm-min-w-0 plm-space-y-4">
-      {/* View Toggle: Roster / Progression */}
-      <div className="plm-flex plm-gap-1 plm-bg-warm-100 plm-rounded-lg plm-p-0.5">
+      <div className="plm-w-full lg:plm-flex-1 plm-min-w-0 plm-space-y-4 plm-pt-5 plm-border-t plm-border-warm-200">
+      {/* View Toggle: Roster / Progression — editorial pill row */}
+      <div className="plm-flex plm-items-center plm-gap-4 plm-border-b plm-border-warm-200 plm-pb-2" role="tablist" aria-label="Squad view">
         {([['roster', 'Roster'], ['progression', 'Progression']] as [SquadView, string][]).map(([key, label]) => (
           <button
             key={key}
+            role="tab"
+            aria-selected={squadView === key}
             onClick={() => setSquadView(key)}
-            className={`plm-flex-1 plm-py-2 plm-text-xs plm-font-semibold plm-rounded-md plm-transition-colors plm-min-h-[44px] ${
+            className={`plm-relative plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.18em] plm-py-2 plm-min-h-[36px] plm-transition-colors ${
               squadView === key
-                ? 'plm-bg-white plm-text-charcoal plm-shadow-sm'
-                : 'plm-text-warm-500 hover:plm-text-warm-700'
+                ? 'plm-text-charcoal'
+                : 'plm-text-warm-400 hover:plm-text-warm-600'
             }`}
           >
             {label}
+            {squadView === key && (
+              <span
+                aria-hidden
+                className="plm-absolute plm--bottom-2 plm-left-0 plm-right-0 plm-h-0.5"
+                style={{ backgroundColor: clubData?.colors.primary || '#1A1A1A' }}
+              />
+            )}
           </button>
         ))}
       </div>
@@ -271,21 +334,7 @@ export function SquadScreen({
       {squadView === 'progression' && <SquadProgression />}
 
       {/* Roster */}
-      {squadView === 'roster' && <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <div className="plm-flex plm-items-center plm-gap-2 plm-mb-3">
-          {clubData && getClubLogoUrl(clubData.id) && (
-            <img
-              src={getClubLogoUrl(clubData.id)}
-              alt=""
-              aria-hidden
-              className="plm-w-7 plm-h-7 plm-object-contain plm-flex-shrink-0"
-            />
-          )}
-          <span className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-tabular-nums">
-            {filteredPlayers.filter((p) => !p.isTemporary).length} player{filteredPlayers.filter((p) => !p.isTemporary).length !== 1 ? 's' : ''}
-          </span>
-        </div>
-
+      {squadView === 'roster' && <div>
         {/* Filters */}
         <div className="plm-flex plm-flex-nowrap plm-items-center plm-gap-0.5 plm-mb-3" role="group" aria-label="Filter by position">
           <span className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-[0.15em] plm-font-semibold plm-mr-1 plm-flex-shrink-0">FILTER:</span>
@@ -355,20 +404,24 @@ export function SquadScreen({
           </table>
         </div>
 
-        {/* Mobile: Compact cards */}
-        <div className="md:plm-hidden plm-space-y-1">
-          {filteredPlayers.map((player) => (
-            <MobilePlayerCard
-              key={player.id}
-              player={player}
-              captainId={captainId}
-              expanded={expandedPlayerId === player.id}
-              onToggle={() =>
-                setExpandedPlayerId(expandedPlayerId === player.id ? null : player.id)
-              }
-              onOpenModal={() => openModal(player.id, playerClub!.id)}
-            />
-          ))}
+        {/* Mobile: flat divider-stack with tap-to-expand detail */}
+        <div className="md:plm-hidden plm-divide-y plm-divide-warm-100">
+          {filteredPlayers.map((player) => {
+            const isInXI = Object.values(startingXI).includes(player.id);
+            return (
+              <MobilePlayerCard
+                key={player.id}
+                player={player}
+                captainId={captainId}
+                isInXI={isInXI}
+                expanded={expandedPlayerId === player.id}
+                onToggle={() =>
+                  setExpandedPlayerId(expandedPlayerId === player.id ? null : player.id)
+                }
+                onOpenModal={() => openModal(player.id, playerClub!.id)}
+              />
+            );
+          })}
         </div>
       </div>}
       </div>
@@ -427,28 +480,29 @@ function DesktopPlayerRow({ player, isInXI, captainId, onOpenModal }: { player: 
 function MobilePlayerCard({
   player,
   captainId,
+  isInXI,
   expanded,
   onToggle,
   onOpenModal,
 }: {
   player: Player;
   captainId?: string | null;
+  isInXI: boolean;
   expanded: boolean;
   onToggle: () => void;
   onOpenModal: () => void;
 }) {
   return (
-    <div
-      className={`plm-rounded plm-border plm-border-warm-100 plm-transition-all ${
-        player.isTemporary ? 'plm-opacity-40 plm-bg-warm-50' : 'plm-bg-white'
-      } ${player.injured ? 'plm-border-red-200 plm-bg-red-50/30' : ''}`}
-    >
+    <div className={player.isTemporary ? 'plm-opacity-40' : ''}>
       <button
         onClick={onToggle}
         aria-expanded={expanded}
         aria-label={`${player.name}, ${player.position}, overall ${player.overall}`}
-        className="plm-w-full plm-flex plm-items-center plm-gap-2 plm-p-3 plm-min-h-[44px] plm-text-left"
+        className="plm-w-full plm-flex plm-items-center plm-gap-2 plm-py-2.5 plm-min-h-[44px] plm-text-left"
       >
+        {isInXI && (
+          <span className="plm-w-1.5 plm-h-1.5 plm-rounded-full plm-bg-emerald-500 plm-flex-shrink-0" title="Starting XI" />
+        )}
         <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-text-warm-400 plm-w-5 plm-tracking-wider">
           {player.position}
         </span>
@@ -477,8 +531,8 @@ function MobilePlayerCard({
       </button>
 
       {expanded && (
-        <div className="plm-px-3 plm-pb-3 plm-border-t plm-border-warm-100 plm-pt-2">
-          <div className="plm-grid plm-grid-cols-3 plm-gap-2 plm-mb-2">
+        <div className="plm-pb-3 plm-pt-1 plm-space-y-2">
+          <div className="plm-grid plm-grid-cols-3 plm-gap-x-3 plm-text-[11px]">
             <StatCell label="Age" value={player.age} />
             <StatCell label="Trait" value={player.trait} />
             <StatCell label="Value" value={`£${refreshPlayerValue(player).toFixed(1)}M`} />
@@ -486,13 +540,13 @@ function MobilePlayerCard({
           <div className="plm-grid plm-grid-cols-6 plm-gap-1">
             {(['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'] as const).map((stat) => (
               <div key={stat} className="plm-text-center">
-                <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase">{stat}</div>
+                <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase plm-tracking-wider">{stat}</div>
                 <div className="plm-text-sm plm-font-bold plm-tabular-nums">{player.stats[stat]}</div>
               </div>
             ))}
           </div>
           {!player.isTemporary && (
-            <div className="plm-grid plm-grid-cols-3 plm-gap-2 plm-mt-2 plm-pt-2 plm-border-t plm-border-warm-100">
+            <div className="plm-grid plm-grid-cols-3 plm-gap-x-3 plm-text-[11px] plm-pt-1.5 plm-border-t plm-border-warm-100">
               <StatCell label="Goals" value={player.goals} />
               <StatCell label="Assists" value={player.assists} />
               <StatCell label="CS" value={player.cleanSheets} />
@@ -500,9 +554,9 @@ function MobilePlayerCard({
           )}
           <button
             onClick={(e) => { e.stopPropagation(); onOpenModal(); }}
-            className="plm-w-full plm-mt-2 plm-py-2 plm-text-xs plm-font-semibold plm-text-warm-600 plm-bg-warm-50 plm-rounded plm-border plm-border-warm-200 hover:plm-bg-warm-100 plm-transition-colors plm-min-h-[44px]"
+            className="plm-w-full plm-py-2 plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.18em] plm-text-warm-600 hover:plm-text-charcoal plm-transition-colors plm-min-h-[44px]"
           >
-            View Full Details
+            View Full Details &rarr;
           </button>
         </div>
       )}
@@ -512,9 +566,25 @@ function MobilePlayerCard({
 
 function StatCell({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="plm-text-center plm-bg-warm-50 plm-rounded plm-py-1 plm-px-1">
-      <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase">{label}</div>
-      <div className="plm-text-xs plm-font-semibold plm-text-charcoal">{value}</div>
+    <div>
+      <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase plm-tracking-wider">{label}</div>
+      <div className="plm-text-xs plm-font-semibold plm-text-charcoal plm-truncate">{value}</div>
+    </div>
+  );
+}
+
+function SquadStat({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
+  return (
+    <div className="plm-px-2 plm-text-center first:plm-pl-0 last:plm-pr-0">
+      <div
+        className="plm-font-display plm-text-2xl plm-font-bold plm-tabular-nums plm-leading-none"
+        style={{ color: accent || '#1A1A1A' }}
+      >
+        {value}
+      </div>
+      <div className="plm-text-[10px] plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-mt-1.5">
+        {label}
+      </div>
     </div>
   );
 }
