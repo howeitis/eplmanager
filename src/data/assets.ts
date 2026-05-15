@@ -140,6 +140,17 @@ export function getHeroImageUrl(): string {
   return `${assetBasePath}/epl_manager_hero.webp`;
 }
 
+/** Premier League shield used on the hub mastheads. Honors the asset base path. */
+export function getLeagueLogoUrl(): string {
+  return `${assetBasePath}/english-premier-league-logo.svg`;
+}
+
+/** League / FA Cup trophy art for the trophy cabinet. Honors the asset base path. */
+export function getTrophyImageUrl(type: 'league' | 'fa-cup'): string {
+  const filename = type === 'league' ? 'epl trophy.png' : 'fa cup trophy.png';
+  return `${assetBasePath}/trophies/${filename}`;
+}
+
 /**
  * Maps in-game nationality strings to the national team logo files in
  * /public/National team logos/. Falls back to the country flag when no

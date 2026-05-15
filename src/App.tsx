@@ -1436,7 +1436,7 @@ function App() {
 
   return (
     <NavigationContext.Provider value={navigationContextValue}>
-      <div className="plm-flex plm-min-h-screen plm-bg-cream plm-font-body">
+      <div className="plm-flex plm-bg-cream plm-font-body">
         <DesktopSidebar
           activeTab={activeNavTab}
           onNavigate={handleNavigate}

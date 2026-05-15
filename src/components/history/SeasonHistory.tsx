@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
+import { getTrophyImageUrl } from '../../data/assets';
 import type { SeasonHistory as SeasonHistoryType } from '../../types/entities';
 import { TutorialModal, useFirstVisitTutorial, type TutorialTab } from '../shared/TutorialModal';
 
@@ -192,7 +193,7 @@ export function SeasonHistoryScreen() {
             {trophies.map((t, i) => {
               const startYear = 2025 + (t.season - 1);
               const yearLabel = `${startYear.toString().slice(-2)}/${(startYear + 1).toString().slice(-2)}`;
-              const trophyImg = t.type === 'league' ? '/trophies/epl trophy.png' : '/trophies/fa cup trophy.png';
+              const trophyImg = getTrophyImageUrl(t.type);
               return (
                 <div key={i} className="plm-w-24 plm-flex plm-flex-col plm-items-center plm-text-center">
                   <img

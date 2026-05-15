@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl, getNationalTeamLogoUrl } from '../../data/assets';
+import { getClubLogoUrl, getNationalTeamLogoUrl, getLeagueLogoUrl } from '../../data/assets';
 import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { InFormScroller } from './InFormScroller';
@@ -88,7 +88,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
         <div className="lg:plm-sticky lg:plm-top-6">
           <header className="plm-mb-1.5 plm-pb-1.5 plm-border-b plm-border-warm-200">
             <img
-              src="/english-premier-league-logo.svg"
+              src={getLeagueLogoUrl()}
               alt="Premier League"
               className="plm-h-10 plm-w-auto"
             />
@@ -244,7 +244,7 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
         <div className="lg:plm-hidden plm--mx-4 plm-px-4">
           <header className="plm-mb-1 plm-pb-1.5 plm-border-b plm-border-warm-200">
             <img
-              src="/english-premier-league-logo.svg"
+              src={getLeagueLogoUrl()}
               alt="Premier League"
               className="plm-h-9 plm-w-auto"
             />

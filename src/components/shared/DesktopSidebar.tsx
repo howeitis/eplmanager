@@ -28,7 +28,7 @@ export function DesktopSidebar({ activeTab, onNavigate, onBack }: DesktopSidebar
   ];
 
   return (
-    <aside className="plm-hidden md:plm-flex plm-flex-col plm-w-56 plm-min-h-screen plm-bg-white plm-border-r plm-border-warm-200 plm-flex-shrink-0">
+    <aside className="plm-hidden md:plm-flex plm-flex-col plm-self-stretch plm-w-56 plm-bg-white plm-border-r plm-border-warm-200 plm-flex-shrink-0">
       {/* Club header — crest sits unboxed above the nav */}
       <div className="plm-px-4 plm-pt-5 plm-pb-3 plm-border-b plm-border-warm-200">
         <div className="plm-flex plm-flex-col plm-items-center plm-text-center plm-gap-2">
