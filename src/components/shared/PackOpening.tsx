@@ -1,7 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { RetroPlayerCard } from './RetroPlayerCard';
 import { getClubLogoUrl } from '@/data/assets';
+import { CLUBS } from '@/data/clubs';
 import type { Player } from '@/types/entities';
+
+const CLUB_BY_ID = new Map(CLUBS.map((c) => [c.id, c]));
 
 interface PackOpeningProps {
   players: Player[];
@@ -10,6 +13,16 @@ interface PackOpeningProps {
   clubColors: { primary: string; secondary: string };
   packTitle: string;
   packSubtitle?: string;
+  /**
+   * Optional per-card club IDs that override the pack-level clubId when
+   * rendering each card. Length should match players[]; missing/undefined
+   * entries fall back to the pack-level clubId. Used by Team-of-the-Season
+   * packs where each card represents a different club's player.
+   */
+  perCardClubIds?: string[];
+  /** Render variant for the cards inside the pack. 'retired' draws a memorial
+   *  treatment (desaturated + RETIRED banner). Default is 'normal'. */
+  cardVariant?: 'normal' | 'retired';
   onComplete: () => void;
 }
 
@@ -51,6 +64,8 @@ export function PackOpening({
   clubColors,
   packTitle,
   packSubtitle,
+  perCardClubIds,
+  cardVariant = 'normal',
   onComplete,
 }: PackOpeningProps) {
   const [packState, setPackState] = useState<PackState>('intro');
@@ -331,15 +346,24 @@ export function PackOpening({
 
           {/* Active card */}
           <div className="plm-flex plm-justify-center" key={currentCardIndex}>
-            <RetroPlayerCard
-              player={players[currentCardIndex]}
-              clubId={clubId}
-              clubName={clubName}
-              clubColors={clubColors}
-              size="xl"
-              animated={revealedCards.has(currentCardIndex)}
-              disableFlip
-            />
+            {(() => {
+              const cardClubId = perCardClubIds?.[currentCardIndex] ?? clubId;
+              const cardClub = cardClubId ? CLUB_BY_ID.get(cardClubId) : null;
+              const cardClubName = cardClub?.name ?? clubName;
+              const cardClubColors = cardClub?.colors ?? clubColors;
+              return (
+                <RetroPlayerCard
+                  player={players[currentCardIndex]}
+                  clubId={cardClubId}
+                  clubName={cardClubName}
+                  clubColors={cardClubColors}
+                  size="xl"
+                  animated={revealedCards.has(currentCardIndex)}
+                  disableFlip
+                  retired={cardVariant === 'retired'}
+                />
+              );
+            })()}
           </div>
 
           {/* Navigation dots */}

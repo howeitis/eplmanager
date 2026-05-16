@@ -40,10 +40,15 @@ function getBracket(age: number): AgeBracket {
 /**
  * Apply aging stat changes to a player. Returns the updated stats and overall.
  * Does not mutate the player — returns new values.
+ *
+ * `devBonus` widens the positive tail of growth-phase stat changes (sourced
+ * from event modifiers like Training facility / Senior mentoring). It only
+ * lifts the cap — declining brackets and retirement rolls are unaffected.
  */
 export function calculateAgingChanges(
   rng: SeededRNG,
   player: Player,
+  devBonus: number = 0,
 ): { stats: Player['stats']; overall: number; retired: boolean } {
   const bracket = getBracket(player.age);
   const statKeys: (keyof Player['stats'])[] = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'];
@@ -71,6 +76,13 @@ export function calculateAgingChanges(
   if (player.highPotential && player.age <= 24) {
     effectiveMin = Math.max(effectiveMin, 5);
     effectiveMax = Math.max(effectiveMax, 10);
+  }
+
+  // DEV_BONUS widens the positive ceiling during growth phases only.
+  // Capped at +3 total so a chain of facility/mentoring events doesn't
+  // become silly — bracket logic still owns the headline curve.
+  if (devBonus > 0 && effectiveMax > 0 && player.age <= 24) {
+    effectiveMax += Math.min(3, devBonus);
   }
 
   // Early peaker: hits ceiling by 24, declines by 27
@@ -234,6 +246,7 @@ export function processClubAging(
   club: Club,
   seasonNumber: number,
   youthBoost: number = 0,
+  devBonus: number = 0,
 ): AgingResult {
   const result: AgingResult = {
     clubId: club.id,
@@ -246,7 +259,7 @@ export function processClubAging(
   for (const player of club.roster) {
     if (player.isTemporary) continue;
 
-    const { stats, overall, retired } = calculateAgingChanges(rng, player);
+    const { stats, overall, retired } = calculateAgingChanges(rng, player, devBonus);
 
     if (retired) {
       // Generate replacement
@@ -291,6 +304,10 @@ export function processClubAging(
 
 /**
  * Process aging for all clubs in the league.
+ *
+ * Youth-boost and dev-bonus apply only to clubs in the respective sets
+ * (typically just the user's club, from event modifiers like Academy
+ * overhaul / Training facility / Senior mentoring).
  */
 export function processLeagueAging(
   rng: SeededRNG,
@@ -298,13 +315,16 @@ export function processLeagueAging(
   seasonNumber: number,
   youthBoostClubIds: Set<string> = new Set(),
   youthBoostAmount: number = 0,
+  devBonusClubIds: Set<string> = new Set(),
+  devBonusAmount: number = 0,
 ): AgingResult[] {
   const results: AgingResult[] = [];
 
   for (const club of clubs) {
     const clubRng = new SeededRNG(`${rng.random()}-aging-${club.id}`);
-    const boost = youthBoostClubIds.has(club.id) ? youthBoostAmount : 0;
-    results.push(processClubAging(clubRng, club, seasonNumber, boost));
+    const ybRaw = youthBoostClubIds.has(club.id) ? youthBoostAmount : 0;
+    const dbRaw = devBonusClubIds.has(club.id) ? devBonusAmount : 0;
+    results.push(processClubAging(clubRng, club, seasonNumber, ybRaw, dbRaw));
   }
 
   return results;

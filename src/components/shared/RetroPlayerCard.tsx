@@ -157,6 +157,9 @@ export interface RetroPlayerCardProps {
   forceFlipped?: boolean;
   /** Whether this player is the team captain */
   isCaptain?: boolean;
+  /** Memorial variant — desaturates the card and adds a RETIRED banner.
+   *  Used for the end-of-season retirement pack. */
+  retired?: boolean;
 }
 
 export function RetroPlayerCard({
@@ -171,6 +174,7 @@ export function RetroPlayerCard({
   disableFlip = false,
   forceFlipped = false,
   isCaptain = false,
+  retired = false,
 }: RetroPlayerCardProps) {
   const [isFlipped, setIsFlipped] = useState(forceFlipped);
   const [glarePos, setGlarePos] = useState<{ x: number; y: number } | null>(null);
@@ -194,6 +198,7 @@ export function RetroPlayerCard({
   const serialNumber = getSerialNumber(player.id);
   const trophies = player.trophiesWon || [];
   const goldenBoots = player.goldenBoots ?? [];
+  const hatTricks = player.hatTricks ?? 0;
   const summaryParts = size !== 'sm' ? generateScoutSummaryParts(player, { recentTransfers }) : null;
 
   // ─── Bottom-right corner ornament ───
@@ -393,6 +398,32 @@ export function RetroPlayerCard({
               </div>
             </div>
           )}
+
+          {/* Hat-trick stamps on card back — cumulative career count. */}
+          {hatTricks > 0 && (
+            <div className="plm-flex plm-flex-col plm-items-center plm-gap-1.5 plm-px-3 plm-mt-2">
+              <span
+                className={`${fs.pos} plm-font-display plm-font-bold plm-uppercase plm-tracking-widest`}
+                style={{ color: '#C2410C', opacity: 0.9 }}
+              >
+                Hat-tricks · {hatTricks}
+              </span>
+              <div className="plm-flex plm-flex-wrap plm-justify-center plm-gap-1.5">
+                {Array.from({ length: Math.min(hatTricks, 20) }).map((_, i) => (
+                  <span
+                    key={i}
+                    title="Hat-trick (3+ goals in a single match)"
+                    style={{
+                      fontSize: size === 'xl' ? 22 : size === 'lg' ? 18 : size === 'md' ? 16 : 14,
+                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',
+                    }}
+                  >
+                    🎩
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Subtle pattern */}
@@ -407,14 +438,18 @@ export function RetroPlayerCard({
   }
 
   // ─── Card front ───
+  // Memorial mode: desaturate + soften the form glow. The RETIRED banner is
+  // painted on top in the JSX block at the bottom of the card.
+  const retiredFilter = retired ? 'grayscale(0.85) brightness(0.92) contrast(0.95)' : undefined;
   return (
     <div
       ref={cardRef}
-      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 plm-flex plm-flex-col ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${isShimmerGold ? 'plm-animate-border-shimmer' : ''}`}
+      className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 plm-flex plm-flex-col ${animated ? 'plm-animate-card-flip' : ''} ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none ${!retired && isShimmerGold ? 'plm-animate-border-shimmer' : ''}`}
       style={{
         background: bgGradient,
         border: `3px solid ${borderColor}`,
-        boxShadow: formShadow
+        filter: retiredFilter,
+        boxShadow: formShadow && !retired
           ? `0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1), ${formShadow}`
           : undefined,
       }}
@@ -900,6 +935,45 @@ export function RetroPlayerCard({
           />
         )}
       </div>
+
+      {/* ─── RETIRED memorial banner ───
+          Diagonal sash across the upper-right corner. Painted outside the
+          grayscale layer so the text stays readable on every tier. */}
+      {retired && (
+        <>
+          <div
+            className="plm-absolute plm-z-[18] plm-pointer-events-none"
+            style={{
+              top: size === 'xl' ? 22 : size === 'lg' ? 18 : 14,
+              right: size === 'xl' ? -42 : size === 'lg' ? -34 : -26,
+              transform: 'rotate(35deg)',
+              transformOrigin: 'center',
+              background:
+                'linear-gradient(135deg, #1F2937 0%, #111827 50%, #1F2937 100%)',
+              color: '#FBBF24',
+              padding: size === 'xl' ? '4px 56px' : size === 'lg' ? '3px 44px' : '2px 32px',
+              fontFamily: 'Playfair Display, serif',
+              fontSize: size === 'xl' ? 14 : size === 'lg' ? 12 : 10,
+              fontWeight: 900,
+              letterSpacing: '0.22em',
+              boxShadow:
+                '0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(251,191,36,0.35), inset 0 -1px 0 rgba(0,0,0,0.4)',
+              borderTop: '1px solid rgba(251,191,36,0.4)',
+              borderBottom: '1px solid rgba(0,0,0,0.4)',
+            }}
+            aria-hidden="true"
+          >
+            RETIRED
+          </div>
+          <div
+            className="plm-absolute plm-z-[17] plm-inset-0 plm-pointer-events-none"
+            style={{
+              boxShadow: 'inset 0 0 80px rgba(0,0,0,0.35)',
+            }}
+            aria-hidden="true"
+          />
+        </>
+      )}
     </div>
   );
 }

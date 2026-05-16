@@ -56,6 +56,8 @@ export interface Player {
   trophiesWon?: { season: number; type: 'league' | 'cup' }[];
   /** Seasons in which this player won the Premier League Golden Boot */
   goldenBoots?: number[];
+  /** Career count of hat-tricks (3+ goals in a single match). Cumulative. */
+  hatTricks?: number;
 }
 
 export interface ClubColors {
@@ -121,6 +123,8 @@ export interface MatchResult {
   assisters: { playerId: string; minute: number; isHome: boolean }[];
   homeStartingXI?: StartingXIMap;
   awayStartingXI?: StartingXIMap;
+  /** Single best-rated player across both XIs by match-impact score. */
+  manOfTheMatchId?: string;
 }
 
 export interface LeagueTableRow {
