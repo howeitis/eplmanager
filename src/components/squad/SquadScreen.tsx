@@ -1,17 +1,18 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
-import type { Player, Position } from '../../types/entities';
-import type { Formation, Mentality } from '../../engine/matchSim';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl } from '@/data/assets';
+import type { Player, Position } from '@/types/entities';
+import type { Formation, Mentality } from '@/engine/matchSim';
 import { FormationPicker } from './FormationPicker';
 import { MentalitySelector } from './MentalitySelector';
 import { StartingXIPicker } from './StartingXIPicker';
 import { SquadProgression } from './SquadProgression';
-import { useModalParams } from '../../hooks/useModalParams';
-import type { XISwap } from '../../engine/startingXI';
-import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
-import { STAT_KEYS, getStatLongName } from '../../utils/statLabels';
+import { useModalParams } from '@/hooks/useModalParams';
+import type { XISwap } from '@/engine/startingXI';
+import { TutorialModal } from '@/components/shared/TutorialModal';
+import { useFirstVisitTutorial } from '@/hooks/useFirstVisitTutorial';
+import { STAT_KEYS, getStatLongName } from '@/utils/statLabels';
 
 function isLightColor(hex: string): boolean {
   const r = parseInt(hex.slice(1, 3), 16);

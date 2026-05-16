@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import type { AgingResult } from '../../engine/aging';
-import type { Player, PlayerStats } from '../../types/entities';
-import { STAT_KEYS, getStatLabel } from '../../utils/statLabels';
+import { useGameStore } from '@/store/gameStore';
+import type { AgingResult } from '@/engine/aging';
+import type { Player, PlayerStats } from '@/types/entities';
+import { STAT_KEYS, getStatLabel } from '@/utils/statLabels';
 
 type AgingSort = 'risers' | 'decliners' | 'age';
 
@@ -47,12 +47,9 @@ export function AgingReport({ agingResults }: AgingReportProps) {
       // statsSnapshotSeasonStart has pre-aging stats for surviving players
       const preStats = player.statsSnapshotSeasonStart;
       const statDeltas = {} as Record<keyof PlayerStats, number>;
-      let totalDelta = 0;
 
       for (const key of STAT_KEYS) {
-        const delta = player.stats[key] - preStats[key];
-        statDeltas[key] = delta;
-        totalDelta += Math.abs(delta);
+        statDeltas[key] = player.stats[key] - preStats[key];
       }
 
       // Find the overall delta from developed array

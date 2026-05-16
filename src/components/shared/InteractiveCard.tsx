@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { animated, useSpring, to } from '@react-spring/web';
-import type { Player } from '../../types/entities';
-import { getCardEffectTier } from '../../utils/cardTier';
+import type { Player } from '@/types/entities';
+import { getCardEffectTier } from '@/utils/cardTier';
 
 // ─── Tilt model ───
 // Fulcrum at the center of the card. Pointer position relative to card

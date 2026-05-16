@@ -11,8 +11,8 @@
  *   - All fees / values are in £M.
  */
 
-import type { Formation, Mentality } from '../engine/matchSim';
-import type { Position } from '../types/entities';
+import type { Formation, Mentality } from '@/engine/matchSim';
+import type { Position } from '@/types/entities';
 
 export const BALANCE = {
   match: {

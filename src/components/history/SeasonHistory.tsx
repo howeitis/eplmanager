@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { getTrophyImageUrl } from '../../data/assets';
-import type { SeasonHistory as SeasonHistoryType } from '../../types/entities';
-import { TutorialModal, useFirstVisitTutorial, type TutorialTab } from '../shared/TutorialModal';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { getTrophyImageUrl } from '@/data/assets';
+import type { SeasonHistory as SeasonHistoryType } from '@/types/entities';
+import { TutorialModal, type TutorialTab } from '@/components/shared/TutorialModal';
+import { useFirstVisitTutorial } from '@/hooks/useFirstVisitTutorial';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 

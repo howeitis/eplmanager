@@ -1,15 +1,15 @@
 import { useEffect, useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
-import { getChairman } from '../../data/chairmen';
-import { analyzeSquad } from '../../engine/squadAnalysis';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl } from '@/data/assets';
+import { getChairman } from '@/data/chairmen';
+import { analyzeSquad } from '@/engine/squadAnalysis';
 import {
   selectGreeting,
   describeGoal,
   describeBudget,
   classifyStanding,
-} from '../../engine/boardMeeting';
+} from '@/engine/boardMeeting';
 
 interface BoardMeetingProps {
   onContinue: () => void;

@@ -1,13 +1,13 @@
 import { useMemo, useEffect, useState } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { LeagueTable } from '../shared/LeagueTable';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { LeagueTable } from '@/components/shared/LeagueTable';
 import { AgingReport } from './AgingReport';
-import { Confetti } from '../shared/Confetti';
-import type { AgingResult } from '../../engine/aging';
-import type { LeagueTableRow, Player, Club, PlayingBackground } from '../../types/entities';
+import { Confetti } from '@/components/shared/Confetti';
+import type { AgingResult } from '@/engine/aging';
+import type { LeagueTableRow, Player, Club, PlayingBackground } from '@/types/entities';
 
-import { CLUB_MANAGERS, TIER_EXPECTED_POSITION } from '../../data/managers';
+import { CLUB_MANAGERS, TIER_EXPECTED_POSITION } from '@/data/managers';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 

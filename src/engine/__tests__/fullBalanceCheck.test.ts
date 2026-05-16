@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateAllSquads } from '../playerGen';
+import { generateAllSquads } from '@/engine/playerGen';
 import {
   generateFixtures,
   getMonthFixtures,
@@ -18,16 +18,16 @@ import {
   type Formation,
   type Mentality,
   type ClubFortune,
-} from '../matchSim';
-import { simulateFACup } from '../faCup';
-import { processLeagueAging, replenishSquad } from '../aging';
-import { simulateAITransferWindow, resetAcquiredFlags, refreshPlayerValue } from '../transfers';
+} from '@/engine/matchSim';
+import { simulateFACup } from '@/engine/faCup';
+import { processLeagueAging, replenishSquad } from '@/engine/aging';
+import { simulateAITransferWindow, resetAcquiredFlags, refreshPlayerValue } from '@/engine/transfers';
 import {
   calculateSeasonEndBudget,
-} from '../reputation';
-import { CLUBS } from '../../data/clubs';
-import { SeededRNG, seasonSeed as deriveSeasonSeed } from '../../utils/rng';
-import type { Club, LeagueTableRow } from '../../types/entities';
+} from '@/engine/reputation';
+import { CLUBS } from '@/data/clubs';
+import { SeededRNG, seasonSeed as deriveSeasonSeed } from '@/utils/rng';
+import type { Club, LeagueTableRow } from '@/types/entities';
 
 /**
  * Task 6.1: Full 100-Season Balance Pass
@@ -212,7 +212,7 @@ describe('100-Season FULL Balance Pass (Task 6.1)', () => {
 
     // ─── Persistent state across seasons ───
     let clubs = buildInitialClubs(gameSeed);
-    let budgets: Record<string, number> = {};
+    const budgets: Record<string, number> = {};
     for (const c of CLUBS) {
       budgets[c.id] = c.budget;
     }

@@ -8,9 +8,9 @@ import type {
   GamePhase,
   StartingXIMap,
   PlayingBackground,
-} from '../types/entities';
-import { SeededRNG } from '../utils/rng';
-import { matchSeed } from '../utils/rng';
+} from '@/types/entities';
+import { SeededRNG } from '@/utils/rng';
+import { matchSeed } from '@/utils/rng';
 import { generatePlayer } from './playerGen';
 import {
   autoSelectXI,
@@ -19,7 +19,7 @@ import {
   calculateSquadDepthBonus,
 } from './startingXI';
 import { getBackgroundEffects } from './managerBackground';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '@/data/balance';
 
 // ─── Formation & Mentality Types ───
 

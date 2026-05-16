@@ -1,4 +1,4 @@
-import { useGameStore } from '../../store/gameStore';
+import { useGameStore } from '@/store/gameStore';
 
 export type NavTab = 'hub' | 'squad' | 'transfers' | 'history' | 'manager';
 

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { useModalParams } from '../../hooks/useModalParams';
-import type { Player } from '../../types/entities';
+import { useGameStore } from '@/store/gameStore';
+import { useModalParams } from '@/hooks/useModalParams';
+import type { Player } from '@/types/entities';
 
 interface ScorerRow {
   player: Player;

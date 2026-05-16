@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import type { PlayingBackground, ManagerPhilosophy } from '../../types/entities';
-import { getManagerFaceUri } from '../../utils/avatarFace';
-import { createRNG } from '../../utils/rng';
+import type { PlayingBackground, ManagerPhilosophy } from '@/types/entities';
+import { getManagerFaceUri } from '@/utils/avatarFace';
+import { createRNG } from '@/utils/rng';
 
 const NATIONALITIES = [
   'American', 'Argentine', 'Australian', 'Belgian', 'Brazilian',

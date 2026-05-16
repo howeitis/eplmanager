@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import type { Player, Club, MarketListing } from '../../types/entities';
-import { useGameStore } from '../../store/gameStore';
-import { useModalParams } from '../../hooks/useModalParams';
-import { RetroPlayerCard } from '../shared/RetroPlayerCard';
+import type { Player, Club, MarketListing } from '@/types/entities';
+import { useGameStore } from '@/store/gameStore';
+import { useModalParams } from '@/hooks/useModalParams';
+import { RetroPlayerCard } from '@/components/shared/RetroPlayerCard';
 
 const ARCHETYPE_STYLES: Record<string, { label: string; bg: string; text: string; border: string }> = {
   star: { label: 'Star', bg: 'plm-bg-amber-50', text: 'plm-text-amber-700', border: 'plm-border-amber-200' },

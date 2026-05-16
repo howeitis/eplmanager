@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import type { Player, Club, Position } from '../../types/entities';
-import { getContinentSalePrice, canSellToContinent, refreshPlayerValue } from '../../engine/transfers';
-import { useModalParams } from '../../hooks/useModalParams';
-import { useGameStore } from '../../store/gameStore';
-import { getClubLogoUrl } from '../../data/assets';
-import { ShortlistStar } from '../shared/ShortlistStar';
+import type { Player, Club, Position } from '@/types/entities';
+import { getContinentSalePrice, canSellToContinent, refreshPlayerValue } from '@/engine/transfers';
+import { useModalParams } from '@/hooks/useModalParams';
+import { useGameStore } from '@/store/gameStore';
+import { getClubLogoUrl } from '@/data/assets';
+import { ShortlistStar } from '@/components/shared/ShortlistStar';
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 type SortKey = 'position' | 'overall' | 'age' | 'form';

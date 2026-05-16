@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeSquad, getTierMedian, computeTierPositionMedian } from '../squadAnalysis';
-import { generateAllSquads } from '../playerGen';
-import { CLUBS } from '../../data/clubs';
-import type { Club, Player, Position } from '../../types/entities';
+import { analyzeSquad, getTierMedian, computeTierPositionMedian } from '@/engine/squadAnalysis';
+import { generateAllSquads } from '@/engine/playerGen';
+import { CLUBS } from '@/data/clubs';
+import type { Club, Player, Position } from '@/types/entities';
 
 // ─── Helpers ───
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createRNG, seasonSeed, matchSeed, transferSeed } from '../../utils/rng';
+import { createRNG, seasonSeed, matchSeed, transferSeed } from '@/utils/rng';
 
 describe('SeededRNG', () => {
   it('produces identical sequences with the same seed', () => {

@@ -1,4 +1,4 @@
-import type { Player } from '../types/entities';
+import type { Player } from '@/types/entities';
 
 // Effect tier drives which overlay layers an InteractiveCard renders on top of
 // a player card. The thresholds mirror the visual tiers already used by

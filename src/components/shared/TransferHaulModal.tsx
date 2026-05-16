@@ -1,7 +1,7 @@
 import { useRef } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { useModalDismiss } from '../../hooks/useModalDismiss';
-import type { TransferRecord } from '../../types/entities';
+import { useGameStore } from '@/store/gameStore';
+import { useModalDismiss } from '@/hooks/useModalDismiss';
+import type { TransferRecord } from '@/types/entities';
 
 interface TransferHaulModalProps {
   transfers: TransferRecord[];

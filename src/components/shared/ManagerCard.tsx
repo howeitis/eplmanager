@@ -1,6 +1,6 @@
-import type { ManagerProfile } from '../../types/entities';
-import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '../../data/assets';
-import { getManagerFaceUri } from '../../utils/avatarFace';
+import type { ManagerProfile } from '@/types/entities';
+import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl } from '@/data/assets';
+import { getManagerFaceUri } from '@/utils/avatarFace';
 import {
   cardTierFromManagerReputation,
   getTierAccentColor,
@@ -8,7 +8,7 @@ import {
   getTierBgGradient,
   getTierFoilColor,
   isLightColor,
-} from '../../utils/tierColors';
+} from '@/utils/tierColors';
 
 const PHILOSOPHY_LABELS: Record<string, string> = {
   attacking: 'Attacking',

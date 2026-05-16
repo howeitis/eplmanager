@@ -1,4 +1,4 @@
-import type { ClubKit } from '../../types/entities';
+import type { ClubKit } from '@/types/entities';
 
 interface ShirtOverlayProps {
   kit: ClubKit;

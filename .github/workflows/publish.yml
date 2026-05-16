@@ -38,6 +38,8 @@ jobs:
       # npm install resolves the missing platform deps and proceeds.
       - run: npm install --no-audit --no-fund
 
+      - run: npm run lint
+
       - run: npm run typecheck
 
       - run: npm test

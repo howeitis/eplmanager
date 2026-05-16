@@ -1,13 +1,13 @@
 import type { StateCreator } from 'zustand';
-import type { GameState } from '../types/store';
-import type { LeagueTableRow, Player, Club, ClubData, GamePhase, StartingXIMap } from '../types/entities';
-import type { Formation } from '../engine/matchSim';
-import type { MonthlyXIRecord } from '../engine/startingXI';
+import type { GameState } from '@/types/store';
+import type { LeagueTableRow, Player, Club, ClubData, GamePhase, StartingXIMap } from '@/types/entities';
+import type { Formation } from '@/engine/matchSim';
+import type { MonthlyXIRecord } from '@/engine/startingXI';
 import {
   STARTING_REP_BY_TIER,
   recomputeClubReputations,
   tierFromReputation,
-} from '../engine/clubReputation';
+} from '@/engine/clubReputation';
 
 export interface TeamSlice {
   clubs: Club[];

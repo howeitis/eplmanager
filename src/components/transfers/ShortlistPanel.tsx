@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { useModalParams } from '../../hooks/useModalParams';
-import { refreshPlayerValue } from '../../engine/transfers';
-import { RetroPlayerCard } from '../shared/RetroPlayerCard';
-import type { Club, Player, Position } from '../../types/entities';
+import { useGameStore } from '@/store/gameStore';
+import { useModalParams } from '@/hooks/useModalParams';
+import { refreshPlayerValue } from '@/engine/transfers';
+import { RetroPlayerCard } from '@/components/shared/RetroPlayerCard';
+import type { Club, Player, Position } from '@/types/entities';
 
 type ShortlistStatus = 'at_club' | 'transferred' | 'signed' | 'retired';
 

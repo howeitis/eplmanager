@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { generateMonthlyEvents, generateTransferWindowEvents, type EventContext } from '../events';
-import { simulateFullSeason } from '../seasonSim';
-import { generateAllSquads } from '../playerGen';
-import { CLUBS } from '../../data/clubs';
-import { SeededRNG } from '../../utils/rng';
-import type { Club, GamePhase } from '../../types/entities';
+import { generateMonthlyEvents, generateTransferWindowEvents, type EventContext } from '@/engine/events';
+import { simulateFullSeason } from '@/engine/seasonSim';
+import { generateAllSquads } from '@/engine/playerGen';
+import { CLUBS } from '@/data/clubs';
+import { SeededRNG } from '@/utils/rng';
+import type { Club, GamePhase } from '@/types/entities';
 
 function buildClubs(seed: string): Club[] {
   const squads = generateAllSquads(seed, CLUBS);

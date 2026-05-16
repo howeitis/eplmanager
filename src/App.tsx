@@ -216,25 +216,25 @@ function App() {
           };
         }
 
-        const state = store.getState();
+        type StoreState = ReturnType<typeof store.getState>;
         store.setState({
-          clubs: migratedClubs as typeof state.clubs,
-          fixtures: data.fixtures as typeof state.fixtures,
-          leagueTable: data.leagueTable as typeof state.leagueTable,
+          clubs: migratedClubs as StoreState['clubs'],
+          fixtures: data.fixtures as StoreState['fixtures'],
+          leagueTable: data.leagueTable as StoreState['leagueTable'],
           budgets: data.budgets,
-          transferHistory: data.transferHistory as typeof state.transferHistory,
-          currentPhase: data.currentPhase as typeof state.currentPhase,
+          transferHistory: data.transferHistory as StoreState['transferHistory'],
+          currentPhase: data.currentPhase as StoreState['currentPhase'],
           seasonNumber: data.seasonNumber,
           gameSeed: data.gameSeed,
-          events: data.events as typeof state.events,
-          activeModifiers: data.activeModifiers as typeof state.activeModifiers,
+          events: data.events as StoreState['events'],
+          activeModifiers: data.activeModifiers as StoreState['activeModifiers'],
           manager: migratedManager,
-          boardExpectation: data.boardExpectation as typeof state.boardExpectation,
-          seasonHistories: data.seasonHistories as typeof state.seasonHistories,
+          boardExpectation: data.boardExpectation as StoreState['boardExpectation'],
+          seasonHistories: data.seasonHistories as StoreState['seasonHistories'],
           saveSlot: data.saveSlot,
           saveMetadata: data.saveMetadata,
           startingXI: data.startingXI || {},
-          startingXIHistory: (data.startingXIHistory || []) as typeof state.startingXIHistory,
+          startingXIHistory: (data.startingXIHistory || []) as StoreState['startingXIHistory'],
           captainId: (data as unknown as Record<string, unknown>).captainId as string | null || null,
           tempFillIns: [],
           transferOffers: [],
@@ -244,13 +244,13 @@ function App() {
           shortlistNotifications: [],
           boardMeetingPending: (data as unknown as Record<string, unknown>).boardMeetingPending as boolean || false,
           // New in v1.x — backfill from migratedClubs.tier so older saves work.
-          previousLeagueTable: (data.previousLeagueTable || []) as typeof state.previousLeagueTable,
+          previousLeagueTable: (data.previousLeagueTable || []) as StoreState['previousLeagueTable'],
           clubReputation: (() => {
             const saved = data.clubReputation;
             if (saved && Object.keys(saved).length > 0) return saved;
             // Older save without reputation: seed from each club's current tier.
             const seed: Record<string, number> = {};
-            for (const c of migratedClubs as typeof state.clubs) {
+            for (const c of migratedClubs as StoreState['clubs']) {
               seed[c.id] = STARTING_REP_BY_TIER[c.tier] ?? 50;
             }
             return seed;

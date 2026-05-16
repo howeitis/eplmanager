@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { generateSquad, generateAllSquads, calculateOverall } from '../playerGen';
-import { CLUBS } from '../../data/clubs';
-import { SeededRNG } from '../../utils/rng';
-import type { Position } from '../../types/entities';
+import { generateSquad, generateAllSquads, calculateOverall } from '@/engine/playerGen';
+import { CLUBS } from '@/data/clubs';
+import { SeededRNG } from '@/utils/rng';
+import type { Position } from '@/types/entities';
 
 describe('Player Generation', () => {
   it('generates a 16-player squad with correct position counts', () => {

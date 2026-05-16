@@ -5,9 +5,9 @@ import type {
   GamePhase,
   SeasonEvent,
   ActiveModifier,
-} from '../types/entities';
-import { SeededRNG } from '../utils/rng';
-import { seasonSeed as deriveSeasonSeed } from '../utils/rng';
+} from '@/types/entities';
+import { SeededRNG } from '@/utils/rng';
+import { seasonSeed as deriveSeasonSeed } from '@/utils/rng';
 import {
   type Formation,
   type Mentality,

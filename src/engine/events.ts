@@ -6,8 +6,8 @@ import type {
   ActiveModifier,
   EventCategory,
   Position,
-} from '../types/entities';
-import { SeededRNG } from '../utils/rng';
+} from '@/types/entities';
+import { SeededRNG } from '@/utils/rng';
 import { generatePlayer, calculateMarketValue } from './playerGen';
 
 // ─── Event Definition ───

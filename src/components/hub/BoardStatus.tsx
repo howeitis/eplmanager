@@ -1,4 +1,4 @@
-import { useGameStore } from '../../store/gameStore';
+import { useGameStore } from '@/store/gameStore';
 
 export function BoardStatus() {
   const boardExpectation = useGameStore((s) => s.boardExpectation);

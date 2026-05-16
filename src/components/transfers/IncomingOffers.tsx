@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import type { TransferOffer, Club } from '../../types/entities';
-import { useModalParams } from '../../hooks/useModalParams';
-import { getClubLogoUrl } from '../../data/assets';
+import type { TransferOffer, Club } from '@/types/entities';
+import { useModalParams } from '@/hooks/useModalParams';
+import { getClubLogoUrl } from '@/data/assets';
 
 interface IncomingOffersProps {
   offers: TransferOffer[];

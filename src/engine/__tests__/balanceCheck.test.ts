@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { generateAllSquads } from '../playerGen';
-import { simulateLightweightSeason, type LightweightSeasonResult } from '../seasonSim';
-import { simulateFACup } from '../faCup';
-import { type ClubFortune } from '../matchSim';
-import { CLUBS } from '../../data/clubs';
-import { SeededRNG } from '../../utils/rng';
-import { seasonSeed as deriveSeasonSeed } from '../../utils/rng';
-import type { Club } from '../../types/entities';
+import { generateAllSquads } from '@/engine/playerGen';
+import { simulateLightweightSeason, type LightweightSeasonResult } from '@/engine/seasonSim';
+import { simulateFACup } from '@/engine/faCup';
+import { type ClubFortune } from '@/engine/matchSim';
+import { CLUBS } from '@/data/clubs';
+import { SeededRNG } from '@/utils/rng';
+import { seasonSeed as deriveSeasonSeed } from '@/utils/rng';
+import type { Club } from '@/types/entities';
 
 function buildClubs(seed: string): Club[] {
   const squads = generateAllSquads(seed, CLUBS);

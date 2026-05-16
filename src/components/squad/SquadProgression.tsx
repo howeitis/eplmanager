@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import type { Player } from '../../types/entities';
-import { useModalParams } from '../../hooks/useModalParams';
+import { useGameStore } from '@/store/gameStore';
+import type { Player } from '@/types/entities';
+import { useModalParams } from '@/hooks/useModalParams';
 
 type ProgressionSort = 'form_trend' | 'goals';
 

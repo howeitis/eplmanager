@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { calculateAgingChanges, processClubAging, processLeagueAging } from '../aging';
-import { generateAllSquads } from '../playerGen';
-import { CLUBS } from '../../data/clubs';
-import { SeededRNG } from '../../utils/rng';
-import type { Club, Player } from '../../types/entities';
+import { calculateAgingChanges, processClubAging, processLeagueAging } from '@/engine/aging';
+import { generateAllSquads } from '@/engine/playerGen';
+import { CLUBS } from '@/data/clubs';
+import { SeededRNG } from '@/utils/rng';
+import type { Club, Player } from '@/types/entities';
 
 function buildClubs(seed: string): Club[] {
   const squads = generateAllSquads(seed, CLUBS);
@@ -211,7 +211,7 @@ describe('Aging System', () => {
   describe('10 Season Aging Integration', () => {
     it('evolves stats realistically over 10 seasons, maintains ~320 players', () => {
       const gameSeed = 'aging-10season-test';
-      let clubs = buildClubs(gameSeed);
+      const clubs = buildClubs(gameSeed);
 
       const initialPlayerCount = clubs.reduce((sum, c) => sum + c.roster.length, 0);
       expect(initialPlayerCount).toBe(320); // 20 teams × 16 players

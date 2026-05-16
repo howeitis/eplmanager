@@ -1,5 +1,5 @@
-import type { ChairmanPersonality } from '../data/chairmen';
-import type { BoardExpectation } from '../types/entities';
+import type { ChairmanPersonality } from '@/data/chairmen';
+import type { BoardExpectation } from '@/types/entities';
 
 // ─── Standing Classification ───
 

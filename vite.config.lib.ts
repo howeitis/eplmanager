@@ -14,13 +14,17 @@ import { resolve } from 'path';
  * Output: dist-lib/{lib.es.js, lib.cjs.js, style.css, *.d.ts}
  */
 export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   plugins: [
     react(),
     dts({
       include: ['src/lib.tsx', 'src/types/**/*', 'src/data/assets.ts'],
       // Emit a single index.d.ts at the package root so the `types` field
       // in package.json resolves with no extra `exports` plumbing.
-      rollupTypes: true,
+      // Renamed from `rollupTypes` in newer unplugin-dts.
+      bundleTypes: true,
       tsconfigPath: resolve(__dirname, 'tsconfig.app.json'),
     }),
   ],

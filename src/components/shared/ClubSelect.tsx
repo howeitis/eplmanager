@@ -1,6 +1,6 @@
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
-import type { ClubData } from '../../types/entities';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl } from '@/data/assets';
+import type { ClubData } from '@/types/entities';
 
 interface ClubSelectProps {
   onSelectClub: (club: ClubData) => void;

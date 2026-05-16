@@ -1,4 +1,4 @@
-import { getBrandLogoUrl, getHeroImageUrl } from '../../data/assets';
+import { getBrandLogoUrl, getHeroImageUrl } from '@/data/assets';
 
 interface TitleScreenProps {
   onStart: () => void;

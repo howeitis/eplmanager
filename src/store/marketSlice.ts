@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import type { GameState } from '../types/store';
-import type { TransferOffer, TransferRecord, MarketListing } from '../types/entities';
+import type { GameState } from '@/types/store';
+import type { TransferOffer, TransferRecord, MarketListing } from '@/types/entities';
 
 export interface FeaturedSlot {
   playerId: string;

@@ -1,11 +1,11 @@
 import { useMemo, useRef } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
-import { ScrollPipIndicator } from '../shared/ScrollPipIndicator';
-import { useNavigation } from '../../hooks/useNavigation';
-import { useModalParams } from '../../hooks/useModalParams';
-import type { Fixture, GamePhase, LeagueTableRow } from '../../types/entities';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl } from '@/data/assets';
+import { ScrollPipIndicator } from '@/components/shared/ScrollPipIndicator';
+import { useNavigation } from '@/hooks/useNavigation';
+import { useModalParams } from '@/hooks/useModalParams';
+import type { Fixture, GamePhase, LeagueTableRow } from '@/types/entities';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 

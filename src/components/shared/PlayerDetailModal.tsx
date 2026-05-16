@@ -1,21 +1,21 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { useModalParams, useModalBrowseList, navigateModalTo } from '../../hooks/useModalParams';
-import { useModalDismiss } from '../../hooks/useModalDismiss';
+import { useGameStore } from '@/store/gameStore';
+import { useModalParams, useModalBrowseList, navigateModalTo } from '@/hooks/useModalParams';
+import { useModalDismiss } from '@/hooks/useModalDismiss';
 import {
   refreshPlayerValue,
   evaluateOffer,
   checkPlayerRefusal,
-} from '../../engine/transfers';
-import { resetProgressionForTransfer } from '../../engine/playerGen';
-import { SeededRNG } from '../../utils/rng';
+} from '@/engine/transfers';
+import { resetProgressionForTransfer } from '@/engine/playerGen';
+import { SeededRNG } from '@/utils/rng';
 import { SigningCelebrationModal } from './SigningCelebrationModal';
 import type { SigningCelebrationData } from './SigningCelebrationModal';
 import { RetroPlayerCard } from './RetroPlayerCard';
 import { InteractiveCard } from './InteractiveCard';
-import type { Club, Player, TransferRecord } from '../../types/entities';
-import { getClubLogoUrl } from '../../data/assets';
-import { STAT_KEYS, getStatLabel, getStatLongName } from '../../utils/statLabels';
+import type { Club, Player, TransferRecord } from '@/types/entities';
+import { getClubLogoUrl } from '@/data/assets';
+import { STAT_KEYS, getStatLabel, getStatLongName } from '@/utils/statLabels';
 
 // Slot colors carry across positions — for GK the slot still represents the
 // same column of the underlying storage, just labelled differently.

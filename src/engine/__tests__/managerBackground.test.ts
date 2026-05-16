@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getBackgroundEffects } from '../managerBackground';
-import { SeededRNG } from '../../utils/rng';
+import { getBackgroundEffects } from '@/engine/managerBackground';
+import { SeededRNG } from '@/utils/rng';
 
 const dummyRng = () => new SeededRNG('mb-test');
 
