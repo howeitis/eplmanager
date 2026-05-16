@@ -4,8 +4,8 @@ import {
   reputationDelta,
   recomputeClubReputations,
   STARTING_REP_BY_TIER,
-} from '../clubReputation';
-import type { LeagueTableRow } from '../../types/entities';
+} from '@/engine/clubReputation';
+import type { LeagueTableRow } from '@/types/entities';
 
 function row(clubId: string, points: number, gd = 0, gf = 0): LeagueTableRow {
   return {

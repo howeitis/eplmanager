@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl } from '@/data/assets';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 

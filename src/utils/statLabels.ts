@@ -16,7 +16,7 @@
  *   SKL        |  POS  (Position)
  */
 
-import type { PlayerStats, Position } from '../types/entities';
+import type { PlayerStats, Position } from '@/types/entities';
 
 export type StatKey = keyof PlayerStats;
 

@@ -8,10 +8,10 @@ import type {
   MarketListing,
   ContinentLeague,
   ContinentSaleResult,
-} from '../types/entities';
-import { SeededRNG } from '../utils/rng';
+} from '@/types/entities';
+import { SeededRNG } from '@/utils/rng';
 import { generatePlayer, resetProgressionForTransfer } from './playerGen';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '@/data/balance';
 
 // --- Continent sale destinations ---
 
@@ -811,7 +811,7 @@ function simulateAIContinentImports(
 
 // --- Featured player selection ---
 
-import type { FeaturedSlot } from '../store/marketSlice';
+import type { FeaturedSlot } from '@/store/marketSlice';
 
 export interface FeaturedCandidate {
   playerId: string;

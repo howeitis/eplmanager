@@ -1,7 +1,7 @@
-import type { Player, Position, Club, ClubData } from '../types/entities';
-import { SeededRNG } from '../utils/rng';
+import type { Player, Position, Club, ClubData } from '@/types/entities';
+import { SeededRNG } from '@/utils/rng';
 import { generatePlayer, calculateOverall, calculateMarketValue } from './playerGen';
-import { BALANCE } from '../data/balance';
+import { BALANCE } from '@/data/balance';
 
 // ─── Age Bracket Definitions ───
 

@@ -3,10 +3,10 @@
  * No React imports. Operates on game state and returns results.
  */
 
-import type { Player, GamePhase } from '../types/entities';
+import type { Player, GamePhase } from '@/types/entities';
 import type { Formation } from './matchSim';
-import { getFormationSlots, checkPositionCompatibility } from '../data/formations';
-import type { FormationSlotDef } from '../data/formations';
+import { getFormationSlots, checkPositionCompatibility } from '@/data/formations';
+import type { FormationSlotDef } from '@/data/formations';
 
 // ─── Types ───
 

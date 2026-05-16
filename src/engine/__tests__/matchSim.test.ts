@@ -6,12 +6,12 @@ import {
   simulateMatch,
   sortTable,
   generateSeasonFortunes,
-} from '../matchSim';
-import { simulateFullSeason } from '../seasonSim';
-import { generateAllSquads } from '../playerGen';
-import { CLUBS } from '../../data/clubs';
-import { SeededRNG } from '../../utils/rng';
-import type { Club } from '../../types/entities';
+} from '@/engine/matchSim';
+import { simulateFullSeason } from '@/engine/seasonSim';
+import { generateAllSquads } from '@/engine/playerGen';
+import { CLUBS } from '@/data/clubs';
+import { SeededRNG } from '@/utils/rng';
+import type { Club } from '@/types/entities';
 
 function buildClubs(seed: string): Club[] {
   const squads = generateAllSquads(seed, CLUBS);

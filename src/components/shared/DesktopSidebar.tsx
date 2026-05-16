@@ -1,5 +1,5 @@
-import { useGameStore } from '../../store/gameStore';
-import { getClubLogoUrl } from '../../data/assets';
+import { useGameStore } from '@/store/gameStore';
+import { getClubLogoUrl } from '@/data/assets';
 import type { NavTab } from './BottomNav';
 
 interface DesktopSidebarProps {

@@ -1,4 +1,4 @@
-import type { Mentality } from '../../engine/matchSim';
+import type { Mentality } from '@/engine/matchSim';
 
 const MENTALITIES: { id: Mentality; label: string; description: string; atk: number; def: number }[] = [
   { id: 'defensive', label: 'Defensive', description: 'Sit deep, absorb pressure', atk: -3, def: 4 },

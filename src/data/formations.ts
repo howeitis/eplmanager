@@ -1,5 +1,5 @@
-import type { Position } from '../types/entities';
-import type { Formation } from '../engine/matchSim';
+import type { Position } from '@/types/entities';
+import type { Formation } from '@/engine/matchSim';
 
 /**
  * Each formation slot has a unique name, a primary position (for auto-population

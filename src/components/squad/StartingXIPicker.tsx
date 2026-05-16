@@ -10,15 +10,15 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import type { Player, Position } from '../../types/entities';
-import type { Formation } from '../../engine/matchSim';
+import { useGameStore } from '@/store/gameStore';
+import type { Player, Position } from '@/types/entities';
+import type { Formation } from '@/engine/matchSim';
 import {
   getFormationSlots,
   checkPositionCompatibility,
   type FormationSlotDef,
-} from '../../data/formations';
-import type { XISwap } from '../../engine/startingXI';
+} from '@/data/formations';
+import type { XISwap } from '@/engine/startingXI';
 
 // ─── Helper: find which slot a player occupies in the XI ───
 function findPlayerSlot(xi: Record<string, string>, playerId: string): string | null {

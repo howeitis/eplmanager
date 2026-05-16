@@ -1,4 +1,4 @@
-import type { ClubData } from '../types/entities';
+import type { ClubData } from '@/types/entities';
 
 export const CLUBS: ClubData[] = [
   // Tier 1 — Elite

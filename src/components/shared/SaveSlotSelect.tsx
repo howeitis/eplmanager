@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { GamePhase, SaveMetadata } from '../../types/entities';
-import { getAllSaveMetadata, deleteSave } from '../../utils/save';
-import { getManagerFaceUri } from '../../utils/avatarFace';
-import { getBrandLogoUrl, getHeroImageUrl } from '../../data/assets';
+import type { GamePhase, SaveMetadata } from '@/types/entities';
+import { getAllSaveMetadata, deleteSave } from '@/utils/save';
+import { getManagerFaceUri } from '@/utils/avatarFace';
+import { getBrandLogoUrl, getHeroImageUrl } from '@/data/assets';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
   summer_window: 'Summer Window',

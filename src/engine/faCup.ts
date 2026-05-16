@@ -1,5 +1,5 @@
-import type { Club, LeagueTableRow, MatchResult, PlayingBackground } from '../types/entities';
-import { SeededRNG } from '../utils/rng';
+import type { Club, LeagueTableRow, MatchResult, PlayingBackground } from '@/types/entities';
+import { SeededRNG } from '@/utils/rng';
 import {
   simulateMatch,
   selectAIFormation,

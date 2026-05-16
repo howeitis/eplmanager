@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl, getNationalTeamLogoUrl, getLeagueLogoUrl } from '../../data/assets';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl, getNationalTeamLogoUrl, getLeagueLogoUrl } from '@/data/assets';
 import { PhaseIndicator } from './PhaseIndicator';
 import { BoardStatus } from './BoardStatus';
 import { InFormScroller } from './InFormScroller';
 import { AroundTheLeague } from './AroundTheLeague';
-import { LeagueTable } from '../shared/LeagueTable';
-import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
-import type { NavTab } from '../shared/BottomNav';
+import { LeagueTable } from '@/components/shared/LeagueTable';
+import { TutorialModal } from '@/components/shared/TutorialModal';
+import { useFirstVisitTutorial } from '@/hooks/useFirstVisitTutorial';
+import type { NavTab } from '@/components/shared/BottomNav';
 
 interface GameHubProps {
   onNavigate: (tab: NavTab) => void;

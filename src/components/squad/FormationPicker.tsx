@@ -1,6 +1,6 @@
-import type { Formation } from '../../engine/matchSim';
-import type { Player } from '../../types/entities';
-import { useGameStore } from '../../store/gameStore';
+import type { Formation } from '@/engine/matchSim';
+import type { Player } from '@/types/entities';
+import { useGameStore } from '@/store/gameStore';
 
 const FORMATIONS: { id: Formation; label: string; description: string }[] = [
   { id: '4-4-2', label: '4-4-2', description: 'Balanced classic' },

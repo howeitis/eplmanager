@@ -1,4 +1,4 @@
-import type { Player, PlayerStats, Position, TransferRecord, Trait } from '../types/entities';
+import type { Player, PlayerStats, Position, TransferRecord, Trait } from '@/types/entities';
 
 /**
  * Procedural "Scout Summary" generator — a Mad Libs engine that

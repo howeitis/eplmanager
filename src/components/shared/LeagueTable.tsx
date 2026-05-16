@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
 import { ClubLink } from './ClubLink';
-import type { Fixture, LeagueTableRow } from '../../types/entities';
+import type { Fixture, LeagueTableRow } from '@/types/entities';
 
 interface LeagueTableProps {
   compact?: boolean;

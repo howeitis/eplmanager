@@ -1,8 +1,8 @@
 import { useMemo, useRef } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { useModalParams } from '../../hooks/useModalParams';
-import { RetroPlayerCard } from '../shared/RetroPlayerCard';
-import { ScrollPipIndicator } from '../shared/ScrollPipIndicator';
+import { useGameStore } from '@/store/gameStore';
+import { useModalParams } from '@/hooks/useModalParams';
+import { RetroPlayerCard } from '@/components/shared/RetroPlayerCard';
+import { ScrollPipIndicator } from '@/components/shared/ScrollPipIndicator';
 
 export function InFormScroller() {
   const manager = useGameStore((s) => s.manager);

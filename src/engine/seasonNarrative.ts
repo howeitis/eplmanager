@@ -1,4 +1,4 @@
-import type { SeededRNG } from '../utils/rng';
+import type { SeededRNG } from '@/utils/rng';
 
 /**
  * Pure narrative helpers for the July off-season "preseason" beat.

@@ -6,7 +6,7 @@ import {
   reshapeToEqualWeightedAverage,
   CURRENT_SCHEMA_VERSION,
   SaveCorruptedError,
-} from '../save';
+} from '@/utils/save';
 
 function makeValidSaveShape(overrides: Record<string, unknown> = {}) {
   return {

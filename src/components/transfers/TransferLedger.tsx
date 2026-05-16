@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { useModalParams } from '../../hooks/useModalParams';
-import type { TransferRecord, Club } from '../../types/entities';
+import { useGameStore } from '@/store/gameStore';
+import { useModalParams } from '@/hooks/useModalParams';
+import type { TransferRecord, Club } from '@/types/entities';
 
 type ScopeFilter = 'all' | 'my_club';
 type TimeFilter = 'current_window' | 'current_season' | 'all_time';

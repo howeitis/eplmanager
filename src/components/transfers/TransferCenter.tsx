@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { SeededRNG } from '../../utils/rng';
-import { seasonSeed, transferSeed } from '../../utils/rng';
+import { useGameStore } from '@/store/gameStore';
+import { SeededRNG } from '@/utils/rng';
+import { seasonSeed, transferSeed } from '@/utils/rng';
 import {
   evaluateOffer,
   checkPlayerRefusal,
@@ -11,17 +11,17 @@ import {
   simulateAITransferWindow,
   generateFeaturedSlots,
   refillFeaturedSlot,
-} from '../../engine/transfers';
-import { resetProgressionForTransfer } from '../../engine/playerGen';
-import { getBackgroundEffects } from '../../engine/managerBackground';
-import { CLUBS } from '../../data/clubs';
+} from '@/engine/transfers';
+import { resetProgressionForTransfer } from '@/engine/playerGen';
+import { getBackgroundEffects } from '@/engine/managerBackground';
+import { CLUBS } from '@/data/clubs';
 import type {
   Player,
   Club,
   TransferOffer,
   TransferRecord,
   MarketListing,
-} from '../../types/entities';
+} from '@/types/entities';
 import { FeaturedRow } from './FeaturedRow';
 import { SquadPanel } from './SquadPanel';
 import { IncomingOffers } from './IncomingOffers';
@@ -29,8 +29,9 @@ import { OutgoingOffers } from './OutgoingOffers';
 import { TransferTicker } from './TransferTicker';
 import { TransferLedger } from './TransferLedger';
 import { ShortlistPanel } from './ShortlistPanel';
-import { ScrollPipIndicator } from '../shared/ScrollPipIndicator';
-import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
+import { ScrollPipIndicator } from '@/components/shared/ScrollPipIndicator';
+import { TutorialModal } from '@/components/shared/TutorialModal';
+import { useFirstVisitTutorial } from '@/hooks/useFirstVisitTutorial';
 
 type TransferTab = 'market' | 'squad' | 'incoming' | 'outgoing' | 'ticker' | 'ledger' | 'shortlist';
 

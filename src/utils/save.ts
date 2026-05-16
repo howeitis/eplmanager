@@ -1,5 +1,5 @@
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
-import type { SaveMetadata } from '../types/entities';
+import type { SaveMetadata } from '@/types/entities';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SaveableState = Record<string, any>;
@@ -184,11 +184,11 @@ export function reshapeToEqualWeightedAverage(
  */
 export function validateSaveData(data: SaveData): void {
   if (!Array.isArray(data.clubs) || data.clubs.length !== 20) {
-    throw new SaveCorruptedError(`expected 20 clubs, got ${(data.clubs as unknown[])?.length ?? 0}`);
+    throw new SaveCorruptedError(`expected 20 clubs, got ${data.clubs?.length ?? 0}`);
   }
   if (!Array.isArray(data.fixtures) || data.fixtures.length !== 380) {
     throw new SaveCorruptedError(
-      `expected 380 fixtures, got ${(data.fixtures as unknown[])?.length ?? 0}`,
+      `expected 380 fixtures, got ${data.fixtures?.length ?? 0}`,
     );
   }
   if (!data.manager) {

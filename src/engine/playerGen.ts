@@ -1,6 +1,6 @@
-import type { Player, PlayerStats, Position, Trait, ClubData, NationalityWeight, ManagerPhilosophy } from '../types/entities';
-import { SeededRNG } from '../utils/rng';
-import { getNamePool } from '../data/namePool';
+import type { Player, PlayerStats, Position, Trait, ClubData, NationalityWeight, ManagerPhilosophy } from '@/types/entities';
+import { SeededRNG } from '@/utils/rng';
+import { getNamePool } from '@/data/namePool';
 
 // Position weight tables for overall rating calculation.
 //

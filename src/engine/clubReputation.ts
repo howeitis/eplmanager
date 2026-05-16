@@ -1,4 +1,4 @@
-import type { LeagueTableRow } from '../types/entities';
+import type { LeagueTableRow } from '@/types/entities';
 
 /**
  * Dynamic club reputation / tier mobility.

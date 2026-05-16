@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useLayoutEffect } from 'react';
-import type { Player, PlayerStats, TransferRecord } from '../../types/entities';
-import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl, getNationalTeamLogoUrl, getBrandLogoUrl, getAssetBasePath } from '../../data/assets';
-import { generateScoutSummaryParts } from '../../engine/scoutSummary';
-import { getStatLabel } from '../../utils/statLabels';
-import { getPlayerFaceUri } from '../../utils/avatarFace';
-import { CLUBS } from '../../data/clubs';
+import type { Player, PlayerStats, TransferRecord } from '@/types/entities';
+import { getNationalityFlagUrl, getNationalityLabel, getClubLogoUrl, getNationalTeamLogoUrl, getBrandLogoUrl, getAssetBasePath } from '@/data/assets';
+import { generateScoutSummaryParts } from '@/engine/scoutSummary';
+import { getStatLabel } from '@/utils/statLabels';
+import { getPlayerFaceUri } from '@/utils/avatarFace';
+import { CLUBS } from '@/data/clubs';
 import {
   cardTierFromOverall,
   getTierAccentColor,
@@ -12,7 +12,7 @@ import {
   getTierBgGradient,
   getTierFoilColor,
   isLightColor,
-} from '../../utils/tierColors';
+} from '@/utils/tierColors';
 import { ShirtOverlay } from './ShirtOverlay';
 
 const CLUB_BY_ID = new Map(CLUBS.map((c) => [c.id, c]));

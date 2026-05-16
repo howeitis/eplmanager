@@ -1,10 +1,10 @@
 import { useRef } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { useModalDismiss } from '../../hooks/useModalDismiss';
-import { isRival } from '../../engine/transfers';
+import { useGameStore } from '@/store/gameStore';
+import { useModalDismiss } from '@/hooks/useModalDismiss';
+import { isRival } from '@/engine/transfers';
 import { RetroPlayerCard } from './RetroPlayerCard';
 import { Confetti } from './Confetti';
-import type { Player, Club } from '../../types/entities';
+import type { Player, Club } from '@/types/entities';
 
 export interface SigningCelebrationData {
   player: Player;

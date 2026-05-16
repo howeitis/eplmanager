@@ -4,10 +4,10 @@ import {
   describeGoal,
   describeBudget,
   classifyStanding,
-} from '../boardMeeting';
-import { getChairman, CHAIRMEN } from '../../data/chairmen';
-import type { ChairmanPersonality } from '../../data/chairmen';
-import { CLUBS } from '../../data/clubs';
+} from '@/engine/boardMeeting';
+import { getChairman, CHAIRMEN } from '@/data/chairmen';
+import type { ChairmanPersonality } from '@/data/chairmen';
+import { CLUBS } from '@/data/clubs';
 
 describe('Board Meeting Engine', () => {
   describe('classifyStanding', () => {

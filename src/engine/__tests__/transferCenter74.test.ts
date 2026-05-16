@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SeededRNG, seasonSeed } from '../../utils/rng';
-import { CLUBS } from '../../data/clubs';
-import { generateAllSquads } from '../playerGen';
+import { SeededRNG, seasonSeed } from '@/utils/rng';
+import { CLUBS } from '@/data/clubs';
+import { generateAllSquads } from '@/engine/playerGen';
 import {
   generateMarketListings,
   generateFeaturedSlots,
   refillFeaturedSlot,
-} from '../transfers';
-import type { FeaturedSlot } from '../../store/marketSlice';
-import type { Club, MarketListing } from '../../types/entities';
+} from '@/engine/transfers';
+import type { FeaturedSlot } from '@/store/marketSlice';
+import type { Club, MarketListing } from '@/types/entities';
 
 const GAME_SEED = 'test-74-seed-featured';
 
@@ -188,7 +188,7 @@ describe('Featured Player Rotation', () => {
 describe('TransferRecord playerAge', () => {
   it('TransferRecord fields include playerAge', () => {
     // Type check: this compiles if playerAge is in the interface
-    const record: import('../../types/entities').TransferRecord = {
+    const record: import('@/types/entities').TransferRecord = {
       playerId: 'test',
       playerName: 'Test Player',
       playerPosition: 'ST',
@@ -208,7 +208,7 @@ describe('TransferRecord playerAge', () => {
 
 describe('Offer Expiry', () => {
   it('TransferOffer includes playerAge field', () => {
-    const offer: import('../../types/entities').TransferOffer = {
+    const offer: import('@/types/entities').TransferOffer = {
       id: 'test-offer',
       playerId: 'p1',
       playerName: 'Test',

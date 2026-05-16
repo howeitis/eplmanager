@@ -8,12 +8,12 @@ import {
   getReputationTSSBonus,
   getReputationRefusalModifier,
   isGameOver,
-} from '../reputation';
-import { generateAllSquads } from '../playerGen';
-import { generateTempFillIn, getAvailableSquad, healInjuries } from '../matchSim';
-import { CLUBS } from '../../data/clubs';
-import { SeededRNG } from '../../utils/rng';
-import type { Club } from '../../types/entities';
+} from '@/engine/reputation';
+import { generateAllSquads } from '@/engine/playerGen';
+import { generateTempFillIn, getAvailableSquad, healInjuries } from '@/engine/matchSim';
+import { CLUBS } from '@/data/clubs';
+import { SeededRNG } from '@/utils/rng';
+import type { Club } from '@/types/entities';
 
 function buildClubs(seed: string): Club[] {
   const squads = generateAllSquads(seed, CLUBS);

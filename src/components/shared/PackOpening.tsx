@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { RetroPlayerCard } from './RetroPlayerCard';
-import { getClubLogoUrl } from '../../data/assets';
-import type { Player } from '../../types/entities';
+import { getClubLogoUrl } from '@/data/assets';
+import type { Player } from '@/types/entities';
 
 interface PackOpeningProps {
   players: Player[];

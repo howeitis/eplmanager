@@ -1,5 +1,5 @@
-import type { TransferOffer, Club } from '../../types/entities';
-import { getClubLogoUrl } from '../../data/assets';
+import type { TransferOffer, Club } from '@/types/entities';
+import { getClubLogoUrl } from '@/data/assets';
 
 interface OutgoingOffersProps {
   offers: TransferOffer[];

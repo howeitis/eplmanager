@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { useModalParams } from '../../hooks/useModalParams';
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
-import type { Player, Position } from '../../types/entities';
-import { ShortlistStar } from '../shared/ShortlistStar';
-import { STAT_KEYS, getStatLongName } from '../../utils/statLabels';
+import { useGameStore } from '@/store/gameStore';
+import { useModalParams } from '@/hooks/useModalParams';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl } from '@/data/assets';
+import type { Player, Position } from '@/types/entities';
+import { ShortlistStar } from '@/components/shared/ShortlistStar';
+import { STAT_KEYS, getStatLongName } from '@/utils/statLabels';
 
 const POSITION_ORDER: Position[] = ['GK', 'CB', 'FB', 'MF', 'WG', 'ST'];
 type SortKey = 'position' | 'overall' | 'age' | 'form';

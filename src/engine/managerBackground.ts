@@ -1,5 +1,5 @@
-import type { PlayingBackground } from '../types/entities';
-import type { SeededRNG } from '../utils/rng';
+import type { PlayingBackground } from '@/types/entities';
+import type { SeededRNG } from '@/utils/rng';
 
 export interface BackgroundEffects {
   matchTSSPct: (ctx: { isRival: boolean; sameTier: boolean; rng: SeededRNG }) => number;

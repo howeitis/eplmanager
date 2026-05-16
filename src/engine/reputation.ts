@@ -1,4 +1,4 @@
-import type { BoardExpectationTier } from '../types/entities';
+import type { BoardExpectationTier } from '@/types/entities';
 
 // ─── Starting Reputation by Tier ───
 

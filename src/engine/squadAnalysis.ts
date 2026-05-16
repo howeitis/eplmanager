@@ -1,4 +1,4 @@
-import type { Club, Player, Position, ManagerPhilosophy } from '../types/entities';
+import type { Club, Player, Position, ManagerPhilosophy } from '@/types/entities';
 
 // ─── Types ───
 

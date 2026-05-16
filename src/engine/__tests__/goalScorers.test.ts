@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { simulateFullSeason } from '../seasonSim';
-import { generateAllSquads } from '../playerGen';
-import { CLUBS } from '../../data/clubs';
-import type { Club } from '../../types/entities';
+import { simulateFullSeason } from '@/engine/seasonSim';
+import { generateAllSquads } from '@/engine/playerGen';
+import { CLUBS } from '@/data/clubs';
+import type { Club } from '@/types/entities';
 
 function buildClubs(seed: string): Club[] {
   const squads = generateAllSquads(seed, CLUBS);

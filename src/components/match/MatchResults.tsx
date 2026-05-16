@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
-import { LeagueTable } from '../shared/LeagueTable';
-import { ClubLink } from '../shared/ClubLink';
-import type { Club, MatchResult, Fixture, Player, SeasonEvent } from '../../types/entities';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl } from '@/data/assets';
+import { LeagueTable } from '@/components/shared/LeagueTable';
+import { ClubLink } from '@/components/shared/ClubLink';
+import type { Club, MatchResult, Fixture, Player, SeasonEvent } from '@/types/entities';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 

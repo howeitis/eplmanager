@@ -5,8 +5,8 @@
  * The full end-of-season aging system remains unchanged.
  */
 
-import type { Player, Club } from '../types/entities';
-import { SeededRNG } from '../utils/rng';
+import type { Player, Club } from '@/types/entities';
+import { SeededRNG } from '@/utils/rng';
 import { calculateOverall, calculateMarketValue } from './playerGen';
 
 export interface MidSeasonAdjustment {

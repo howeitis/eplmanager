@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import type { GameState } from '../types/store';
-import type { Fixture, MatchResult, LeagueTableRow } from '../types/entities';
+import type { GameState } from '@/types/store';
+import type { Fixture, MatchResult, LeagueTableRow } from '@/types/entities';
 
 export interface MatchSlice {
   fixtures: Fixture[];

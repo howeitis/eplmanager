@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import type { GameState } from '../types/store';
-import type { GamePhase, SeasonEvent, ActiveModifier } from '../types/entities';
+import type { GameState } from '@/types/store';
+import type { GamePhase, SeasonEvent, ActiveModifier } from '@/types/entities';
 
 export interface SeasonSlice {
   currentPhase: GamePhase;

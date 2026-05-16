@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GameState } from '../types/store';
+import type { GameState } from '@/types/store';
 import { createTeamSlice } from './teamSlice';
 import { createMatchSlice } from './matchSlice';
 import { createMarketSlice } from './marketSlice';

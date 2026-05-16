@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
-import { useGameStore } from '../../store/gameStore';
-import { CLUBS } from '../../data/clubs';
-import { getClubLogoUrl } from '../../data/assets';
-import { ManagerCard } from '../shared/ManagerCard';
-import { getManagerFaceUri } from '../../utils/avatarFace';
-import { saveGame } from '../../utils/save';
-import { isLightColor } from '../../utils/tierColors';
-import { TutorialModal, useFirstVisitTutorial } from '../shared/TutorialModal';
+import { useGameStore } from '@/store/gameStore';
+import { CLUBS } from '@/data/clubs';
+import { getClubLogoUrl } from '@/data/assets';
+import { ManagerCard } from '@/components/shared/ManagerCard';
+import { getManagerFaceUri } from '@/utils/avatarFace';
+import { saveGame } from '@/utils/save';
+import { isLightColor } from '@/utils/tierColors';
+import { TutorialModal } from '@/components/shared/TutorialModal';
+import { useFirstVisitTutorial } from '@/hooks/useFirstVisitTutorial';
 
 const ACCOMPLISHMENT_ICONS: Record<string, string> = {
   'league-title': '🏆',

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { SeededRNG } from '../../utils/rng';
-import { CLUBS } from '../../data/clubs';
-import { generateAllSquads } from '../playerGen';
+import { SeededRNG } from '@/utils/rng';
+import { CLUBS } from '@/data/clubs';
+import { generateAllSquads } from '@/engine/playerGen';
 import {
   calculateMarketValue,
   refreshPlayerValue,
@@ -15,8 +15,8 @@ import {
   generateMarketListings,
   simulateAITransferWindow,
   resetAcquiredFlags,
-} from '../transfers';
-import type { Club, Player, TransferRecord } from '../../types/entities';
+} from '@/engine/transfers';
+import type { Club, Player, TransferRecord } from '@/types/entities';
 
 const GAME_SEED = 'test-transfer-seed-42';
 
@@ -262,7 +262,7 @@ describe('Market Listings', () => {
 describe('AI Transfer Window Simulation', () => {
   it('simulates 10 windows without any club exceeding budget', () => {
     let clubs = setupClubs();
-    let budgets = setupBudgets();
+    const budgets = setupBudgets();
 
     const allTransfers: TransferRecord[] = [];
 
@@ -278,7 +278,7 @@ describe('AI Transfer Window Simulation', () => {
         budgets,
         'man-city', // Player club — excluded from AI actions
         seasonNumber,
-        windowType as 'summer' | 'january',
+        windowType,
       );
 
       allTransfers.push(...result.completedTransfers);
@@ -326,7 +326,7 @@ describe('AI Transfer Window Simulation', () => {
 
   it('rival-to-rival transfers are rare', () => {
     let clubs = setupClubs();
-    let budgets = setupBudgets();
+    const budgets = setupBudgets();
     let rivalTransfers = 0;
     let totalTransfers = 0;
 
@@ -336,7 +336,7 @@ describe('AI Transfer Window Simulation', () => {
       const rng = new SeededRNG(`rival-test-season-${seasonNumber}-${windowType}`);
 
       const result = simulateAITransferWindow(
-        rng, clubs, budgets, 'man-city', seasonNumber, windowType as 'summer' | 'january',
+        rng, clubs, budgets, 'man-city', seasonNumber, windowType,
       );
 
       for (const t of result.completedTransfers) {

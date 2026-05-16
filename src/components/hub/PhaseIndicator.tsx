@@ -1,4 +1,4 @@
-import type { GamePhase } from '../../types/entities';
+import type { GamePhase } from '@/types/entities';
 
 const PHASE_DISPLAY: Record<GamePhase, { label: string; month: string }> = {
   summer_window: { label: 'Summer Transfer Window', month: 'Pre-Season' },

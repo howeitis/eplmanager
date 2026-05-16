@@ -1,12 +1,12 @@
 import type { StateCreator } from 'zustand';
-import type { GameState } from '../types/store';
+import type { GameState } from '@/types/store';
 import type {
   ManagerProfile,
   ManagerAccomplishment,
   BoardExpectation,
   SeasonHistory,
   SaveMetadata,
-} from '../types/entities';
+} from '@/types/entities';
 
 export interface MetaSlice {
   manager: ManagerProfile | null;
