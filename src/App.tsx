@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import './index.css';
 import { SaveSlotSelect } from './components/shared/SaveSlotSelect';
 import { ClubSelect } from './components/shared/ClubSelect';
@@ -1467,11 +1467,17 @@ function App() {
   }, [store, fortunes]);
 
   // ─── Season-wrap pack chain ───
-  // Sequence: improved → TOTS → retirement memorial → youth → off-season.
-  // Each step inspects its own queue; if empty, it skips to the next.
-  // Implemented as a single ref-less closure so updating queue state between
-  // steps is unambiguous — each step clears its own queue before the next
-  // pack opens, so re-running this handler is idempotent.
+  // Auto-fires the moment the user lands on the SeasonEnd page (via the
+  // useEffect below). Sequence: improved → TOTS → retirement memorial →
+  // youth. The terminal step just dismisses the last pack — the user is
+  // then left on the SeasonEnd page to browse the standings, awards,
+  // aging report, and the Athletic interview at their own pace before
+  // clicking "Continue to Off-Season".
+  //
+  // Each step inspects its own queue; if empty, it skips to the next
+  // synchronously so seasons with no risers / no retirees / etc. flow
+  // through to whatever does have content (or terminate immediately if
+  // nothing does).
   const runSeasonEndPackChain = useCallback(() => {
     const state = store.getState();
     const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
@@ -1489,16 +1495,22 @@ function App() {
       clearStep();
     };
 
+    // Terminal step. No more packs to open — the chain just dismisses
+    // and leaves the user on the SeasonEnd page underneath. Advancing
+    // to the off-season is the user's deliberate click on the
+    // "Continue to Off-Season" button at the bottom of that page.
+    const finishChain = () => {};
+
     const startYouth = () => {
       if (youthIntakePlayers.length === 0) {
-        handleContinueToOffSeason();
+        finishChain();
         return;
       }
       openPack(
         {
           title: 'Youth Academy',
           subtitle: `${playerClub?.name || 'Club'} Graduates`,
-          onComplete: handleContinueToOffSeason,
+          onComplete: finishChain,
         },
         youthIntakePlayers,
         () => setYouthIntakePlayers([]),
@@ -1567,8 +1579,24 @@ function App() {
     startImproved();
   }, [
     store, improvedPlayers, totsPlayers, totsClubIds, retiringPlayers,
-    youthIntakePlayers, handleContinueToOffSeason,
+    youthIntakePlayers,
   ]);
+
+  // Auto-fire the pack chain when the user first lands on the SeasonEnd
+  // page. The ref gate ensures we don't refire on every re-render — only
+  // on the transition INTO season_end. When the user later leaves
+  // (Continue to Off-Season → board_meeting), the ref resets so the next
+  // season's entry triggers a fresh run.
+  const seasonEndPacksFiredRef = useRef(false);
+  useEffect(() => {
+    if (gameView !== 'season_end') {
+      seasonEndPacksFiredRef.current = false;
+      return;
+    }
+    if (seasonEndPacksFiredRef.current) return;
+    seasonEndPacksFiredRef.current = true;
+    runSeasonEndPackChain();
+  }, [gameView, runSeasonEndPackChain]);
 
   // ─── Navigation ───
 
@@ -1796,7 +1824,7 @@ function App() {
             )}
             {gameView === 'season_end' && (
               <SeasonEnd
-                onContinue={runSeasonEndPackChain}
+                onContinue={handleContinueToOffSeason}
                 faCupWinner={faCupWinner}
                 agingResults={agingResults}
               />
