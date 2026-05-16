@@ -315,7 +315,7 @@ export function RetroPlayerCard({
     return (
       <div
         ref={cardRef}
-        className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 plm-cursor-pointer plm-select-none`}
+        className={`${sizeClasses[size]} plm-relative plm-rounded-xl plm-overflow-hidden plm-shadow-lg plm-flex-shrink-0 ${!disableFlip ? 'plm-cursor-pointer' : ''} plm-select-none`}
         style={{
           // Unified premium navy back across all tiers — same design the
           // gold cards used, now applied to bronze and silver too.
@@ -324,11 +324,11 @@ export function RetroPlayerCard({
           border: `3px solid ${borderColor}`,
           animation: 'plm-card-flip 0.4s ease-out',
         }}
-        onClick={handleFlip}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFlip(); } }}
-        aria-label="Flip card back to front"
+        onClick={disableFlip ? undefined : handleFlip}
+        role={disableFlip ? undefined : 'button'}
+        tabIndex={disableFlip ? undefined : 0}
+        onKeyDown={disableFlip ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFlip(); } }}
+        aria-label={disableFlip ? undefined : 'Flip card back to front'}
       >
         {/* Decorative border */}
         <div
@@ -462,7 +462,7 @@ export function RetroPlayerCard({
       onMouseLeave={handleMouseLeave}
       onTouchMove={handleTouchMove}
       onTouchEnd={() => setGlarePos(null)}
-      onClick={handleFlip}
+      onClick={disableFlip ? undefined : handleFlip}
       role={disableFlip ? undefined : 'button'}
       tabIndex={disableFlip ? undefined : 0}
       onKeyDown={disableFlip ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFlip(); } }}
@@ -942,33 +942,30 @@ export function RetroPlayerCard({
       </div>
 
       {/* ─── RISER ↑ tier-up stamp ───
-          Used by the Risers pack at season wrap. Sits diagonally in the
-          upper-left and animates in with `plm-animate-stamp-in` so the
-          card feels like it just got rubber-stamped with a promotion.
-          A circular gold glow pulses behind it via `plm-animate-tier-pulse`,
-          and a quick fade-in outer border completes the celebration.
-          Rendered above the form-glow / cosmic layers via z-[19]. */}
+          Used by the Risers pack at season wrap. A compact pill that tucks
+          under the OVR/POS in the upper-left so the player can still read
+          their new overall. Animates in with `plm-animate-stamp-in`, and a
+          gold halo pulses behind the card via `plm-animate-tier-pulse`. */}
       {tierUp && (
         <>
           <div
             className="plm-absolute plm-z-[19] plm-pointer-events-none plm-animate-stamp-in"
             style={{
-              top: size === 'xl' ? 28 : size === 'lg' ? 22 : 16,
-              left: size === 'xl' ? -38 : size === 'lg' ? -30 : -22,
-              transform: 'rotate(-22deg)',
-              transformOrigin: 'center',
+              top: size === 'xl' ? 74 : size === 'lg' ? 58 : size === 'md' ? 48 : 38,
+              left: size === 'xl' ? 10 : size === 'lg' ? 8 : 6,
               background:
                 'linear-gradient(135deg, #16A34A 0%, #065F46 50%, #16A34A 100%)',
               color: '#FEF3C7',
-              padding: size === 'xl' ? '6px 56px' : size === 'lg' ? '5px 44px' : '3px 32px',
+              padding: size === 'xl' ? '2px 8px' : size === 'lg' ? '2px 7px' : '1.5px 6px',
               fontFamily: 'Playfair Display, serif',
-              fontSize: size === 'xl' ? 15 : size === 'lg' ? 13 : 11,
+              fontSize: size === 'xl' ? 10 : size === 'lg' ? 9 : 8,
               fontWeight: 900,
-              letterSpacing: '0.20em',
+              letterSpacing: '0.14em',
+              borderRadius: 3,
               boxShadow:
-                '0 4px 10px rgba(0,0,0,0.45), 0 0 18px rgba(34,197,94,0.55), inset 0 1px 0 rgba(254,243,199,0.55), inset 0 -1px 0 rgba(0,0,0,0.35)',
-              borderTop: '1px solid rgba(254,243,199,0.55)',
-              borderBottom: '1px solid rgba(0,0,0,0.45)',
+                '0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(34,197,94,0.55), inset 0 1px 0 rgba(254,243,199,0.45)',
+              borderTop: '1px solid rgba(254,243,199,0.45)',
+              borderBottom: '1px solid rgba(0,0,0,0.4)',
             }}
             aria-hidden="true"
           >
