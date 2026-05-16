@@ -77,15 +77,18 @@ export function InteractiveCard({
   });
 
   const handleTapFlip = useCallback(() => {
-    if (!cardBack || reducedMotion || exitingRef.current) return;
+    if (!cardBack || exitingRef.current) return;
     // Debounce: prevent double-fire within 400ms
     const now = performance.now();
     if (now - lastFlipTimeRef.current < 400) return;
     lastFlipTimeRef.current = now;
     setIsFlipped((prev) => {
       const next = !prev;
+      // Reduced-motion: jump straight to the target so the back face still
+      // becomes visible — just without the spring animation.
       api.start({
         flipY: next ? 180 : 0,
+        immediate: reducedMotion,
         config: { mass: 1, tension: 220, friction: 24 },
       });
       return next;
@@ -145,13 +148,15 @@ export function InteractiveCard({
   }, [reducedMotion, settleToNeutral]);
 
   // ─── Pointer tracking for tap detection + flip ───
+  // Tap detection runs even with reduced motion so the back face stays
+  // reachable — only the tilt/spring animation honors the OS preference.
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    if (reducedMotion || exitingRef.current) return;
+    if (exitingRef.current) return;
     tapStartRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
-  }, [reducedMotion]);
+  }, []);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (reducedMotion || exitingRef.current) return;
+    if (exitingRef.current) return;
     const start = tapStartRef.current;
     tapStartRef.current = null;
     if (start) {
@@ -163,7 +168,7 @@ export function InteractiveCard({
       }
     }
     // Settle tilt back to neutral when touch ends (mouse settles on leave).
-    if (e.pointerType === 'touch') {
+    if (e.pointerType === 'touch' && !reducedMotion) {
       settleToNeutral();
     }
   }, [reducedMotion, handleTapFlip, settleToNeutral]);
