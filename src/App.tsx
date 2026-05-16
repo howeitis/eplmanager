@@ -146,6 +146,7 @@ function App() {
   const [julyNarrative, setJulyNarrative] = useState<string | null>(null);
   const [julyWinnerNationality, setJulyWinnerNationality] = useState<string | null>(null);
   const [packPlayers, setPackPlayers] = useState<import('./types/entities').Player[]>([]);
+  const [packInstanceKey, setPackInstanceKey] = useState(0);
   const [packConfig, setPackConfig] = useState<{ title: string; subtitle?: string; clubOverride?: { name: string; colors: { primary: string; secondary: string }; clubId?: string }; perCardClubIds?: string[]; cardVariant?: 'normal' | 'retired'; onComplete?: () => void } | null>(null);
   const [youthIntakePlayers, setYouthIntakePlayers] = useState<import('./types/entities').Player[]>([]);
   // Season-wrap reveal queues. Computed during handleSeasonEnd, consumed in
@@ -1476,18 +1477,32 @@ function App() {
     const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
     const userColors = playerClub?.colors || { primary: '#1A1A1A', secondary: '#333' };
 
+    // Each step bumps packInstanceKey so React remounts PackOpening and the
+    // new pack plays its full intro → shake → burst → cards animation.
+    // If a queue is empty, the step calls the next one synchronously and
+    // the user never sees a pause — the chain skips cleanly to whatever
+    // does have content (or to off-season if nothing does).
+    const openPack = (cfg: NonNullable<typeof packConfig>, payload: import('./types/entities').Player[], clearStep: () => void) => {
+      setPackPlayers(payload);
+      setPackConfig(cfg);
+      setPackInstanceKey((k) => k + 1);
+      clearStep();
+    };
+
     const startYouth = () => {
       if (youthIntakePlayers.length === 0) {
         handleContinueToOffSeason();
         return;
       }
-      setPackPlayers(youthIntakePlayers);
-      setPackConfig({
-        title: 'Youth Academy',
-        subtitle: `${playerClub?.name || 'Club'} Graduates`,
-        onComplete: handleContinueToOffSeason,
-      });
-      setYouthIntakePlayers([]);
+      openPack(
+        {
+          title: 'Youth Academy',
+          subtitle: `${playerClub?.name || 'Club'} Graduates`,
+          onComplete: handleContinueToOffSeason,
+        },
+        youthIntakePlayers,
+        () => setYouthIntakePlayers([]),
+      );
     };
 
     const startRetirement = () => {
@@ -1495,14 +1510,16 @@ function App() {
         startYouth();
         return;
       }
-      setPackPlayers(retiringPlayers);
-      setPackConfig({
-        title: 'Hanging Up the Boots',
-        subtitle: 'Career farewells',
-        cardVariant: 'retired',
-        onComplete: startYouth,
-      });
-      setRetiringPlayers([]);
+      openPack(
+        {
+          title: 'Hanging Up the Boots',
+          subtitle: 'Career farewells',
+          cardVariant: 'retired',
+          onComplete: startYouth,
+        },
+        retiringPlayers,
+        () => setRetiringPlayers([]),
+      );
     };
 
     const startTots = () => {
@@ -1510,19 +1527,20 @@ function App() {
         startRetirement();
         return;
       }
-      setPackPlayers(totsPlayers);
-      setPackConfig({
-        title: 'Team of the Season',
-        subtitle: `Premier League XI · Season ${state.seasonNumber}`,
-        clubOverride: {
-          name: 'Premier League',
-          colors: { primary: '#FFD700', secondary: '#1A1A1A' },
+      openPack(
+        {
+          title: 'Team of the Season',
+          subtitle: `Premier League XI · Season ${state.seasonNumber}`,
+          clubOverride: {
+            name: 'Premier League',
+            colors: { primary: '#FFD700', secondary: '#1A1A1A' },
+          },
+          perCardClubIds: totsClubIds,
+          onComplete: startRetirement,
         },
-        perCardClubIds: totsClubIds,
-        onComplete: startRetirement,
-      });
-      setTotsPlayers([]);
-      setTotsClubIds([]);
+        totsPlayers,
+        () => { setTotsPlayers([]); setTotsClubIds([]); },
+      );
     };
 
     const startImproved = () => {
@@ -1530,18 +1548,20 @@ function App() {
         startTots();
         return;
       }
-      setPackPlayers(improvedPlayers);
-      setPackConfig({
-        title: 'Risers',
-        subtitle: 'Tier-ups this season',
-        clubOverride: {
-          name: playerClub?.name || 'Club',
-          colors: userColors,
-          clubId: playerClub?.id,
+      openPack(
+        {
+          title: 'Risers',
+          subtitle: 'Tier-ups this season',
+          clubOverride: {
+            name: playerClub?.name || 'Club',
+            colors: userColors,
+            clubId: playerClub?.id,
+          },
+          onComplete: startTots,
         },
-        onComplete: startTots,
-      });
-      setImprovedPlayers([]);
+        improvedPlayers,
+        () => setImprovedPlayers([]),
+      );
     };
 
     startImproved();
@@ -1789,7 +1809,13 @@ function App() {
         <Suspense fallback={null}>
           {playerModalOpen && <PlayerDetailModal />}
 
-          {/* Pack Opening overlay */}
+          {/* Pack Opening overlay. The `key` on packConfig.title forces a
+              full unmount/remount of PackOpening when the chain moves from
+              one pack to the next (Risers → TOTS → Retirement → Youth) —
+              that's what replays each pack's intro → shake → burst →
+              cards animation. Without the key, React would just swap
+              players[] in place and the user would see the second pack
+              start already in cards-revealed state. */}
           {packConfig && packPlayers.length > 0 && (() => {
             const state = store.getState();
             const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
@@ -1797,6 +1823,7 @@ function App() {
             const override = packConfig.clubOverride;
             return (
               <PackOpening
+                key={`pack-${packInstanceKey}`}
                 players={packPlayers}
                 clubName={override?.name ?? playerClub?.name ?? ''}
                 clubId={override?.clubId ?? playerClub?.id}

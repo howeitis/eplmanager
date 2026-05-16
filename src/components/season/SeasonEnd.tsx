@@ -333,12 +333,14 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
         </div>
       </div>
 
-      {/* Continue button */}
+      {/* Continue button — kicks off the season-wrap pack chain
+          (Risers → TOTS → Retirement → Youth Academy) before advancing
+          to the off-season / board meeting. */}
       <button
         onClick={onContinue}
         className="plm-w-full plm-py-3.5 plm-rounded-lg plm-font-body plm-font-semibold plm-text-sm plm-bg-charcoal plm-text-white hover:plm-bg-charcoal-light plm-transition-colors plm-min-h-[44px]"
       >
-        Continue to Off-Season
+        Process Season End
       </button>
     </div>
   );

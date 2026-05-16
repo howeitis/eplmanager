@@ -173,7 +173,7 @@ export function PackOpening({
 
   return (
     <div
-      className={`plm-fixed plm-inset-0 plm-z-[70] plm-flex plm-flex-col plm-items-center plm-justify-center plm-bg-charcoal/95 plm-animate-fade-in ${
+      className={`plm-fixed plm-inset-0 plm-z-[70] plm-flex plm-flex-col plm-items-center plm-justify-center plm-bg-charcoal plm-animate-fade-in ${
         showImpact ? 'plm-animate-screen-shake' : ''
       }`}
     >
@@ -344,8 +344,17 @@ export function PackOpening({
             {currentCardIndex + 1} / {players.length}
           </div>
 
-          {/* Active card */}
-          <div className="plm-flex plm-justify-center" key={currentCardIndex}>
+          {/* Active card — no key on currentCardIndex so React reuses the
+              same DOM node when paging between cards. That avoids the
+              unmount/remount cycle that previously caused a brief opacity-0
+              frame (plm-animate-card-flip starts invisible) and bled the
+              SeasonEnd page through the overlay as a white flash.
+              `animated` is wired to the *first reveal only* (revealedCards
+              size 1) so card 0 still gets its dramatic flip-in after the
+              pack burst; every subsequent next/prev navigation re-uses the
+              same DOM element with no className flip and no animation
+              restart. */}
+          <div className="plm-flex plm-justify-center">
             {(() => {
               const cardClubId = perCardClubIds?.[currentCardIndex] ?? clubId;
               const cardClub = cardClubId ? CLUB_BY_ID.get(cardClubId) : null;
@@ -358,7 +367,7 @@ export function PackOpening({
                   clubName={cardClubName}
                   clubColors={cardClubColors}
                   size="xl"
-                  animated={revealedCards.has(currentCardIndex)}
+                  animated={revealedCards.size === 1 && currentCardIndex === 0}
                   disableFlip
                   retired={cardVariant === 'retired'}
                 />
