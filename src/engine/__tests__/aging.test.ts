@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateAgingChanges, processClubAging, processLeagueAging } from '@/engine/aging';
+import { annualYouthIntake, calculateAgingChanges, generateRegen, processClubAging, processLeagueAging } from '@/engine/aging';
 import { generateAllSquads } from '@/engine/playerGen';
 import { CLUBS } from '@/data/clubs';
 import { SeededRNG } from '@/utils/rng';
@@ -205,6 +205,36 @@ describe('Aging System', () => {
           expect(p.seasonsAtClub).toBe(3);
         }
       }
+    });
+  });
+
+  describe('annualYouthIntake', () => {
+    it('produces players a few overall points below the regen baseline', () => {
+      const clubs = buildClubs('youth-vs-regen');
+      const refClub = clubs[0];
+
+      const youthOveralls: number[] = [];
+      const regenOveralls: number[] = [];
+
+      for (let i = 0; i < 200; i++) {
+        const youthRng = new SeededRNG(`youth-${i}`);
+        const ys = annualYouthIntake(youthRng, { ...refClub, roster: [] }, 1, 0, 0);
+        for (const p of ys) youthOveralls.push(p.overall);
+
+        const regenRng = new SeededRNG(`regen-${i}`);
+        const r = generateRegen(regenRng, 'MF', refClub, `regen-test-${i}`);
+        regenOveralls.push(r.overall);
+      }
+
+      const avgYouth = youthOveralls.reduce((a, b) => a + b, 0) / youthOveralls.length;
+      const avgRegen = regenOveralls.reduce((a, b) => a + b, 0) / regenOveralls.length;
+
+      // Youth intake should sit a few points below the regen baseline so the
+      // academy crop reads as prospects, not ready-made starters.
+      expect(avgYouth).toBeLessThan(avgRegen);
+      const gap = avgRegen - avgYouth;
+      expect(gap).toBeGreaterThan(1.5);
+      expect(gap).toBeLessThan(6);
     });
   });
 

@@ -170,7 +170,10 @@ const STAR_BOY_CHANCE_BY_TIER: Record<number, number> = {
 
 /**
  * Generate a replacement player (regen) for a retired player.
- * The regen is a young player at the same position with a rating based on the club's tier.
+ * The regen is a young player at the same position with a rating based on the
+ * club's tier. `youthBoost` is an additive overall offset — positive when an
+ * Academy-style event is active, negative when the caller wants a softer
+ * intake (see YOUTH_INTAKE_RATING_OFFSET).
  */
 export function generateRegen(
   rng: SeededRNG,
@@ -201,6 +204,15 @@ export function generateRegen(
 }
 
 /**
+ * Youth intake players land a few overall points below the regen baseline.
+ * Regens replace retirees one-for-one and need to roughly preserve squad
+ * rating; youth intake is *additive*, so without this penalty the 17–19yo
+ * academy crop drifted into ready-made first-team quality and crowded out
+ * the squad core. A modest negative offset keeps them feeling like prospects.
+ */
+const YOUTH_INTAKE_RATING_OFFSET = -4;
+
+/**
  * Annual youth intake: every club promotes at least one academy graduate per
  * season, plus one extra per retiring player (1 + retireCount). Guarantees
  * the youth pack at the start of each new season and scales with turnover.
@@ -219,7 +231,7 @@ export function annualYouthIntake(
   for (let i = 0; i < intakeCount; i++) {
     const pos = positions[rng.randomInt(0, positions.length - 1)];
     const regenId = `${club.id}-youth-s${seasonNumber}-${i}`;
-    const player = generateRegen(rng, pos, club, regenId);
+    const player = generateRegen(rng, pos, club, regenId, YOUTH_INTAKE_RATING_OFFSET);
     player.age = rng.randomInt(17, 19); // Academy graduates skew younger
     player.homegrown = true;
     newPlayers.push(player);

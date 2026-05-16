@@ -149,15 +149,11 @@ export function PlayerDetailModal() {
     }
   }, [isOpen]);
 
-  // Navigating to a different player remounts InteractiveCard via key={player.id},
-  // so its internal flip state resets to false. Mirror that here.
-  useEffect(() => {
-    setIsCardFlipped(false);
-  }, [playerId]);
-
   const handleFlipCard = useCallback(() => {
     cardHandleRef.current?.flip();
-    setIsCardFlipped((prev) => !prev);
+    // The button label is driven by `onFlipChange` below — no optimistic
+    // toggle here. Toggling locally would drift out of sync if the card's
+    // internal debounce swallowed the flip (e.g. rapid double-click).
   }, []);
 
   // The celebration modal manages its own dismiss plumbing when visible, so we
@@ -292,6 +288,7 @@ export function PlayerDetailModal() {
               onDismiss={closeModal}
               onNext={navigation.next ? handleNext : undefined}
               onPrev={navigation.prev ? handlePrev : undefined}
+              onFlipChange={setIsCardFlipped}
               cardBack={
                 <RetroPlayerCard
                   player={player}
