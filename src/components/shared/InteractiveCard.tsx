@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import { animated, useSpring, to } from '@react-spring/web';
 import type { Player } from '@/types/entities';
 import { getCardEffectTier } from '@/utils/cardTier';
@@ -25,6 +25,13 @@ export interface InteractiveCardProps {
   cardBack?: ReactNode;
 }
 
+/** Imperative API exposed via ref so a parent button can drive the flip
+ *  without relying on the card's own gesture handling. */
+export interface InteractiveCardHandle {
+  flip: () => void;
+  isFlipped: boolean;
+}
+
 function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined' || !window.matchMedia) return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -34,14 +41,14 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-export function InteractiveCard({
+export const InteractiveCard = forwardRef<InteractiveCardHandle, InteractiveCardProps>(function InteractiveCard({
   player,
   onNext: _onNext,
   onPrev: _onPrev,
   enterFrom = null,
   children,
   cardBack,
-}: InteractiveCardProps) {
+}, ref) {
   const tier = getCardEffectTier(player);
   const reducedMotion = useRef(prefersReducedMotion()).current;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -94,6 +101,18 @@ export function InteractiveCard({
       return next;
     });
   }, [cardBack, reducedMotion, api]);
+
+  // Imperative flip hook for a parent-rendered button. Bypasses the gesture
+  // path entirely so the back face is always reachable, even on browsers
+  // where pointer/tap events on the card don't behave predictably.
+  useImperativeHandle(
+    ref,
+    () => ({
+      flip: handleTapFlip,
+      isFlipped,
+    }),
+    [handleTapFlip, isFlipped],
+  );
 
   // Spring in from entry side on mount.
   useEffect(() => {
@@ -313,7 +332,7 @@ export function InteractiveCard({
       </animated.div>
     </div>
   );
-}
+});
 
 // ─── Overlay layers ───
 
