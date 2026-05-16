@@ -3,6 +3,6 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/((?!assets|national flags|National team logos|Premier League Clubs Logos|favicon\\.svg|icons\\.svg|epl_manager.*\\.(webp|jpg|png)|eplmanager.*\\.(webp|jpg|png)).*)", "destination": "/index.html" }
+    { "source": "/((?!assets|national flags|National team logos|Premier League Clubs Logos|favicon\\.svg|icons\\.svg|epl_manager.*\\.webp|eplmanager.*\\.png|eplmanager_og\\.jpg).*)", "destination": "/index.html" }
   ]
 }
