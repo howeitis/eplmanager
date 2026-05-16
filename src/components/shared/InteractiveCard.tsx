@@ -23,6 +23,11 @@ export interface InteractiveCardProps {
   enterFrom?: 'left' | 'right' | null;
   children: ReactNode;
   cardBack?: ReactNode;
+  /** Fires whenever the card's flipped state changes — lets a parent that
+   *  renders an external flip button keep its label in sync without having
+   *  to mirror the toggle locally (mirror state would drift if a click is
+   *  swallowed by the internal debounce). */
+  onFlipChange?: (isFlipped: boolean) => void;
 }
 
 /** Imperative API exposed via ref so a parent button can drive the flip
@@ -48,6 +53,7 @@ export const InteractiveCard = forwardRef<InteractiveCardHandle, InteractiveCard
   enterFrom = null,
   children,
   cardBack,
+  onFlipChange,
 }, ref) {
   const tier = getCardEffectTier(player);
   const reducedMotion = useRef(prefersReducedMotion()).current;
@@ -89,18 +95,24 @@ export const InteractiveCard = forwardRef<InteractiveCardHandle, InteractiveCard
     const now = performance.now();
     if (now - lastFlipTimeRef.current < 400) return;
     lastFlipTimeRef.current = now;
-    setIsFlipped((prev) => {
-      const next = !prev;
-      // Reduced-motion: jump straight to the target so the back face still
-      // becomes visible — just without the spring animation.
-      api.start({
-        flipY: next ? 180 : 0,
-        immediate: reducedMotion,
-        config: { mass: 1, tension: 220, friction: 24 },
-      });
-      return next;
+    setIsFlipped((prev) => !prev);
+  }, [cardBack]);
+
+  // Drive the spring animation off the committed isFlipped state rather than
+  // from inside the setIsFlipped updater. Putting `api.start()` inside a state
+  // updater is a side-effect-in-a-pure-function anti-pattern: React 19 +
+  // StrictMode (dev) invokes the updater twice, and the spring sees redundant
+  // start requests for the same target, which can leave the flip stuck or
+  // silently no-op. An effect tied to the committed state is reliable and
+  // also fires for navigation remounts (where isFlipped resets to false).
+  useEffect(() => {
+    api.start({
+      flipY: isFlipped ? 180 : 0,
+      immediate: reducedMotion,
+      config: { mass: 1, tension: 220, friction: 24 },
     });
-  }, [cardBack, reducedMotion, api]);
+    onFlipChange?.(isFlipped);
+  }, [isFlipped, api, reducedMotion, onFlipChange]);
 
   // Imperative flip hook for a parent-rendered button. Bypasses the gesture
   // path entirely so the back face is always reachable, even on browsers
