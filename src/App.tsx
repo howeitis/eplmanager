@@ -78,6 +78,7 @@ import { processMidSeasonAdjustments } from './engine/midSeasonAdjustments';
 import { generateMonthlyEvents } from './engine/events';
 import { simulateFACup } from './engine/faCup';
 import { processLeagueAging, replenishSquad, annualYouthIntake, type AgingResult } from './engine/aging';
+import { computeAgingModifiers } from './engine/modifierEffects';
 import { getCalendarYear, generateJulyNarrative } from './engine/seasonNarrative';
 import { validateTransferState } from './engine/transfers';
 import { STARTING_REP_BY_TIER } from './engine/clubReputation';
@@ -145,8 +146,15 @@ function App() {
   const [julyNarrative, setJulyNarrative] = useState<string | null>(null);
   const [julyWinnerNationality, setJulyWinnerNationality] = useState<string | null>(null);
   const [packPlayers, setPackPlayers] = useState<import('./types/entities').Player[]>([]);
-  const [packConfig, setPackConfig] = useState<{ title: string; subtitle?: string; onComplete?: () => void } | null>(null);
+  const [packConfig, setPackConfig] = useState<{ title: string; subtitle?: string; clubOverride?: { name: string; colors: { primary: string; secondary: string }; clubId?: string }; perCardClubIds?: string[]; cardVariant?: 'normal' | 'retired'; onComplete?: () => void } | null>(null);
   const [youthIntakePlayers, setYouthIntakePlayers] = useState<import('./types/entities').Player[]>([]);
+  // Season-wrap reveal queues. Computed during handleSeasonEnd, consumed in
+  // sequence (improved → TOTS → retirement → youth) from the SeasonEnd
+  // onContinue handler.
+  const [improvedPlayers, setImprovedPlayers] = useState<import('./types/entities').Player[]>([]);
+  const [retiringPlayers, setRetiringPlayers] = useState<import('./types/entities').Player[]>([]);
+  const [totsPlayers, setTotsPlayers] = useState<import('./types/entities').Player[]>([]);
+  const [totsClubIds, setTotsClubIds] = useState<string[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
   const store = useGameStore;
   const managerClubId = useGameStore((s) => s.manager?.clubId);
@@ -738,6 +746,11 @@ function App() {
         seasonSeed: sSeed,
         userClubId: playerClubId,
         userBackground: state.manager?.playingBackground,
+        // Active event modifiers (squad-morale, training-facility, etc.).
+        // simulateMatch filters by targetClubId, so passing the full list is
+        // safe — only effects targeting one of the two clubs in this match
+        // will actually fire.
+        activeModifiers: state.activeModifiers,
       });
 
       results.push(result);
@@ -803,6 +816,28 @@ function App() {
             goals: (Number.isFinite(freshPlayer.goals) ? freshPlayer.goals : 0) + delta,
           });
         }
+      }
+    }
+
+    // ─── Hat-trick stamps ───
+    // For every match, find players who scored 3+ goals in that single match
+    // and bump their cumulative `hatTricks` counter. Persists on the player so
+    // the card-back stamp survives across seasons.
+    for (const result of results) {
+      const perMatchByPlayer = new Map<string, { count: number; clubId: string }>();
+      for (const s of result.scorers) {
+        const clubId = s.isHome ? result.homeClubId : result.awayClubId;
+        const cur = perMatchByPlayer.get(s.playerId);
+        if (cur) cur.count++;
+        else perMatchByPlayer.set(s.playerId, { count: 1, clubId });
+      }
+      for (const [playerId, { count, clubId }] of perMatchByPlayer) {
+        if (count < 3) continue;
+        const freshClub = store.getState().clubs.find((c) => c.id === clubId);
+        const freshPlayer = freshClub?.roster.find((p) => p.id === playerId);
+        if (!freshPlayer) continue;
+        const current = typeof freshPlayer.hatTricks === 'number' ? freshPlayer.hatTricks : 0;
+        state.updatePlayer(clubId, playerId, { hatTricks: current + 1 });
       }
     }
     for (const [clubId, playerMap] of assistDeltas) {
@@ -1131,9 +1166,33 @@ function App() {
     // to climb a tier and 2–3 lean ones to fall.
     state.applyClubReputationsForSeason(sorted);
 
+    // Snapshot overalls BEFORE aging so we can detect tier-ups (events +
+    // aging-driven). Compared post-aging via cardTierFromOverall — see the
+    // "improved player pack" below.
+    const preAgingOverallByPlayer = new Map<string, { overall: number; age: number; clubId: string }>();
+    for (const club of clubs) {
+      for (const p of club.roster) {
+        if (p.isTemporary) continue;
+        preAgingOverallByPlayer.set(p.id, { overall: p.overall, age: p.age, clubId: club.id });
+      }
+    }
+
+    // Apply DEV_BONUS / YOUTH_BOOST event modifiers (training-facility,
+    // academy-overhaul, senior-mentoring narrative events) to the player's
+    // club aging pass. AI clubs use the unmodified curve.
+    const agingMods = computeAgingModifiers(state.activeModifiers, playerClubId);
+
     // Process aging
     const agingRng = new SeededRNG(`${sSeed}-aging`);
-    const agingResults_ = processLeagueAging(agingRng, clubs, seasonNumber);
+    const agingResults_ = processLeagueAging(
+      agingRng,
+      clubs,
+      seasonNumber,
+      new Set([playerClubId]),
+      agingMods.youthBoost,
+      new Set([playerClubId]),
+      agingMods.devBonus,
+    );
     setAgingResults(agingResults_);
     // Apply aging results to store
     for (const result of agingResults_) {
@@ -1234,6 +1293,96 @@ function App() {
     // surfaces only the youth prospects (sized 1 + retiring count).
     setYouthIntakePlayers(playerYouthIntake);
 
+    // ─── Season-wrap reveal queues ─────────────────────────────────────
+    // Built after aging completes; consumed sequentially from SeasonEnd's
+    // onContinue (improved → TOTS → retirement → youth → off-season).
+
+    // Improved players: detect tier-band upgrades on the user's roster
+    // (bronze < 75 ≤ silver < 80 ≤ gold < 85 ≤ elite). The future-star halo
+    // is intentionally ignored here — a 21yo silver future-star aging into
+    // a 22yo silver isn't a "downgrade" we want to penalise. We only
+    // celebrate genuine overall-band crossings.
+    const bandFor = (ovr: number): number => {
+      if (ovr >= 85) return 4; // elite
+      if (ovr >= 80) return 3; // gold
+      if (ovr >= 75) return 2; // silver
+      if (ovr >= 65) return 1; // bronze
+      return 0;
+    };
+    const improvedList: import('./types/entities').Player[] = [];
+    const postAgingUserClub = store.getState().clubs.find((c) => c.id === playerClubId);
+    if (postAgingUserClub) {
+      for (const p of postAgingUserClub.roster) {
+        if (p.isTemporary) continue;
+        const pre = preAgingOverallByPlayer.get(p.id);
+        if (!pre) continue;
+        if (bandFor(p.overall) > bandFor(pre.overall)) improvedList.push(p);
+      }
+    }
+    setImprovedPlayers(improvedList);
+
+    // Retirement memorial: every player from the user's club who hung up
+    // their boots this season (any tenure length — even one-season cameos
+    // get a farewell card).
+    const userAgingResult = agingResults_.find((r) => r.clubId === playerClubId);
+    const retirees: import('./types/entities').Player[] = userAgingResult
+      ? userAgingResult.retired.map((r) => r.player)
+      : [];
+    setRetiringPlayers(retirees);
+
+    // Team of the Season: one player per slot across the whole league using
+    // a 4-3-3 spine. Scores are position-specific weightings of goals,
+    // assists, clean sheets, overall, and form. Retired players are still
+    // eligible — their pre-aging snapshot retains the season's tallies.
+    const totsCandidates: { player: import('./types/entities').Player; clubId: string }[] = [];
+    for (const club of store.getState().clubs) {
+      for (const p of club.roster) {
+        if (p.isTemporary) continue;
+        totsCandidates.push({ player: p, clubId: club.id });
+      }
+    }
+    for (const r of agingResults_) {
+      for (const ret of r.retired) {
+        totsCandidates.push({ player: ret.player, clubId: r.clubId });
+      }
+    }
+
+    const scoreFor = (p: import('./types/entities').Player): number => {
+      const g = p.goals || 0, a = p.assists || 0, cs = p.cleanSheets || 0;
+      const f = p.form || 0, ovr = p.overall;
+      switch (p.position) {
+        case 'GK': return cs * 3 + ovr * 0.4 + f * 0.5;
+        case 'CB': return cs * 1.8 + ovr * 0.6 + f * 0.5 + g * 1.0;
+        case 'FB': return cs * 1.2 + ovr * 0.5 + a * 1.5 + f * 0.5 + g * 0.8;
+        case 'MF': return g * 1.5 + a * 2.0 + ovr * 0.5 + f * 0.5;
+        case 'WG': return g * 2.0 + a * 1.5 + ovr * 0.5 + f * 0.5;
+        case 'ST': return g * 2.5 + a * 1.0 + ovr * 0.4 + f * 0.5;
+      }
+    };
+
+    const pickTop = (pos: import('./types/entities').Position, n: number) => {
+      return totsCandidates
+        .filter((c) => c.player.position === pos)
+        .sort((a, b) => scoreFor(b.player) - scoreFor(a.player))
+        .slice(0, n);
+    };
+
+    // 4-3-3: 1 GK, 2 CB, 2 FB, 3 MF, 3 attackers (2 WG + 1 ST or 1 WG + 2 ST
+    // — pick by raw score from the WG+ST pool to honour the strongest trio).
+    const totsSlots: { player: import('./types/entities').Player; clubId: string }[] = [];
+    totsSlots.push(...pickTop('GK', 1));
+    totsSlots.push(...pickTop('CB', 2));
+    totsSlots.push(...pickTop('FB', 2));
+    totsSlots.push(...pickTop('MF', 3));
+    const attackerPool = totsCandidates
+      .filter((c) => c.player.position === 'WG' || c.player.position === 'ST')
+      .sort((a, b) => scoreFor(b.player) - scoreFor(a.player))
+      .slice(0, 3);
+    totsSlots.push(...attackerPool);
+
+    setTotsPlayers(totsSlots.map((s) => s.player));
+    setTotsClubIds(totsSlots.map((s) => s.clubId));
+
     // Auto-set captain: keep current if still in squad, otherwise pick best player
     const postAgingPlayerClub = store.getState().clubs.find((c) => c.id === playerClubId);
     if (postAgingPlayerClub) {
@@ -1315,6 +1464,91 @@ function App() {
     store.getState().setBoardMeetingPending(true);
     setGameView('board_meeting');
   }, [store, fortunes]);
+
+  // ─── Season-wrap pack chain ───
+  // Sequence: improved → TOTS → retirement memorial → youth → off-season.
+  // Each step inspects its own queue; if empty, it skips to the next.
+  // Implemented as a single ref-less closure so updating queue state between
+  // steps is unambiguous — each step clears its own queue before the next
+  // pack opens, so re-running this handler is idempotent.
+  const runSeasonEndPackChain = useCallback(() => {
+    const state = store.getState();
+    const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
+    const userColors = playerClub?.colors || { primary: '#1A1A1A', secondary: '#333' };
+
+    const startYouth = () => {
+      if (youthIntakePlayers.length === 0) {
+        handleContinueToOffSeason();
+        return;
+      }
+      setPackPlayers(youthIntakePlayers);
+      setPackConfig({
+        title: 'Youth Academy',
+        subtitle: `${playerClub?.name || 'Club'} Graduates`,
+        onComplete: handleContinueToOffSeason,
+      });
+      setYouthIntakePlayers([]);
+    };
+
+    const startRetirement = () => {
+      if (retiringPlayers.length === 0) {
+        startYouth();
+        return;
+      }
+      setPackPlayers(retiringPlayers);
+      setPackConfig({
+        title: 'Hanging Up the Boots',
+        subtitle: 'Career farewells',
+        cardVariant: 'retired',
+        onComplete: startYouth,
+      });
+      setRetiringPlayers([]);
+    };
+
+    const startTots = () => {
+      if (totsPlayers.length === 0) {
+        startRetirement();
+        return;
+      }
+      setPackPlayers(totsPlayers);
+      setPackConfig({
+        title: 'Team of the Season',
+        subtitle: `Premier League XI · Season ${state.seasonNumber}`,
+        clubOverride: {
+          name: 'Premier League',
+          colors: { primary: '#FFD700', secondary: '#1A1A1A' },
+        },
+        perCardClubIds: totsClubIds,
+        onComplete: startRetirement,
+      });
+      setTotsPlayers([]);
+      setTotsClubIds([]);
+    };
+
+    const startImproved = () => {
+      if (improvedPlayers.length === 0) {
+        startTots();
+        return;
+      }
+      setPackPlayers(improvedPlayers);
+      setPackConfig({
+        title: 'Risers',
+        subtitle: 'Tier-ups this season',
+        clubOverride: {
+          name: playerClub?.name || 'Club',
+          colors: userColors,
+          clubId: playerClub?.id,
+        },
+        onComplete: startTots,
+      });
+      setImprovedPlayers([]);
+    };
+
+    startImproved();
+  }, [
+    store, improvedPlayers, totsPlayers, totsClubIds, retiringPlayers,
+    youthIntakePlayers, handleContinueToOffSeason,
+  ]);
 
   // ─── Navigation ───
 
@@ -1542,22 +1776,7 @@ function App() {
             )}
             {gameView === 'season_end' && (
               <SeasonEnd
-                onContinue={() => {
-                  // If there are youth intake players, show youth pack first
-                  if (youthIntakePlayers.length > 0) {
-                    const state = store.getState();
-                    const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
-                    setPackPlayers(youthIntakePlayers);
-                    setPackConfig({
-                      title: 'Youth Academy',
-                      subtitle: `${playerClub?.name || 'Club'} Graduates`,
-                      onComplete: handleContinueToOffSeason,
-                    });
-                    setYouthIntakePlayers([]);
-                    return;
-                  }
-                  handleContinueToOffSeason();
-                }}
+                onContinue={runSeasonEndPackChain}
                 faCupWinner={faCupWinner}
                 agingResults={agingResults}
               />
@@ -1575,14 +1794,21 @@ function App() {
             const state = store.getState();
             const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
             const customOnComplete = packConfig.onComplete;
+            const override = packConfig.clubOverride;
             return (
               <PackOpening
                 players={packPlayers}
-                clubName={playerClub?.name || ''}
-                clubId={playerClub?.id}
-                clubColors={playerClub?.colors || { primary: '#1A1A1A', secondary: '#333' }}
+                clubName={override?.name ?? playerClub?.name ?? ''}
+                clubId={override?.clubId ?? playerClub?.id}
+                clubColors={
+                  override?.colors ??
+                  playerClub?.colors ??
+                  { primary: '#1A1A1A', secondary: '#333' }
+                }
                 packTitle={packConfig.title}
                 packSubtitle={packConfig.subtitle}
+                perCardClubIds={packConfig.perCardClubIds}
+                cardVariant={packConfig.cardVariant}
                 onComplete={() => {
                   setPackPlayers([]);
                   setPackConfig(null);

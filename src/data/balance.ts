@@ -37,10 +37,12 @@ export const BALANCE = {
   },
 
   injury: {
-    /** Per non-temp player, per month. */
-    base: 0.05,
-    fragile: 0.10,
-    durable: 0.02,
+    /** Per non-temp player, per month. 0.05 produced ~10 injuries/club/season
+     *  (≈40% squad churn). Real PL is ~2–3% monthly; 0.035 keeps drama
+     *  without making roster turnover the loudest signal of the season. */
+    base: 0.035,
+    fragile: 0.07,
+    durable: 0.014,
     /** GKs less prone — multiplier applied after trait selection. */
     gkMultiplier: 0.25,
     /**

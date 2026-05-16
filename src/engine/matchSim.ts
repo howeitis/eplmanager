@@ -8,6 +8,7 @@ import type {
   GamePhase,
   StartingXIMap,
   PlayingBackground,
+  ActiveModifier,
 } from '@/types/entities';
 import { SeededRNG } from '@/utils/rng';
 import { matchSeed } from '@/utils/rng';
@@ -20,6 +21,12 @@ import {
 } from './startingXI';
 import { getBackgroundEffects } from './managerBackground';
 import { BALANCE } from '@/data/balance';
+import {
+  computeTeamModifiers,
+  getEffectivePlayer,
+  EMPTY_TEAM_MODS,
+  type TeamModifiers,
+} from './modifierEffects';
 
 // ─── Formation & Mentality Types ───
 
@@ -294,6 +301,11 @@ export interface TSSConfig {
   // Additive fraction of the Starting XI base rating, applied once.
   // Used by manager-background match perks (former-pro, never-played).
   userTSSBoostPct?: number;
+  /** Squad-wide modifier bundle (TSS/TSS_HOME/TSS_UNDERDOG/DERBY_CHAOS/
+   *  FORMATION_DOUBLE/squadFormShift). Optional — defaults to no effect. */
+  teamModifiers?: TeamModifiers;
+  /** TSS of the opposing team (post-baseline) — used to gate TSS_UNDERDOG. */
+  opponentBaseRating?: number;
 }
 
 /**
@@ -347,22 +359,29 @@ export function calculateTSS(
   // Form from the Starting XI only
   const { avgForm } = calculateSquadRatings(startingXIPlayers);
 
-  // Formation modifier
+  const teamMods = config.teamModifiers ?? EMPTY_TEAM_MODS;
+
+  // Formation modifier — doubled by FORMATION_DOUBLE event modifier.
   const formMod = FORMATION_MODIFIERS[config.formation];
-  const formationBonus = (formMod.atk + formMod.def) / 2;
+  let formationBonus = (formMod.atk + formMod.def) / 2;
+  if (teamMods.formationDoubleActive) formationBonus *= 2;
 
   // Mentality modifier
   const mentMod = MENTALITY_MODIFIERS[config.mentality];
   const mentalityBonus = (mentMod.atk + mentMod.def) / 2;
 
-  // Home advantage
-  const homeBonus = config.isHome ? BALANCE.match.homeBonus : 0;
+  // Home advantage — TSS_HOME modifier piles onto the standard home bonus.
+  const homeBonus = config.isHome
+    ? BALANCE.match.homeBonus + (teamMods.tssHomeBonus || 0)
+    : 0;
 
-  // Form modifier (average of Starting XI form values, -5 to +5)
-  const formBonus = avgForm;
+  // Form modifier (average of Starting XI form values + squad-wide FORM shift)
+  const formBonus = avgForm + (teamMods.squadFormShift || 0);
 
-  // Derby chaos
-  const derbyBonus = isDerby ? rng.randomFloat(0, BALANCE.match.derbyBonusMax) : 0;
+  // Derby chaos — DERBY_CHAOS modifier widens the random range.
+  const derbyBonus = isDerby
+    ? rng.randomFloat(0, BALANCE.match.derbyBonusMax + (teamMods.derbyChaosBonus || 0))
+    : 0;
 
   // Fortune (season-long modifier)
   const fortuneBonus = config.fortune;
@@ -394,8 +413,18 @@ export function calculateTSS(
 
   const userBackgroundBonus = baseRating * (config.userTSSBoostPct ?? 0);
 
+  // Squad-wide event bonuses (TSS direct + underdog kicker when we trail
+  // the opponent's base XI rating, e.g. heavy-rain advantage).
+  const tssEventBonus = teamMods.tssBonus || 0;
+  const underdogBonus =
+    teamMods.tssUnderdogBonus && config.opponentBaseRating !== undefined &&
+    baseRating < config.opponentBaseRating
+      ? teamMods.tssUnderdogBonus
+      : 0;
+
   return baseRating + formationBonus + mentalityBonus + homeBonus +
-    formBonus + derbyBonus + fortuneBonus + repBonus + narrativeBonus + leaderBonus + preferredFormationBonus + captainBonus + userBackgroundBonus;
+    formBonus + derbyBonus + fortuneBonus + repBonus + narrativeBonus + leaderBonus +
+    preferredFormationBonus + captainBonus + userBackgroundBonus + tssEventBonus + underdogBonus;
 }
 
 /**
@@ -619,6 +648,73 @@ function assignAssisters(
   return assisters;
 }
 
+// ─── Man of the Match ───
+
+/**
+ * Pick the single best performer across both Starting XIs.
+ *
+ * Composite score:
+ *   - goals × 5, assists × 2.5
+ *   - GK on a clean sheet: +4; per goal conceded: −1 (floor at the contribution)
+ *   - CB/FB on a clean sheet: +1.5
+ *   - form × 0.5, (overall − 75) × 0.1
+ *   - winning team kicker +0.6
+ *   - small RNG jitter so ties don't always resolve in roster-iteration order
+ *
+ * Returns the playerId with the highest score, or undefined if no candidates
+ * exist (defensive — both XIs would have to be empty).
+ */
+function pickManOfTheMatch(
+  rng: SeededRNG,
+  homeXIPlayers: Player[],
+  awayXIPlayers: Player[],
+  homeGoals: number,
+  awayGoals: number,
+  scorers: { playerId: string; isHome: boolean }[],
+  assisters: { playerId: string; isHome: boolean }[],
+): string | undefined {
+  if (homeXIPlayers.length === 0 && awayXIPlayers.length === 0) return undefined;
+
+  const goalsBy = new Map<string, number>();
+  for (const s of scorers) goalsBy.set(s.playerId, (goalsBy.get(s.playerId) || 0) + 1);
+  const assistsBy = new Map<string, number>();
+  for (const a of assisters) assistsBy.set(a.playerId, (assistsBy.get(a.playerId) || 0) + 1);
+
+  const homeWon = homeGoals > awayGoals;
+  const awayWon = awayGoals > homeGoals;
+
+  let bestId: string | undefined;
+  let bestScore = -Infinity;
+
+  const scoreOne = (p: Player, isHome: boolean) => {
+    const g = goalsBy.get(p.id) || 0;
+    const a = assistsBy.get(p.id) || 0;
+    const conceded = isHome ? awayGoals : homeGoals;
+    let s = g * 5 + a * 2.5 + (p.form ?? 0) * 0.5 + (p.overall - 75) * 0.1;
+
+    if (p.position === 'GK') {
+      s += conceded === 0 ? 4 : -conceded;
+    } else if ((p.position === 'CB' || p.position === 'FB') && conceded === 0) {
+      s += 1.5;
+    }
+
+    if ((isHome && homeWon) || (!isHome && awayWon)) s += 0.6;
+    s += rng.randomFloat(-0.25, 0.25);
+    return s;
+  };
+
+  for (const p of homeXIPlayers) {
+    const s = scoreOne(p, true);
+    if (s > bestScore) { bestScore = s; bestId = p.id; }
+  }
+  for (const p of awayXIPlayers) {
+    const s = scoreOne(p, false);
+    if (s > bestScore) { bestScore = s; bestId = p.id; }
+  }
+
+  return bestId;
+}
+
 // ─── Form Update ───
 
 export function updatePlayerForm(rng: SeededRNG, player: Player): number {
@@ -661,6 +757,12 @@ export interface MatchContext {
   // headless tests and AI-only sims keep their existing call shape.
   userClubId?: string;
   userBackground?: PlayingBackground;
+  /**
+   * Active modifiers (from event engine) that should be applied to the
+   * player's club for this match. Filtered by targetClubId; club-wide and
+   * player-targeted effects both flow through here.
+   */
+  activeModifiers?: ActiveModifier[];
 }
 
 export function simulateMatch(
@@ -681,10 +783,35 @@ export function simulateMatch(
   const homeXI = context.homeStartingXI || autoSelectXI(context.homeFormation, homeSquad.available);
   const awayXI = context.awayStartingXI || autoSelectXI(context.awayFormation, awaySquad.available);
 
-  const homeXIPlayers = getStartingXIPlayers(homeXI, homeSquad.available);
-  const awayXIPlayers = getStartingXIPlayers(awayXI, awaySquad.available);
-  const homeBenchPlayers = getBenchPlayers(homeXI, homeSquad.available);
-  const awayBenchPlayers = getBenchPlayers(awayXI, awaySquad.available);
+  let homeXIPlayers = getStartingXIPlayers(homeXI, homeSquad.available);
+  let awayXIPlayers = getStartingXIPlayers(awayXI, awaySquad.available);
+  let homeBenchPlayers = getBenchPlayers(homeXI, homeSquad.available);
+  let awayBenchPlayers = getBenchPlayers(awayXI, awaySquad.available);
+
+  // Apply per-player event modifiers (effective stats/form/overall) — only
+  // for the club they target. AI-side clubs typically have no modifiers
+  // since events are scoped to the user's club.
+  if (context.activeModifiers && context.activeModifiers.length > 0) {
+    const mods = context.activeModifiers;
+    homeXIPlayers = homeXIPlayers.map((p) => getEffectivePlayer(p, mods, context.homeClub.id));
+    awayXIPlayers = awayXIPlayers.map((p) => getEffectivePlayer(p, mods, context.awayClub.id));
+    homeBenchPlayers = homeBenchPlayers.map((p) => getEffectivePlayer(p, mods, context.homeClub.id));
+    awayBenchPlayers = awayBenchPlayers.map((p) => getEffectivePlayer(p, mods, context.awayClub.id));
+  }
+
+  // Squad-wide modifier bundles (TSS_HOME/UNDERDOG/DERBY_CHAOS/FORMATION_DOUBLE…)
+  const homeTeamMods = computeTeamModifiers(context.activeModifiers, context.homeClub.id);
+  const awayTeamMods = computeTeamModifiers(context.activeModifiers, context.awayClub.id);
+
+  // Opponent base ratings — referenced by the TSS_UNDERDOG gate. We measure
+  // the bare XI average (no modifiers) on each side so the gate decision is
+  // symmetric and doesn't depend on which TSS pass runs first.
+  const homeBaseRating = homeXIPlayers.length > 0
+    ? homeXIPlayers.reduce((s, p) => s + p.overall, 0) / homeXIPlayers.length
+    : 50;
+  const awayBaseRating = awayXIPlayers.length > 0
+    ? awayXIPlayers.reduce((s, p) => s + p.overall, 0) / awayXIPlayers.length
+    : 50;
 
   // Manager-background match boost — applied only to the user's side.
   const sameTier = context.homeClub.tier === context.awayClub.tier;
@@ -710,6 +837,8 @@ export function simulateMatch(
       preferredFormation: context.homePreferredFormation,
       captainId: context.homeCaptainId,
       userTSSBoostPct: homeUserBoost,
+      teamModifiers: homeTeamMods,
+      opponentBaseRating: awayBaseRating,
     },
     isDerby,
     rng,
@@ -728,6 +857,8 @@ export function simulateMatch(
       preferredFormation: context.awayPreferredFormation,
       captainId: context.awayCaptainId,
       userTSSBoostPct: awayUserBoost,
+      teamModifiers: awayTeamMods,
+      opponentBaseRating: homeBaseRating,
     },
     isDerby,
     rng,
@@ -765,6 +896,13 @@ export function simulateMatch(
     awayScorers.map((s) => s.playerId),
   );
 
+  const allScorers = [...homeScorers, ...awayScorers];
+  const allAssisters = [...homeAssisters, ...awayAssisters];
+
+  const manOfTheMatchId = pickManOfTheMatch(
+    rng, homeXIPlayers, awayXIPlayers, homeGoals, awayGoals, allScorers, allAssisters,
+  );
+
   return {
     fixtureId: context.fixture.id,
     homeClubId: context.homeClub.id,
@@ -772,10 +910,11 @@ export function simulateMatch(
     homeGoals,
     awayGoals,
     isDerby,
-    scorers: [...homeScorers, ...awayScorers],
-    assisters: [...homeAssisters, ...awayAssisters],
+    scorers: allScorers,
+    assisters: allAssisters,
     homeStartingXI: homeXI,
     awayStartingXI: awayXI,
+    manOfTheMatchId,
   };
 }
 

@@ -112,6 +112,57 @@ describe('Match Simulation', () => {
     expect(result.awayClubId).toBe(awayClub.id);
   });
 
+  it('assigns a man of the match from the starting XI', () => {
+    const clubs = buildClubs('motm-test');
+    const result = simulateMatch({
+      homeClub: clubs[0], awayClub: clubs[19],
+      fixture: { id: 'motm-1', homeClubId: clubs[0].id, awayClubId: clubs[19].id, gameweek: 1, played: false, result: null },
+      homeFormation: '4-3-3', awayFormation: '4-4-2',
+      homeMentality: 'attacking', awayMentality: 'balanced',
+      homeFortune: 3, awayFortune: -2,
+      seasonSeed: 'motm-season',
+    });
+    expect(result.manOfTheMatchId).toBeTruthy();
+    const motmInHome = clubs[0].roster.some((p) => p.id === result.manOfTheMatchId);
+    const motmInAway = clubs[19].roster.some((p) => p.id === result.manOfTheMatchId);
+    // MotM must be on one of the two competing clubs' rosters (no temp fill-in stuck).
+    expect(motmInHome || motmInAway).toBe(true);
+  });
+
+  it('honours TSS-direct event modifiers on the player club', () => {
+    const clubs = buildClubs('mods-test');
+    const home = clubs[10];
+    const away = clubs[11];
+    const fixture = { id: 'mods-1', homeClubId: home.id, awayClubId: away.id, gameweek: 1, played: false, result: null };
+    const baseArgs = {
+      homeClub: home, awayClub: away, fixture,
+      homeFormation: '4-4-2' as const, awayFormation: '4-4-2' as const,
+      homeMentality: 'balanced' as const, awayMentality: 'balanced' as const,
+      homeFortune: 0, awayFortune: 0,
+      seasonSeed: 'mods-season',
+    };
+
+    const baseline = simulateMatch(baseArgs);
+    const boosted = simulateMatch({
+      ...baseArgs,
+      activeModifiers: [
+        { id: 'm1', description: 'Squad morale', effect: { TSS: 8 }, expiresAt: 'september', targetClubId: home.id },
+      ],
+    });
+
+    // Same RNG seed + same inputs: the +8 TSS event modifier should leave a
+    // fingerprint on the home result. We can't assert a strict goal delta
+    // (Poisson noise), but the simulations should produce divergent
+    // outcomes — either goals, or scorer composition, or MotM.
+    const divergedGoals = boosted.homeGoals !== baseline.homeGoals;
+    const divergedMotm = boosted.manOfTheMatchId !== baseline.manOfTheMatchId;
+    const divergedScorers =
+      boosted.scorers.map((s) => s.playerId).join('|') !==
+      baseline.scorers.map((s) => s.playerId).join('|');
+    expect(divergedGoals || divergedScorers || divergedMotm).toBe(true);
+    expect(typeof boosted.manOfTheMatchId).toBe('string');
+  });
+
   it('produces deterministic results with the same seed', () => {
     const clubs1 = buildClubs('determinism-match');
     const clubs2 = buildClubs('determinism-match');

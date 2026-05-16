@@ -524,6 +524,42 @@ function MatchScoreCard({
           {awayScorers.length === 0 && <div className="plm-flex-1" />}
         </div>
       )}
+
+      {/* Man of the Match — surfaced on the user's headline cards so it gets
+          its own chip rather than blending into the scorer list. */}
+      {isPlayerMatch && isUserSection && result.manOfTheMatchId && (() => {
+        const motmHome = findPlayer(result.manOfTheMatchId, result.homeClubId);
+        const motmAway = motmHome ? null : findPlayer(result.manOfTheMatchId, result.awayClubId);
+        const motm = motmHome || motmAway;
+        const motmIsHome = !!motmHome;
+        if (!motm) return null;
+        const motmAccent = motmIsHome ? homeClub?.colors.primary : awayClub?.colors.primary;
+        const lastName = motm.name.split(' ').pop() || motm.name;
+        const isUserClubPlayer =
+          (motmIsHome && result.homeClubId === playerClubId) ||
+          (!motmIsHome && result.awayClubId === playerClubId);
+        return (
+          <div className="plm-px-3 plm-pb-2 plm-flex plm-justify-center plm-text-[10px]">
+            <span
+              className="plm-inline-flex plm-items-center plm-gap-1 plm-rounded-full plm-px-2.5 plm-py-0.5 plm-bg-amber-50 plm-border plm-border-amber-300 plm-text-amber-900 plm-animate-fade-in plm-opacity-0"
+              style={{
+                animationDelay: '600ms',
+                animationFillMode: 'forwards',
+                borderColor: motmAccent ? motmAccent + '60' : undefined,
+              }}
+              title={`Man of the Match · ${motm.name}`}
+            >
+              <span aria-hidden>⭐</span>
+              <span className="plm-font-semibold plm-uppercase plm-tracking-wider plm-text-[8px]">
+                MOTM
+              </span>
+              <span className={`plm-font-medium ${isUserClubPlayer ? 'plm-font-bold' : ''}`}>
+                {lastName}
+              </span>
+            </span>
+          </div>
+        );
+      })()}
     </div>
   );
 }
