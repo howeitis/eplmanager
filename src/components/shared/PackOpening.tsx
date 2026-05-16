@@ -20,9 +20,18 @@ interface PackOpeningProps {
    * packs where each card represents a different club's player.
    */
   perCardClubIds?: string[];
-  /** Render variant for the cards inside the pack. 'retired' draws a memorial
-   *  treatment (desaturated + RETIRED banner). Default is 'normal'. */
-  cardVariant?: 'normal' | 'retired';
+  /** Render variant for the cards inside the pack.
+   *  - 'normal' (default) → no extra treatment
+   *  - 'retired' → desaturated card + RETIRED sash
+   *  - 'tier-up' → celebratory RISER stamp + impact burst on every reveal,
+   *    used by the Risers pack at season wrap. */
+  cardVariant?: 'normal' | 'retired' | 'tier-up';
+  /**
+   * Optional override for the large logo painted onto the pack wrapper on
+   * the intro screen. Defaults to `getClubLogoUrl(clubId)`. The TOTS pack
+   * uses this to swap the user's club crest for the Premier League shield.
+   */
+  coverLogoUrl?: string;
   onComplete: () => void;
 }
 
@@ -66,6 +75,7 @@ export function PackOpening({
   packSubtitle,
   perCardClubIds,
   cardVariant = 'normal',
+  coverLogoUrl,
   onComplete,
 }: PackOpeningProps) {
   const [packState, setPackState] = useState<PackState>('intro');
@@ -78,22 +88,25 @@ export function PackOpening({
   const isLight = isLightColor(clubColors.primary);
   const currentPlayer = players[currentCardIndex];
   const isHighRated = currentPlayer?.overall >= 85;
+  const isTierUp = cardVariant === 'tier-up';
 
-  // Trigger impact effect when revealing a high-rated card
+  // Trigger impact effect when revealing a celebratory card. Fires on every
+  // tier-up card (the Risers pack — each card is *the* moment); high-rated
+  // cards (85+ OVR) still get it in normal/retired packs.
   useEffect(() => {
     if (packState !== 'cards') return;
     if (!revealedCards.has(currentCardIndex)) return;
 
-    if (isHighRated) {
+    if (isHighRated || isTierUp) {
       setShowImpact(true);
-      setParticles(generateParticles(20, true));
+      setParticles(generateParticles(isTierUp ? 28 : 20, true));
       const timer = setTimeout(() => {
         setShowImpact(false);
         setParticles([]);
-      }, 1200);
+      }, isTierUp ? 1400 : 1200);
       return () => clearTimeout(timer);
     }
-  }, [packState, currentCardIndex, isHighRated, revealedCards]);
+  }, [packState, currentCardIndex, isHighRated, isTierUp, revealedCards]);
 
   // Transition through pack states
   const handlePackTap = useCallback(() => {
@@ -251,9 +264,23 @@ export function PackOpening({
               />
             </div>
 
-            {/* Club crest — center anchor, large */}
+            {/* Pack cover logo — center anchor, large. `coverLogoUrl`
+                wins if provided (Team-of-the-Season packs paint the
+                Premier League shield here); otherwise we fall back to
+                the pack's clubId crest, with the soccer-ball emoji as
+                the last-resort empty state. */}
             <div className="plm-flex-1 plm-flex plm-items-center plm-justify-center plm-w-full plm-px-8 plm-relative plm-z-[3] plm-mt-12">
-              {clubId ? (
+              {coverLogoUrl ? (
+                <img
+                  src={coverLogoUrl}
+                  alt={clubName}
+                  className="plm-w-52 plm-h-52 plm-object-contain"
+                  style={{
+                    filter:
+                      'drop-shadow(0 10px 22px rgba(0,0,0,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+                  }}
+                />
+              ) : clubId ? (
                 <img
                   src={getClubLogoUrl(clubId)}
                   alt={clubName}
@@ -370,6 +397,7 @@ export function PackOpening({
                   animated={revealedCards.size === 1 && currentCardIndex === 0}
                   disableFlip
                   retired={cardVariant === 'retired'}
+                  tierUp={cardVariant === 'tier-up'}
                 />
               );
             })()}
