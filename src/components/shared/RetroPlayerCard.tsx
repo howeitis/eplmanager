@@ -160,6 +160,10 @@ export interface RetroPlayerCardProps {
   /** Memorial variant — desaturates the card and adds a RETIRED banner.
    *  Used for the end-of-season retirement pack. */
   retired?: boolean;
+  /** Tier-up variant — paints a celebratory RISER ↑ stamp on the card
+   *  and adds a gold-shimmer pulse on the border. Used by the Risers
+   *  pack at season wrap. */
+  tierUp?: boolean;
 }
 
 export function RetroPlayerCard({
@@ -175,6 +179,7 @@ export function RetroPlayerCard({
   forceFlipped = false,
   isCaptain = false,
   retired = false,
+  tierUp = false,
 }: RetroPlayerCardProps) {
   const [isFlipped, setIsFlipped] = useState(forceFlipped);
   const [glarePos, setGlarePos] = useState<{ x: number; y: number } | null>(null);
@@ -935,6 +940,53 @@ export function RetroPlayerCard({
           />
         )}
       </div>
+
+      {/* ─── RISER ↑ tier-up stamp ───
+          Used by the Risers pack at season wrap. Sits diagonally in the
+          upper-left and animates in with `plm-animate-stamp-in` so the
+          card feels like it just got rubber-stamped with a promotion.
+          A circular gold glow pulses behind it via `plm-animate-tier-pulse`,
+          and a quick fade-in outer border completes the celebration.
+          Rendered above the form-glow / cosmic layers via z-[19]. */}
+      {tierUp && (
+        <>
+          <div
+            className="plm-absolute plm-z-[19] plm-pointer-events-none plm-animate-stamp-in"
+            style={{
+              top: size === 'xl' ? 28 : size === 'lg' ? 22 : 16,
+              left: size === 'xl' ? -38 : size === 'lg' ? -30 : -22,
+              transform: 'rotate(-22deg)',
+              transformOrigin: 'center',
+              background:
+                'linear-gradient(135deg, #16A34A 0%, #065F46 50%, #16A34A 100%)',
+              color: '#FEF3C7',
+              padding: size === 'xl' ? '6px 56px' : size === 'lg' ? '5px 44px' : '3px 32px',
+              fontFamily: 'Playfair Display, serif',
+              fontSize: size === 'xl' ? 15 : size === 'lg' ? 13 : 11,
+              fontWeight: 900,
+              letterSpacing: '0.20em',
+              boxShadow:
+                '0 4px 10px rgba(0,0,0,0.45), 0 0 18px rgba(34,197,94,0.55), inset 0 1px 0 rgba(254,243,199,0.55), inset 0 -1px 0 rgba(0,0,0,0.35)',
+              borderTop: '1px solid rgba(254,243,199,0.55)',
+              borderBottom: '1px solid rgba(0,0,0,0.45)',
+            }}
+            aria-hidden="true"
+          >
+            RISER ↑
+          </div>
+          {/* Outer gold halo — pulses for the 0.6s after the stamp lands
+              so the moment lingers slightly. */}
+          <div
+            className="plm-absolute plm-z-[18] plm-inset-0 plm-pointer-events-none plm-animate-tier-pulse"
+            style={{
+              borderRadius: 12,
+              boxShadow:
+                '0 0 0 2px rgba(34,197,94,0.6), 0 0 30px 4px rgba(34,197,94,0.45)',
+            }}
+            aria-hidden="true"
+          />
+        </>
+      )}
 
       {/* ─── RETIRED memorial banner ───
           Diagonal sash across the upper-right corner. Painted outside the

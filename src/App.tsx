@@ -79,6 +79,7 @@ import { generateMonthlyEvents } from './engine/events';
 import { simulateFACup } from './engine/faCup';
 import { processLeagueAging, replenishSquad, annualYouthIntake, type AgingResult } from './engine/aging';
 import { computeAgingModifiers } from './engine/modifierEffects';
+import { getLeagueLogoUrl } from './data/assets';
 import { getCalendarYear, generateJulyNarrative } from './engine/seasonNarrative';
 import { validateTransferState } from './engine/transfers';
 import { STARTING_REP_BY_TIER } from './engine/clubReputation';
@@ -147,7 +148,15 @@ function App() {
   const [julyWinnerNationality, setJulyWinnerNationality] = useState<string | null>(null);
   const [packPlayers, setPackPlayers] = useState<import('./types/entities').Player[]>([]);
   const [packInstanceKey, setPackInstanceKey] = useState(0);
-  const [packConfig, setPackConfig] = useState<{ title: string; subtitle?: string; clubOverride?: { name: string; colors: { primary: string; secondary: string }; clubId?: string }; perCardClubIds?: string[]; cardVariant?: 'normal' | 'retired'; onComplete?: () => void } | null>(null);
+  const [packConfig, setPackConfig] = useState<{
+    title: string;
+    subtitle?: string;
+    clubOverride?: { name: string; colors: { primary: string; secondary: string }; clubId?: string };
+    perCardClubIds?: string[];
+    cardVariant?: 'normal' | 'retired' | 'tier-up';
+    coverLogoUrl?: string;
+    onComplete?: () => void;
+  } | null>(null);
   const [youthIntakePlayers, setYouthIntakePlayers] = useState<import('./types/entities').Player[]>([]);
   // Season-wrap reveal queues. Computed during handleSeasonEnd, consumed in
   // sequence (improved → TOTS → retirement → youth) from the SeasonEnd
@@ -1548,6 +1557,10 @@ function App() {
             colors: { primary: '#FFD700', secondary: '#1A1A1A' },
           },
           perCardClubIds: totsClubIds,
+          // The TOTS pack belongs to the league, not the user's club —
+          // paint the Premier League shield on the wrapper instead of
+          // the user's crest.
+          coverLogoUrl: getLeagueLogoUrl(),
           onComplete: startRetirement,
         },
         totsPlayers,
@@ -1569,6 +1582,10 @@ function App() {
             colors: userColors,
             clubId: playerClub?.id,
           },
+          // Tier-up variant triggers the celebratory stamp + impact
+          // burst on every card reveal — every player in this pack is
+          // a real promotion moment.
+          cardVariant: 'tier-up',
           onComplete: startTots,
         },
         improvedPlayers,
@@ -1864,6 +1881,7 @@ function App() {
                 packSubtitle={packConfig.subtitle}
                 perCardClubIds={packConfig.perCardClubIds}
                 cardVariant={packConfig.cardVariant}
+                coverLogoUrl={packConfig.coverLogoUrl}
                 onComplete={() => {
                   setPackPlayers([]);
                   setPackConfig(null);
