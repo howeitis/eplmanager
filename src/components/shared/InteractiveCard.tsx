@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
-import { animated, useSpring, to } from '@react-spring/web';
+import { animated, useSpring, useSpringRef, to } from '@react-spring/web';
 import type { Player } from '@/types/entities';
 import { getCardEffectTier } from '@/utils/cardTier';
 
@@ -76,17 +76,31 @@ export const InteractiveCard = forwardRef<InteractiveCardHandle, InteractiveCard
     setGlare({ px: clamp(px, 0, 100), py: clamp(py, 0, 100) });
   }, []);
 
-  const [spring, api] = useSpring(() => {
-    if (reducedMotion) {
-      return { x: 0, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 1, opacity: 1 };
-    }
-    if (enterFrom === 'left') {
-      return { x: -window.innerWidth, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 0.95, opacity: 0 };
-    }
-    if (enterFrom === 'right') {
-      return { x: window.innerWidth, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 0.95, opacity: 0 };
-    }
-    return { x: 0, y: 0, rotX: 0, rotY: 0, flipY: 0, scale: 1, opacity: 1 };
+  // Captured once: re-renders must not re-evaluate this object or the spring
+  // will be pulled back to these defaults on every commit.
+  //
+  // Why the explicit `useSpringRef` + `useSpring({ref, from})` pattern:
+  // The terser `useSpring(() => ({...}))` form looks equivalent and in
+  // @react-spring/web v9 it was — you got `[values, api]` and api.start()
+  // controlled the spring. In v10 the function form retains its returned
+  // object as a persistent default target, so api.start({flipY: 180}) is
+  // immediately overridden by the spring snapping back toward flipY: 0.
+  // The flip would visually nudge and settle. The ref form below stores
+  // `from` only as initial state and leaves the spring imperatively driven.
+  const initialFrom = useRef({
+    x: reducedMotion ? 0 : enterFrom === 'left' ? -window.innerWidth : enterFrom === 'right' ? window.innerWidth : 0,
+    y: 0,
+    rotX: 0,
+    rotY: 0,
+    flipY: 0,
+    scale: enterFrom && !reducedMotion ? 0.95 : 1,
+    opacity: enterFrom && !reducedMotion ? 0 : 1,
+  }).current;
+
+  const api = useSpringRef();
+  const spring = useSpring({
+    ref: api,
+    from: initialFrom,
   });
 
   const handleTapFlip = useCallback(() => {
@@ -98,16 +112,13 @@ export const InteractiveCard = forwardRef<InteractiveCardHandle, InteractiveCard
     setIsFlipped((prev) => !prev);
   }, [cardBack]);
 
-  // Drive the spring animation off the committed isFlipped state rather than
-  // from inside the setIsFlipped updater. Putting `api.start()` inside a state
-  // updater is a side-effect-in-a-pure-function anti-pattern: React 19 +
-  // StrictMode (dev) invokes the updater twice, and the spring sees redundant
-  // start requests for the same target, which can leave the flip stuck or
-  // silently no-op. An effect tied to the committed state is reliable and
-  // also fires for navigation remounts (where isFlipped resets to false).
+  // Drive the spring animation off the committed isFlipped state, not from
+  // inside the setIsFlipped updater. State updaters must be pure functions,
+  // and an effect tied to the committed value also handles navigation
+  // remounts (isFlipped resets to false) without extra wiring.
   useEffect(() => {
     api.start({
-      flipY: isFlipped ? 180 : 0,
+      to: { flipY: isFlipped ? 180 : 0 },
       immediate: reducedMotion,
       config: { mass: 1, tension: 220, friction: 24 },
     });
