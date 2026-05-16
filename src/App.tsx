@@ -1,24 +1,51 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import './index.css';
 import { SaveSlotSelect } from './components/shared/SaveSlotSelect';
 import { ClubSelect } from './components/shared/ClubSelect';
-import { ManagerCreation, type ManagerCreationData } from './components/shared/ManagerCreation';
-import { TransferCenter } from './components/transfers/TransferCenter';
+import type { ManagerCreationData } from './components/shared/ManagerCreation';
 import { GameHub } from './components/hub/GameHub';
 import { SquadScreen } from './components/squad/SquadScreen';
-import { ClubSquadScreen } from './components/squad/ClubSquadScreen';
-import { MatchResults } from './components/match/MatchResults';
-import { SeasonEnd } from './components/season/SeasonEnd';
-import { BoardMeeting } from './components/season/BoardMeeting';
-import { SeasonHistoryScreen } from './components/history/SeasonHistory';
-import { ManagerProfileScreen } from './components/manager/ManagerProfileScreen';
 import { TitleScreen } from './components/shared/TitleScreen';
 import { BottomNav, type NavTab } from './components/shared/BottomNav';
 import { DesktopSidebar } from './components/shared/DesktopSidebar';
-import { PlayerDetailModal } from './components/shared/PlayerDetailModal';
-import { PackOpening } from './components/shared/PackOpening';
 import { TutorialModal } from './components/shared/TutorialModal';
+import { useModalParams } from './hooks/useModalParams';
 import { NavigationContext } from './hooks/useNavigation';
+
+// Lazy chunks. These screens/modals aren't on the initial render path —
+// splitting them out keeps the boot bundle small and only pays the cost
+// when the player actually navigates there. Suspense fallback is null
+// because the gap is single-digit frames over the wire.
+const ManagerCreation = lazy(() =>
+  import('./components/shared/ManagerCreation').then((m) => ({ default: m.ManagerCreation })),
+);
+const TransferCenter = lazy(() =>
+  import('./components/transfers/TransferCenter').then((m) => ({ default: m.TransferCenter })),
+);
+const ClubSquadScreen = lazy(() =>
+  import('./components/squad/ClubSquadScreen').then((m) => ({ default: m.ClubSquadScreen })),
+);
+const MatchResults = lazy(() =>
+  import('./components/match/MatchResults').then((m) => ({ default: m.MatchResults })),
+);
+const SeasonEnd = lazy(() =>
+  import('./components/season/SeasonEnd').then((m) => ({ default: m.SeasonEnd })),
+);
+const BoardMeeting = lazy(() =>
+  import('./components/season/BoardMeeting').then((m) => ({ default: m.BoardMeeting })),
+);
+const SeasonHistoryScreen = lazy(() =>
+  import('./components/history/SeasonHistory').then((m) => ({ default: m.SeasonHistoryScreen })),
+);
+const ManagerProfileScreen = lazy(() =>
+  import('./components/manager/ManagerProfileScreen').then((m) => ({ default: m.ManagerProfileScreen })),
+);
+const PlayerDetailModal = lazy(() =>
+  import('./components/shared/PlayerDetailModal').then((m) => ({ default: m.PlayerDetailModal })),
+);
+const PackOpening = lazy(() =>
+  import('./components/shared/PackOpening').then((m) => ({ default: m.PackOpening })),
+);
 import { useGameStore } from './store/gameStore';
 import { CLUBS } from './data/clubs';
 import { inferNationalityFromName } from './data/namePool';
@@ -123,6 +150,9 @@ function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const store = useGameStore;
   const managerClubId = useGameStore((s) => s.manager?.clubId);
+  // Gate the PlayerDetailModal chunk on actual modal state so it doesn't
+  // load on the first frame just because the modal is mounted (returns null).
+  const playerModalOpen = useModalParams().isOpen;
 
   // ─── Save/Load handlers ───
 
@@ -1421,11 +1451,13 @@ function App() {
 
   if (screen === 'manager_creation' && selectedClub) {
     return (
-      <ManagerCreation
-        clubName={selectedClub.name}
-        onSubmit={handleManagerCreated}
-        onBack={() => setScreen('club_select')}
-      />
+      <Suspense fallback={null}>
+        <ManagerCreation
+          clubName={selectedClub.name}
+          onSubmit={handleManagerCreated}
+          onBack={() => setScreen('club_select')}
+        />
+      </Suspense>
     );
   }
 
@@ -1445,6 +1477,7 @@ function App() {
 
         <main className="plm-flex-1 plm-min-w-0 plm-px-4 md:plm-px-6 plm-pb-20 md:plm-pb-0">
           <div className="plm-max-w-7xl plm-mx-auto">
+            <Suspense fallback={null}>
             {gameView === 'hub' && (
               <GameHub
                 onNavigate={handleNavigate}
@@ -1529,41 +1562,44 @@ function App() {
                 agingResults={agingResults}
               />
             )}
+            </Suspense>
           </div>
         </main>
 
         <BottomNav activeTab={activeNavTab} onNavigate={handleNavigate} />
-        <PlayerDetailModal />
+        <Suspense fallback={null}>
+          {playerModalOpen && <PlayerDetailModal />}
 
-        {/* Pack Opening overlay */}
-        {packConfig && packPlayers.length > 0 && (() => {
-          const state = store.getState();
-          const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
-          const customOnComplete = packConfig.onComplete;
-          return (
-            <PackOpening
-              players={packPlayers}
-              clubName={playerClub?.name || ''}
-              clubId={playerClub?.id}
-              clubColors={playerClub?.colors || { primary: '#1A1A1A', secondary: '#333' }}
-              packTitle={packConfig.title}
-              packSubtitle={packConfig.subtitle}
-              onComplete={() => {
-                setPackPlayers([]);
-                setPackConfig(null);
-                if (customOnComplete) {
-                  customOnComplete();
-                } else {
-                  setGameView('hub');
-                }
-                // Always land at the top of whatever screen comes next.
-                window.scrollTo(0, 0);
-              }}
-            />
-          );
-        })()}
+          {/* Pack Opening overlay */}
+          {packConfig && packPlayers.length > 0 && (() => {
+            const state = store.getState();
+            const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
+            const customOnComplete = packConfig.onComplete;
+            return (
+              <PackOpening
+                players={packPlayers}
+                clubName={playerClub?.name || ''}
+                clubId={playerClub?.id}
+                clubColors={playerClub?.colors || { primary: '#1A1A1A', secondary: '#333' }}
+                packTitle={packConfig.title}
+                packSubtitle={packConfig.subtitle}
+                onComplete={() => {
+                  setPackPlayers([]);
+                  setPackConfig(null);
+                  if (customOnComplete) {
+                    customOnComplete();
+                  } else {
+                    setGameView('hub');
+                  }
+                  // Always land at the top of whatever screen comes next.
+                  window.scrollTo(0, 0);
+                }}
+              />
+            );
+          })()}
+          {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
+        </Suspense>
       </div>
-      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
     </NavigationContext.Provider>
   );
 }
