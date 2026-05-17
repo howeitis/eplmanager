@@ -1,12 +1,9 @@
 /**
  * StartingXIPicker — Visual formation view with player assignment.
  *
- * AUDIT FINDINGS (Task 7.3 Step 1):
- * - No `startingXI` state existed in teamSlice or any slice prior to Task 7.3.
- * - FormationPicker.tsx only selects formation type, no player-to-slot assignment.
- * - calculateTSS used whole-squad average. Now changed to Starting XI avg + depth bonus.
- * - MatchResult had no XI fields. Now has homeStartingXI/awayStartingXI.
- * - No FormationSlot type existed. Created in data/formations.ts.
+ * Owns Starting XI: which 11 players line up in which slots for the
+ * currently selected formation. The TSS calculation uses the Starting XI
+ * average + a squad-depth bonus from the bench.
  */
 
 import { useState, useMemo } from 'react';
