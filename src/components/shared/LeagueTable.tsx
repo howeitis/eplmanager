@@ -149,36 +149,36 @@ export function LeagueTable({ compact = false, hideForm = false }: LeagueTablePr
         <caption className="plm-sr-only">Premier League standings</caption>
         <thead>
           <tr className="plm-border-b plm-border-warm-200">
-            <th scope="col" className="plm-text-left plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-6">
+            <th scope="col" className="plm-text-left plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase plm-w-6">
               <span className="plm-sr-only">Position</span>#
             </th>
-            <th scope="col" className="plm-text-left plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider">
+            <th scope="col" className="plm-text-left plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase">
               Club
             </th>
-            <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-7" title="Played">
+            <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase plm-w-7" title="Played">
               P
             </th>
             {!compact && (
               <>
-                <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-7 plm-hidden sm:plm-table-cell" title="Won">
+                <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase plm-w-7 plm-hidden sm:plm-table-cell" title="Won">
                   W
                 </th>
-                <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-7 plm-hidden sm:plm-table-cell" title="Drawn">
+                <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase plm-w-7 plm-hidden sm:plm-table-cell" title="Drawn">
                   D
                 </th>
-                <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-7 plm-hidden sm:plm-table-cell" title="Lost">
+                <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase plm-w-7 plm-hidden sm:plm-table-cell" title="Lost">
                   L
                 </th>
               </>
             )}
-            <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-9" title="Goal Difference">
+            <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase plm-w-9" title="Goal Difference">
               GD
             </th>
-            <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-9" title="Points">
+            <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase plm-w-9" title="Points">
               Pts
             </th>
             {showForm && (
-              <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-24 plm-hidden md:plm-table-cell" title="Last 5 results">
+              <th scope="col" className="plm-text-center plm-py-2 plm-px-1 plm-text-eyebrow plm-font-semibold plm-text-warm-500 plm-uppercase plm-w-24 plm-hidden md:plm-table-cell" title="Last 5 results">
                 Form
               </th>
             )}

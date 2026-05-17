@@ -36,15 +36,15 @@ export function PhaseIndicator({ phase, seasonNumber }: PhaseIndicatorProps) {
   return (
     <div className="plm-flex plm-items-start plm-justify-between plm-gap-3">
       <div className="plm-min-w-0">
-        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+        <p className="plm-text-eyebrow plm-font-medium plm-uppercase plm-text-warm-500">
           Season {seasonNumber} &middot; {startYear}/{endYear.toString().slice(-2)}
         </p>
-        <h2 className="plm-font-display plm-text-3xl plm-font-bold plm-text-charcoal plm-leading-tight plm-mt-0.5">
+        <h2 className="plm-font-display plm-text-display-md plm-font-bold plm-text-charcoal plm-mt-0.5">
           {display.month}
         </h2>
       </div>
       {isWindow && (
-        <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-[0.18em] plm-px-2.5 plm-py-1 plm-bg-amber-50 plm-text-amber-700 plm-rounded-full plm-border plm-border-amber-200 plm-flex-shrink-0 plm-mt-1">
+        <span className="plm-text-eyebrow plm-font-semibold plm-uppercase plm-px-2.5 plm-py-1 plm-bg-amber-50 plm-text-amber-700 plm-rounded-full plm-border plm-border-amber-200 plm-flex-shrink-0 plm-mt-1">
           Window Open
         </span>
       )}

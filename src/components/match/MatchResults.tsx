@@ -121,10 +121,10 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
             )
           )}
           <div>
-            <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-leading-none">
+            <h2 className="plm-font-display plm-text-display-md plm-font-bold plm-text-charcoal">
               {monthLabel}
             </h2>
-            <p className="plm-text-xs plm-text-warm-500 plm-mt-0.5">
+            <p className="plm-font-display plm-italic plm-text-caption plm-text-warm-600 plm-mt-0.5 plm-tabular-nums">
               {userFixtures.length} match{userFixtures.length !== 1 ? 'es' : ''} played
             </p>
           </div>
@@ -157,13 +157,13 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
       {/* ─── Your club's results ─── */}
       {userFixtures.length > 0 && (
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-          <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
+          <h3 className="plm-font-display plm-text-display-sm plm-font-bold plm-text-charcoal plm-mb-3">
             {playerClubData?.name || 'Your'} Results
           </h3>
           <div className="plm-space-y-2">
             {userGameweeks.map(([gw, gwFixtures]) => (
               <div key={gw}>
-                <div className="plm-text-[10px] plm-font-semibold plm-text-warm-400 plm-uppercase plm-tracking-wider plm-mb-1.5">
+                <div className="plm-text-eyebrow plm-font-semibold plm-text-warm-400 plm-uppercase plm-mb-1.5 plm-tabular-nums">
                   Matchday {gw}
                 </div>
                 <div className="plm-space-y-1.5">
@@ -191,7 +191,7 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
           onClick={() => setShowAllResults((v) => !v)}
           className="plm-w-full plm-flex plm-items-center plm-justify-between plm-p-4 plm-text-left plm-min-h-[44px] hover:plm-bg-warm-50 plm-transition-colors"
         >
-          <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal">
+          <h3 className="plm-font-display plm-text-display-sm plm-font-bold plm-text-charcoal plm-tabular-nums">
             All Results ({sortedFixtures.length} matches)
           </h3>
           <span className="plm-text-warm-400 plm-text-sm plm-font-bold">
@@ -228,7 +228,7 @@ export function MatchResults({ monthLabel, fixtures, events, onContinue }: Match
 
       {/* ─── Standings ─── */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
+        <h3 className="plm-font-display plm-text-display-sm plm-font-bold plm-text-charcoal plm-mb-3">
           Standings
         </h3>
         <LeagueTable />
@@ -260,9 +260,9 @@ function KeyStatBox({
 }) {
   return (
     <div className="plm-bg-white/60 plm-rounded plm-p-2 plm-text-center">
-      <div className="plm-text-[10px] plm-text-warm-500 plm-uppercase plm-tracking-wider plm-font-medium">{label}</div>
+      <div className="plm-text-eyebrow plm-text-warm-500 plm-uppercase plm-font-medium">{label}</div>
       <div
-        className="plm-text-base plm-font-bold plm-tabular-nums"
+        className="plm-font-display plm-text-display-sm plm-font-bold plm-tabular-nums plm-mt-0.5"
         style={{ color: accent && accentColor ? accentColor : '#1A1A1A' }}
       >
         {value}

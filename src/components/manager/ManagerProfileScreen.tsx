@@ -86,7 +86,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
 
       {/* Editorial masthead — unboxed identity + stats */}
       <section className="plm-relative" style={{ zIndex: 1 }}>
-        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500">
+        <p className="plm-text-eyebrow plm-font-medium plm-uppercase plm-text-warm-500">
           The Manager
         </p>
         <div className="plm-mt-3 plm-flex plm-items-center plm-gap-3">
@@ -115,10 +115,10 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
             )}
           </div>
           <div className="plm-min-w-0 plm-flex-1">
-            <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
+            <h1 className="plm-font-display plm-text-display-md plm-font-bold plm-text-charcoal plm-truncate">
               {manager.name}
             </h1>
-            <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
+            <p className="plm-font-display plm-italic plm-text-byline plm-text-warm-600 plm-truncate">
               {currentClub?.name ?? 'Between clubs'}
             </p>
           </div>
@@ -141,7 +141,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
 
       {/* Manager Card — unboxed centered showpiece */}
       <section className="plm-relative" style={{ zIndex: 1 }}>
-        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500 plm-mb-3">
+        <p className="plm-text-eyebrow plm-font-medium plm-uppercase plm-text-warm-500 plm-mb-3">
           Manager Card
         </p>
         <div className="plm-flex plm-justify-center">
@@ -156,7 +156,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
 
       {/* Tenures — unboxed editorial list */}
       <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
-        <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500 plm-mb-3">
+        <p className="plm-text-eyebrow plm-font-medium plm-uppercase plm-text-warm-500 plm-mb-3">
           Club Tenures
         </p>
         <div className="plm-space-y-3">
@@ -217,7 +217,7 @@ export function ManagerProfileScreen({ onResign }: ManagerProfileScreenProps = {
       {/* Honors / Accomplishments — unboxed */}
       {manager.accomplishments.length > 0 && (
         <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
-          <p className="plm-text-[10px] plm-font-medium plm-uppercase plm-tracking-[0.18em] plm-text-warm-500 plm-mb-3">
+          <p className="plm-text-eyebrow plm-font-medium plm-uppercase plm-text-warm-500 plm-mb-3">
             Honors
           </p>
           <div className="plm-space-y-4">
@@ -360,12 +360,12 @@ function ManagerStatBox({ label, value, accent }: { label: string; value: number
   return (
     <div className="plm-px-2 plm-text-center first:plm-pl-0 last:plm-pr-0">
       <div
-        className="plm-font-display plm-text-2xl plm-font-bold plm-tabular-nums plm-leading-none"
+        className="plm-font-display plm-text-display-md plm-font-bold plm-tabular-nums plm-leading-none"
         style={{ color: accent || '#1A1A1A' }}
       >
         {value}
       </div>
-      <div className="plm-text-[10px] plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-mt-1.5">
+      <div className="plm-text-eyebrow plm-text-warm-500 plm-font-medium plm-uppercase plm-mt-1.5">
         {label}
       </div>
     </div>

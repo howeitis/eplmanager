@@ -121,10 +121,10 @@ export function GameHub({ onNavigate, onAdvance, advanceLabel, julyNarrative, ju
               />
             ) : null}
             <div className="plm-min-w-0 plm-flex-1">
-              <h1 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-leading-tight plm-truncate">
+              <h1 className="plm-font-display plm-text-display-md plm-font-bold plm-text-charcoal plm-truncate">
                 {playerClub?.name}
               </h1>
-              <p className="plm-font-display plm-italic plm-text-sm plm-text-warm-600 plm-truncate">
+              <p className="plm-font-display plm-italic plm-text-byline plm-text-warm-600 plm-truncate">
                 Managed by {manager?.name}
               </p>
             </div>
@@ -287,10 +287,10 @@ function ordinal(n: number): string {
 function StatBox({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (
     <div className="plm-px-2 plm-text-center first:plm-pl-0 last:plm-pr-0">
-      <div className={`plm-font-display plm-text-2xl plm-font-bold plm-tabular-nums plm-leading-none ${accent ? 'plm-text-emerald-700' : 'plm-text-charcoal'}`}>
+      <div className={`plm-font-display plm-text-display-md plm-font-bold plm-tabular-nums plm-leading-none ${accent ? 'plm-text-emerald-700' : 'plm-text-charcoal'}`}>
         {value}
       </div>
-      <div className="plm-text-[10px] plm-text-warm-500 plm-font-medium plm-uppercase plm-tracking-[0.15em] plm-mt-1.5">
+      <div className="plm-text-eyebrow plm-text-warm-500 plm-font-medium plm-uppercase plm-mt-1.5">
         {label}
       </div>
     </div>

@@ -23,6 +23,8 @@
   -moz-osx-font-smoothing: grayscale;
   background-color: #FAF8F5;
   color: #1A1A1A;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  font-variant-numeric: lining-nums;
 }
 
 .plm-app-root h1,
@@ -30,6 +32,20 @@
 .plm-app-root h3,
 .plm-app-root h4 {
   font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Playfair Display has nice discretionary ligatures (fi, fl, st) — turn
+   them on wherever the display font runs. Kerning + standard ligatures
+   are inherited from the root rule. */
+.plm-app-root .plm-font-display {
+  font-feature-settings: 'kern' 1, 'liga' 1, 'dlig' 1;
+}
+
+/* All <table> contents default to tabular + lining numerals so columns
+   align. Replaces 40+ piecemeal plm-tabular-nums utilities (which stay
+   harmless on non-table contexts like StatBox values and card stats). */
+.plm-app-root table {
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 /*

@@ -327,7 +327,7 @@ function NextMonthList({ fixtures, playerClubId, onOpenClub }: { fixtures: Fixtu
             oppClubId={oppId}
             onOpenClub={onOpenClub}
             rightSlot={
-              <span className="plm-text-[10px] plm-font-bold plm-uppercase plm-tracking-[0.1em] plm-text-warm-500 plm-font-sans">
+              <span className="plm-text-eyebrow plm-font-bold plm-uppercase plm-text-warm-500 plm-tabular-nums">
                 MD {f.gameweek}
               </span>
             }

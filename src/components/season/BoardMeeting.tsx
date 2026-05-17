@@ -126,10 +126,10 @@ export function BoardMeeting({ onContinue }: BoardMeetingProps) {
               }}
             />
           )}
-          <h1 className="plm-font-display plm-text-2xl md:plm-text-3xl plm-font-bold plm-text-charcoal plm-mb-1">
+          <h1 className="plm-font-display plm-text-display-md md:plm-text-display-lg plm-font-bold plm-text-charcoal plm-mb-1">
             Board Meeting
           </h1>
-          <p className="plm-text-sm plm-text-warm-500">
+          <p className="plm-font-display plm-italic plm-text-byline plm-text-warm-600">
             {playerClub.name} &middot; Season {seasonNumber}
           </p>
         </div>
@@ -162,7 +162,7 @@ export function BoardMeeting({ onContinue }: BoardMeetingProps) {
 
         {/* Section 1: Greeting */}
         <Section number={1} title="The Greeting">
-          <p className="plm-text-sm plm-text-charcoal plm-leading-relaxed">
+          <p className="plm-text-sm plm-text-charcoal plm-leading-relaxed plm-tabular-nums">
             {greeting}
           </p>
         </Section>
@@ -182,7 +182,7 @@ export function BoardMeeting({ onContinue }: BoardMeetingProps) {
               <p className="plm-text-base plm-font-bold plm-text-charcoal">
                 {goalText}
               </p>
-              <p className="plm-text-xs plm-text-warm-500">
+              <p className="plm-text-xs plm-text-warm-500 plm-tabular-nums">
                 Board expectation: finish {ordinal(boardExpectation?.minPosition || 20)} or higher
               </p>
             </div>
@@ -191,17 +191,17 @@ export function BoardMeeting({ onContinue }: BoardMeetingProps) {
 
         {/* Section 3: The Budget */}
         <Section number={3} title="Transfer Budget">
-          <p className="plm-text-sm plm-text-charcoal plm-leading-relaxed plm-mb-3">
+          <p className="plm-text-sm plm-text-charcoal plm-leading-relaxed plm-tabular-nums plm-mb-3">
             {budgetDialogue}
           </p>
           <div
             className="plm-rounded-lg plm-p-4 plm-text-center"
             style={{ backgroundColor: accentColor + '10' }}
           >
-            <p className="plm-text-xs plm-text-warm-500 plm-uppercase plm-tracking-wider plm-font-medium plm-mb-1">
+            <p className="plm-text-eyebrow plm-text-warm-500 plm-uppercase plm-font-medium plm-mb-1">
               Available Funds
             </p>
-            <p className="plm-text-3xl plm-font-bold plm-tabular-nums" style={{ color: accentColor }}>
+            <p className="plm-font-display plm-text-display-lg plm-font-bold plm-tabular-nums" style={{ color: accentColor }}>
               {'\u00A3'}{budget.toFixed(0)}M
             </p>
           </div>

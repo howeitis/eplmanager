@@ -261,10 +261,10 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
       {showConfetti && <Confetti count={80} duration={4000} />}
       {/* Final table */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <h2 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-mb-1">
+        <h2 className="plm-font-display plm-text-display-md plm-font-bold plm-text-charcoal plm-mb-1">
           Final Standings
         </h2>
-        <p className="plm-text-xs plm-text-warm-500 plm-mb-3">
+        <p className="plm-font-display plm-italic plm-text-byline plm-text-warm-600 plm-mb-3 plm-tabular-nums">
           Season {seasonNumber} complete
         </p>
         <LeagueTable />
@@ -273,7 +273,7 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
       {/* Your season stats */}
       {playerRow && (
         <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-          <h3 className="plm-font-display plm-text-base plm-font-bold plm-text-charcoal plm-mb-3">
+          <h3 className="plm-font-display plm-text-display-sm plm-font-bold plm-text-charcoal plm-mb-3">
             Your Season
           </h3>
           <div className="plm-grid plm-grid-cols-3 sm:plm-grid-cols-6 plm-gap-2">
@@ -289,7 +289,7 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
 
       {/* Awards */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
-        <h3 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal plm-mb-4">
+        <h3 className="plm-font-display plm-text-display-md plm-font-bold plm-text-charcoal plm-mb-4">
           Awards Ceremony
         </h3>
         <div className="plm-grid plm-grid-cols-1 md:plm-grid-cols-2 lg:plm-grid-cols-3 plm-gap-3">
@@ -307,15 +307,15 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
         <div className="plm-max-w-2xl plm-mx-auto">
           <div className="plm-flex plm-items-center plm-gap-2 plm-mb-4">
             <div className="plm-h-px plm-flex-1 plm-bg-warm-200" />
-            <span className="plm-text-[10px] plm-font-bold plm-text-warm-400 plm-uppercase plm-tracking-[0.2em]">
+            <span className="plm-text-eyebrow plm-font-bold plm-text-warm-400 plm-uppercase">
               The Athletic
             </span>
             <div className="plm-h-px plm-flex-1 plm-bg-warm-200" />
           </div>
-          <h3 className="plm-font-display plm-text-xl plm-font-bold plm-text-charcoal plm-text-center plm-mb-1">
+          <h3 className="plm-font-display plm-text-display-md plm-font-bold plm-text-charcoal plm-text-center plm-mb-1">
             End-of-Season Interview
           </h3>
-          <p className="plm-text-xs plm-text-warm-500 plm-text-center plm-mb-6 plm-italic">
+          <p className="plm-font-display plm-italic plm-text-byline plm-text-warm-600 plm-text-center plm-mb-6">
             {manager?.name}, {playerClubData?.name}
           </p>
           <div className="plm-space-y-5">
@@ -351,7 +351,7 @@ export function SeasonEnd({ onContinue, faCupWinner, agingResults = [] }: Season
 function AwardCard({ award }: { award: Award }) {
   return (
     <div className="plm-rounded-lg plm-border plm-border-warm-200 plm-p-3 plm-bg-warm-50">
-      <div className="plm-text-[10px] plm-font-bold plm-text-warm-400 plm-uppercase plm-tracking-wider plm-mb-1.5">
+      <div className="plm-text-eyebrow plm-font-bold plm-text-warm-400 plm-uppercase plm-mb-1.5">
         {award.title}
       </div>
       <div className="plm-font-display plm-font-bold plm-text-charcoal plm-text-base plm-mb-0.5">
@@ -374,7 +374,7 @@ function AwardCard({ award }: { award: Award }) {
 function MiniStat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="plm-text-center plm-bg-warm-50 plm-rounded plm-py-2 plm-px-1">
-      <div className="plm-text-[9px] plm-text-warm-400 plm-uppercase plm-tracking-wider">{label}</div>
+      <div className="plm-text-eyebrow plm-text-warm-400 plm-uppercase">{label}</div>
       <div className="plm-text-sm plm-font-bold plm-text-charcoal plm-tabular-nums">{String(value)}</div>
     </div>
   );

@@ -15,6 +15,24 @@ export default {
         display: ['"Playfair Display"', 'Georgia', 'serif'],
         body: ['"DM Sans"', 'system-ui', 'sans-serif'],
       },
+      // Editorial type scale. Each token bakes in its own line-height and
+      // letter-spacing so screens reach for semantic tokens instead of
+      // hand-rolling sizes per component. Negative tracking on display-*
+      // is the "premium" lever — Playfair at 24px+ wants tightening.
+      fontSize: {
+        eyebrow:      ['0.6875rem', { lineHeight: '1',    letterSpacing: '0.14em' }],
+        caption:      ['0.75rem',   { lineHeight: '1.4',  letterSpacing: '0.01em' }],
+        byline:       ['0.875rem',  { lineHeight: '1.5',  letterSpacing: '0' }],
+        'display-sm': ['1.25rem',   { lineHeight: '1.15', letterSpacing: '-0.005em' }],
+        'display-md': ['1.5rem',    { lineHeight: '1.1',  letterSpacing: '-0.01em' }],
+        'display-lg': ['1.875rem',  { lineHeight: '1.05', letterSpacing: '-0.015em' }],
+        'display-xl': ['2.5rem',    { lineHeight: '1',    letterSpacing: '-0.02em' }],
+      },
+      letterSpacing: {
+        eyebrow: '0.14em',
+        caps:    '0.08em',
+        display: '-0.01em',
+      },
       keyframes: {
         'fade-in': {
           '0%': { opacity: '0' },
