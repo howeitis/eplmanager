@@ -26,13 +26,14 @@ const FILTERS: { id: Filter; label: string }[] = [
 ];
 
 /**
- * Career sticker album. Lists every player and manager card the user has
+ * Career card collection. Lists every player and manager card the user has
  * accumulated, grouped by season most-recent-first. Click a card to enlarge
  * it. Cards are full snapshots so this view is decoupled from live roster
  * state — players who were sold or who have retired still show up here.
  */
 export function BinderScreen() {
   const manager = useGameStore((s) => s.manager);
+  const removeBinderCard = useGameStore((s) => s.removeBinderCard);
   const { navigateBack } = useNavigation();
   const [filter, setFilter] = useState<Filter>('all');
   const [enlarged, setEnlarged] = useState<BinderCard | null>(null);
@@ -85,7 +86,7 @@ export function BinderScreen() {
           <div className="plm-h-px plm-flex-1 plm-bg-warm-200" />
         </div>
         <h2 className="plm-font-display plm-text-2xl plm-font-bold plm-text-charcoal plm-text-center plm-mb-1">
-          {manager?.name ? `${manager.name}'s Scrapbook` : 'Your Scrapbook'}
+          {manager?.name ? `${manager.name}'s Card Collection` : 'Your Card Collection'}
         </h2>
         <p className="plm-text-xs plm-text-warm-500 plm-text-center">
           {total === 0
@@ -132,7 +133,16 @@ export function BinderScreen() {
       )}
 
       {/* Enlarged card overlay */}
-      {enlarged && <EnlargedCardModal card={enlarged} onDismiss={() => setEnlarged(null)} />}
+      {enlarged && (
+        <EnlargedCardModal
+          card={enlarged}
+          onDismiss={() => setEnlarged(null)}
+          onRemove={() => {
+            removeBinderCard(enlarged.id);
+            setEnlarged(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -221,9 +231,18 @@ function EmptyState({ filter }: { filter: Filter }) {
 
 // ─── Enlarged-card modal ─────────────────────────────────────────
 
-function EnlargedCardModal({ card, onDismiss }: { card: BinderCard; onDismiss: () => void }) {
+function EnlargedCardModal({
+  card,
+  onDismiss,
+  onRemove,
+}: {
+  card: BinderCard;
+  onDismiss: () => void;
+  onRemove: () => void;
+}) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const { handleBackdropClick } = useModalDismiss(dialogRef, onDismiss);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const clubData = clubDataMap.get(card.clubId);
   const mintedDate = new Date(card.mintedAt).toLocaleDateString(undefined, {
     year: 'numeric', month: 'short', day: 'numeric',
@@ -240,12 +259,15 @@ function EnlargedCardModal({ card, onDismiss }: { card: BinderCard; onDismiss: (
       <div className="plm-absolute plm-inset-0 plm-bg-black/70 plm-animate-fade-in" />
       <div
         ref={dialogRef}
-        className="plm-relative plm-bg-cream plm-rounded-xl plm-px-6 plm-py-8 plm-flex plm-flex-col plm-items-center plm-gap-4 plm-animate-slide-up plm-max-h-[90vh] plm-overflow-y-auto"
+        // Wider min-width + extra top padding so the close button has its
+        // own gutter rather than overlapping the card's top-right corner
+        // — easy to tap, easy to read.
+        className="plm-relative plm-bg-cream plm-rounded-xl plm-px-8 plm-pt-14 plm-pb-6 plm-flex plm-flex-col plm-items-center plm-gap-4 plm-animate-slide-up plm-max-h-[92vh] plm-overflow-y-auto plm-min-w-[320px]"
       >
         <button
           onClick={onDismiss}
           aria-label="Close"
-          className="plm-absolute plm-top-3 plm-right-3 plm-w-9 plm-h-9 plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-warm-500 hover:plm-bg-warm-100 plm-min-h-[44px] plm-min-w-[44px]"
+          className="plm-absolute plm-top-3 plm-right-3 plm-w-11 plm-h-11 plm-flex plm-items-center plm-justify-center plm-rounded-full plm-text-warm-600 plm-bg-white plm-border plm-border-warm-200 plm-shadow-sm hover:plm-bg-warm-100 plm-min-h-[44px] plm-min-w-[44px]"
         >
           <svg className="plm-w-5 plm-h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -273,6 +295,37 @@ function EnlargedCardModal({ card, onDismiss }: { card: BinderCard; onDismiss: (
           )}
           <div className="plm-mt-1 plm-italic">Minted {mintedDate}</div>
         </div>
+
+        {/* Remove from collection — two-step to prevent fat-finger
+            deletes. The confirm state replaces the button rather than
+            popping a separate alert so it stays inline with the card. */}
+        {confirmingRemove ? (
+          <div className="plm-flex plm-items-center plm-gap-2 plm-pt-1">
+            <span className="plm-text-xs plm-text-warm-700 plm-italic">Remove this card permanently?</span>
+            <button
+              type="button"
+              onClick={onRemove}
+              className="plm-text-xs plm-font-semibold plm-text-white plm-bg-red-600 hover:plm-bg-red-700 plm-rounded plm-px-3 plm-py-1.5 plm-min-h-[36px]"
+            >
+              Remove
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingRemove(false)}
+              className="plm-text-xs plm-font-semibold plm-text-warm-600 hover:plm-text-charcoal plm-rounded plm-px-2 plm-py-1.5 plm-min-h-[36px]"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmingRemove(true)}
+            className="plm-text-[11px] plm-uppercase plm-tracking-wider plm-font-semibold plm-text-warm-500 hover:plm-text-red-600 plm-pt-1"
+          >
+            Remove from collection
+          </button>
+        )}
       </div>
     </div>
   );

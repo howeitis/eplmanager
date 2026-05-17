@@ -28,11 +28,17 @@ export interface MetaSlice {
   endCurrentTenure: (endSeason: number) => void;
   startNewTenure: (clubId: string, startSeason: number) => void;
   /**
-   * Mint one or more binder cards onto the manager's career scrapbook.
+   * Mint one or more binder cards onto the manager's career collection.
    * Dedupes by card id — calling twice with the same id is a no-op,
    * so retry/replay-safe at every call site.
    */
   addBinderCards: (cards: BinderCard[]) => void;
+  /**
+   * Remove a single binder card by id. Used by the binder's per-card
+   * delete affordance — the card is gone permanently from this save,
+   * which is the desired UX (no undo). No-op if the id isn't present.
+   */
+  removeBinderCard: (cardId: string) => void;
 }
 
 export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set) => ({
@@ -153,6 +159,15 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set)
       }
       if (fresh.length === 0) return {};
       return { manager: { ...state.manager, binder: [...existing, ...fresh] } };
+    });
+  },
+
+  removeBinderCard: (cardId) => {
+    set((state) => {
+      if (!state.manager?.binder) return {};
+      const next = state.manager.binder.filter((c) => c.id !== cardId);
+      if (next.length === state.manager.binder.length) return {};
+      return { manager: { ...state.manager, binder: next } };
     });
   },
 });

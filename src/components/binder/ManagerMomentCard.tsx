@@ -21,7 +21,10 @@ interface ManagerMomentCardProps {
  * to give career milestones the same collectible weight as player cards.
  */
 export function ManagerMomentCard({ card, clubName, size = 'md' }: ManagerMomentCardProps) {
-  const tier = tierForMoment(card.type);
+  // Per-card override beats the per-type default. Used by milestone moments
+  // (50/100/250 games scale up the tier) and is forward-compatible for any
+  // future moment whose rarity varies by sub-criterion.
+  const tier = card.tier ?? tierForMoment(card.type);
   const accent = card.accentColor ?? getTierAccentColor(tier);
   const border = getTierBorderColor(tier);
   const gradient = getTierBgGradient(tier);

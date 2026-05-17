@@ -50,7 +50,7 @@ describe('detectFinalDayStakes', () => {
     expect(stakes).toBeNull();
   });
 
-  it('fires a title-race cinematic when top two are within 5 points', () => {
+  it('fires a title-race cinematic when top two are within 5 points and player is a contender', () => {
     const pts = [85, 84, 70, 65, 55, 50, 48, 45, 42, 40, 38, 36, 34, 32, 30, 28, 26, 23, 20, 17];
     const stakes = detectFinalDayStakes({
       leagueTable: table(pts, 0),
@@ -59,6 +59,19 @@ describe('detectFinalDayStakes', () => {
     });
     expect(stakes?.kind).toBe('title');
     expect(stakes && 'contenders' in stakes && stakes.contenders).toContain('you');
+  });
+
+  it('does not fire title-race when player is mid-table, even if the title is tight', () => {
+    // Top two tied at 85-84 (real race) but the player is in 10th.
+    // The cinematic should not fire — it's reserved for the user's own
+    // story, not as a neutral broadcast of someone else's title.
+    const pts = [85, 84, 70, 65, 60, 55, 50, 48, 45, 42, 40, 38, 36, 34, 32, 30, 28, 26, 23, 20];
+    const stakes = detectFinalDayStakes({
+      leagueTable: table(pts, 9),
+      playerClubId: 'you',
+      fixturesRemaining: 1,
+    });
+    expect(stakes).toBeNull();
   });
 
   it('does not fire title-race when the gap to second is more than 5 points', () => {

@@ -1249,8 +1249,16 @@ function App() {
       totalFaCups: updatedMgr.tenures.reduce((sum, t) => sum + t.faCups, 0),
     });
 
-    // Check milestone games
+    // Check milestone games. The milestone moment's rarity scales with
+    // the count: 50 is bronze (touchline chalk), 100 silver (you've
+    // arrived), 250 gold (institution), 500+ elite (legend status).
     const totalGames = store.getState().manager!.totalGamesManaged;
+    const milestoneTier = (m: number): import('./types/entities').ManagerMomentTier => {
+      if (m >= 500) return 'elite';
+      if (m >= 250) return 'gold';
+      if (m >= 100) return 'silver';
+      return 'bronze';
+    };
     for (const milestone of [50, 100, 250, 500, 1000]) {
       if (totalGames >= milestone && (totalGames - gamesThisSeason) < milestone) {
         state.addAccomplishment({
@@ -1268,6 +1276,7 @@ function App() {
             subtitle: 'A line drawn in the touchline chalk.',
             season: seasonNumber,
             clubId: playerClubId,
+            tier: milestoneTier(milestone),
           }),
         );
       }
