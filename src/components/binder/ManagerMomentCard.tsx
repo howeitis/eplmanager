@@ -119,9 +119,12 @@ export function ManagerMomentCard({ card, clubName, size = 'md' }: ManagerMoment
 function tierForMoment(type: ManagerMomentType): CardTier {
   switch (type) {
     case 'first-title':
+    case 'icon-arrived':
+    case 'legend-status':
       return 'elite';
     case 'league-title':
     case 'final-day-clincher':
+    case 'starboy-emerged':
       return 'gold';
     case 'first-cup':
     case 'fa-cup':
@@ -146,6 +149,9 @@ function labelForMoment(type: ManagerMomentType): string {
     case 'promotion': return 'Promotion';
     case 'final-day-clincher': return 'Final Day';
     case 'first-hire': return 'Appointment';
+    case 'starboy-emerged': return 'Starboy';
+    case 'icon-arrived': return 'Icon';
+    case 'legend-status': return 'Legend';
   }
 }
 
@@ -167,6 +173,12 @@ function glyphForMoment(type: ManagerMomentType): string {
       return '⌛';
     case 'first-hire':
       return '🪪';
+    case 'starboy-emerged':
+      return '⭐';
+    case 'icon-arrived':
+      return '🌠';
+    case 'legend-status':
+      return '🦁';
   }
 }
 

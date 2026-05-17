@@ -5,6 +5,8 @@ import { getTrophyImageUrl } from '@/data/assets';
 import type { SeasonHistory as SeasonHistoryType } from '@/types/entities';
 import { TutorialModal, type TutorialTab } from '@/components/shared/TutorialModal';
 import { useFirstVisitTutorial } from '@/hooks/useFirstVisitTutorial';
+import { useNavigation } from '@/hooks/useNavigation';
+import { binderCardCount, playerCards, managerMomentCards } from '@/utils/binder';
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
@@ -17,6 +19,14 @@ export function SeasonHistoryScreen() {
   const firstVisit = useFirstVisitTutorial('history', saveSlot);
   const [reviewTab, setReviewTab] = useState<TutorialTab | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const { navigateToBinder } = useNavigation();
+
+  // Binder card totals — drives the entry-point tile below the trophy
+  // cabinet. We compute up front so empty binders can still surface the
+  // tile (with a discoverability prompt) rather than hiding the feature.
+  const binderTotal = binderCardCount(manager?.binder);
+  const binderPlayerCount = playerCards(manager?.binder).length;
+  const binderMomentCount = managerMomentCards(manager?.binder).length;
 
   // All-time records
   const records = useMemo(() => {
@@ -118,6 +128,15 @@ export function SeasonHistoryScreen() {
           </p>
           <div className="plm-mt-4">{tutorialButton}</div>
         </section>
+        <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+          <BinderTile
+            total={binderTotal}
+            players={binderPlayerCount}
+            moments={binderMomentCount}
+            accent={playerClub?.colors.primary || '#1A1A1A'}
+            onOpen={navigateToBinder}
+          />
+        </section>
         {tutorialModal}
       </div>
     );
@@ -216,6 +235,19 @@ export function SeasonHistoryScreen() {
           </div>
         </section>
       )}
+
+      {/* Binder entry — sits below the trophy cabinet as a sub-screen
+          door. Surfaces even on empty binders so the feature is
+          discoverable; the screen itself handles its own empty state. */}
+      <section className="plm-relative plm-pt-5 plm-border-t plm-border-warm-200" style={{ zIndex: 1 }}>
+        <BinderTile
+          total={binderTotal}
+          players={binderPlayerCount}
+          moments={binderMomentCount}
+          accent={accent}
+          onOpen={navigateToBinder}
+        />
+      </section>
 
       {/* All-time Records — magazine pull-quote feel */}
       {(records.mostGoals.goals > 0 || records.highestPoints.points > 0) && (
@@ -418,6 +450,62 @@ function getOrdinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+// ─── Binder entry tile ─────────────────────────────────────────────────
+
+function BinderTile({
+  total,
+  players,
+  moments,
+  accent,
+  onOpen,
+}: {
+  total: number;
+  players: number;
+  moments: number;
+  accent: string;
+  onOpen: () => void;
+}) {
+  return (
+    <>
+      <div className="plm-flex plm-items-baseline plm-justify-between plm-mb-3">
+        <h2 className="plm-font-display plm-text-lg plm-font-bold plm-text-charcoal">
+          Career Binder
+        </h2>
+        <span className="plm-text-[10px] plm-uppercase plm-tracking-[0.18em] plm-text-warm-500 plm-font-semibold plm-tabular-nums">
+          {total} {total === 1 ? 'card' : 'cards'}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="plm-w-full plm-flex plm-items-center plm-gap-4 plm-rounded-lg plm-border plm-border-warm-200 plm-bg-white plm-px-4 plm-py-4 plm-text-left hover:plm-bg-warm-50 plm-transition-colors plm-min-h-[44px]"
+        aria-label="Open career binder"
+      >
+        <div
+          className="plm-w-14 plm-h-14 plm-rounded plm-flex plm-items-center plm-justify-center plm-flex-shrink-0 plm-text-2xl plm-text-white"
+          style={{ backgroundColor: accent }}
+          aria-hidden
+        >
+          ▦
+        </div>
+        <div className="plm-flex-1 plm-min-w-0">
+          <div className="plm-font-display plm-font-bold plm-text-base plm-text-charcoal">
+            {total === 0 ? 'Open your scrapbook' : 'Career scrapbook'}
+          </div>
+          <div className="plm-text-xs plm-text-warm-600 plm-mt-0.5">
+            {total === 0
+              ? 'Signings, milestones, and silverware land here as cards.'
+              : `${moments} ${moments === 1 ? 'moment' : 'moments'} · ${players} ${players === 1 ? 'player' : 'players'}`}
+          </div>
+        </div>
+        <span className="plm-text-warm-400 plm-text-lg plm-flex-shrink-0" aria-hidden>
+          ›
+        </span>
+      </button>
+    </>
+  );
 }
 
 // ─── Tutorial review picker ────────────────────────────────────────────────

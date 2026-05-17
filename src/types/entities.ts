@@ -363,7 +363,13 @@ export type ManagerMomentType =
   | 'survival'
   | 'milestone-games'
   | 'promotion'
-  | 'final-day-clincher';
+  | 'final-day-clincher'
+  /** A user-club u21 player crossed into Starboy territory (age ≤21, OVR ≥82). */
+  | 'starboy-emerged'
+  /** A user-club player crossed into Icon overall (≥90). */
+  | 'icon-arrived'
+  /** A user-club player reached Legend status (8+ career trophies). */
+  | 'legend-status';
 
 export interface ManagerMomentCard {
   kind: 'manager-moment';

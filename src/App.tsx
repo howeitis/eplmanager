@@ -96,6 +96,7 @@ import {
 } from './engine/reputation';
 import { getBackgroundEffects } from './engine/managerBackground';
 import { mintPlayerCard, mintManagerMoment } from './utils/binder';
+import { detectRareTierTransitions, type RareTierPreState } from './utils/rareTierTransitions';
 import { detectFinalDayStakes, type FinalDayStakes } from './components/match/finalDayStakes';
 import type { BinderCard } from './types/entities';
 import type {
@@ -1115,6 +1116,19 @@ function App() {
     );
     state.updateReputation(repResult.delta);
 
+    // Snapshot pre-season trophy counts for user-club players. Used later
+    // to detect Legend-status crossings (8+ trophies) — trophies are
+    // awarded immediately below, so we have to capture the pre state here
+    // before the mutation runs.
+    const preSeasonTrophyCount = new Map<string, number>();
+    const userClubPreTrophies = clubs.find((c) => c.id === playerClubId);
+    if (userClubPreTrophies) {
+      for (const p of userClubPreTrophies.roster) {
+        if (p.isTemporary) continue;
+        preSeasonTrophyCount.set(p.id, (p.trophiesWon ?? []).length);
+      }
+    }
+
     // Award trophy stickers to every non-temporary player on the winning
     // clubs — applies to both the user's squad and AI squads, so retro cards
     // across the league reflect their honours. Mutates the local `clubs`
@@ -1461,15 +1475,22 @@ function App() {
     // a 4-3-3 spine. Scores are position-specific weightings of goals,
     // assists, clean sheets, overall, and form. Retired players are still
     // eligible — their pre-aging snapshot retains the season's tallies.
+    //
+    // Floor at OVR 75: a bronze striker who happened to score 11 goals
+    // shouldn't crowd out a 78-rated forward with a poorer return. The
+    // league-of-the-season XI should read as a *Silver+* lineup.
+    const TOTS_MIN_OVERALL = 75;
     const totsCandidates: { player: import('./types/entities').Player; clubId: string }[] = [];
     for (const club of store.getState().clubs) {
       for (const p of club.roster) {
         if (p.isTemporary) continue;
+        if (p.overall < TOTS_MIN_OVERALL) continue;
         totsCandidates.push({ player: p, clubId: club.id });
       }
     }
     for (const r of agingResults_) {
       for (const ret of r.retired) {
+        if (ret.player.overall < TOTS_MIN_OVERALL) continue;
         totsCandidates.push({ player: ret.player, clubId: r.clubId });
       }
     }
@@ -1510,20 +1531,43 @@ function App() {
     setTotsPlayers(totsSlots.map((s) => s.player));
     setTotsClubIds(totsSlots.map((s) => s.clubId));
 
-    // ─── Mint binder cards for the season's pack contents ─────────────
-    // Every card in the season-end packs (improved / TOTS / retirement /
-    // youth) gets a permanent home in the binder. Done here at queue-
-    // build time rather than inside the pack flow so it persists even if
-    // the user skips through the celebrations without revealing each card.
-    const seasonEndCards: BinderCard[] = [...newMoments];
-    for (const p of improvedList) {
-      seasonEndCards.push(mintPlayerCard(p, playerClubId, seasonNumber, 'tier-up'));
+    // ─── Detect Starboy / Icon / Legend crossings ───────────────────
+    // Generic tier-band crossings (bronze → silver, etc.) don't earn
+    // their own binder card — the season-end Risers pack already
+    // celebrates them in flight. Only the rare cosmic-tier transitions
+    // (u21 Starboy, OVR-90 Icon, 8-trophy Legend) get a permanent
+    // manager-moment card.
+    const rarePre = new Map<string, RareTierPreState>();
+    for (const [id, agingState] of preAgingOverallByPlayer.entries()) {
+      rarePre.set(id, {
+        overall: agingState.overall,
+        age: agingState.age,
+        trophies: preSeasonTrophyCount.get(id) ?? 0,
+      });
     }
+    const rareTransitions = postAgingUserClub
+      ? detectRareTierTransitions({
+          postAgingRoster: postAgingUserClub.roster,
+          playerClubId,
+          seasonNumber,
+          pre: rarePre,
+        })
+      : [];
+
+    // ─── Mint binder cards for the season's pack contents ─────────────
+    // Permanent home in the binder for: rare-tier transitions, retirees,
+    // user-club TOTS picks, and youth-academy graduates. TOTS is filtered
+    // to the user's own players — the binder is the manager's scrapbook,
+    // not a league-wide archive. Done at queue-build time rather than
+    // inside the pack flow so it persists even if the user clicks past
+    // the celebrations.
+    const seasonEndCards: BinderCard[] = [...newMoments, ...rareTransitions];
     for (const p of retirees) {
       seasonEndCards.push(mintPlayerCard(p, playerClubId, seasonNumber, 'retirement'));
     }
     for (let i = 0; i < totsSlots.length; i++) {
       const slot = totsSlots[i];
+      if (slot.clubId !== playerClubId) continue;
       seasonEndCards.push(mintPlayerCard(slot.player, slot.clubId, seasonNumber, 'tots'));
     }
     for (const p of playerYouthIntake) {
@@ -1788,6 +1832,12 @@ function App() {
     }
   }, [managerClubId, gameView, handleNavigate]);
 
+  const navigateToBinder = useCallback(() => {
+    setViewHistory((prev) => [...prev, gameView]);
+    setGameView('binder');
+    window.scrollTo(0, 0);
+  }, [gameView]);
+
   const navigateBack = useCallback(() => {
     setViewHistory((prev) => {
       const copy = [...prev];
@@ -1805,8 +1855,9 @@ function App() {
 
   const navigationContextValue = useMemo(() => ({
     navigateToClub,
+    navigateToBinder,
     navigateBack,
-  }), [navigateToClub, navigateBack]);
+  }), [navigateToClub, navigateToBinder, navigateBack]);
 
   const handleBoardMeetingContinue = useCallback(async () => {
     const state = store.getState();
@@ -1900,10 +1951,15 @@ function App() {
     );
   }
 
-  // Game screen with navigation
-  const activeNavTab: NavTab = (['hub', 'squad', 'transfers', 'binder', 'history', 'manager'] as NavTab[]).includes(gameView as NavTab)
+  // Game screen with navigation. The Binder sits under History as a
+  // sub-screen (reached from the History page), so when the user is on
+  // it we keep the History tab lit to signal where in the hierarchy
+  // they are.
+  const activeNavTab: NavTab = (['hub', 'squad', 'transfers', 'history', 'manager'] as NavTab[]).includes(gameView as NavTab)
     ? (gameView as NavTab)
-    : 'hub';
+    : gameView === 'binder'
+      ? 'history'
+      : 'hub';
 
   return (
     <NavigationContext.Provider value={navigationContextValue}>
