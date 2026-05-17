@@ -371,6 +371,15 @@ export type ManagerMomentType =
   /** A user-club player reached Legend status (8+ career trophies). */
   | 'legend-status';
 
+/**
+ * Optional tier override for moments whose rarity varies by sub-criterion.
+ * Used by milestone-games (50 = bronze, 100 = silver, 250 = gold), where
+ * the moment type alone doesn't capture how rare the achievement is.
+ * When unset, ManagerMomentCard falls back to a default tier keyed off
+ * the moment type.
+ */
+export type ManagerMomentTier = 'base' | 'bronze' | 'silver' | 'gold' | 'elite';
+
 export interface ManagerMomentCard {
   kind: 'manager-moment';
   id: string;
@@ -384,6 +393,8 @@ export interface ManagerMomentCard {
   mintedAt: number;
   /** Optional override for the card accent. Falls back to club primary. */
   accentColor?: string;
+  /** Optional rarity override; falls back to a per-type default. */
+  tier?: ManagerMomentTier;
 }
 
 export type BinderCard = PlayerBinderCard | ManagerMomentCard;

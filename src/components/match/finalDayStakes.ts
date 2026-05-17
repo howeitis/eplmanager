@@ -46,12 +46,15 @@ export function detectFinalDayStakes({
   const leader = sorted[0];
   const second = sorted[1];
 
-  // Title race — 2+ within 5 pts of leader.
+  // Title race — 2+ within 5 pts of leader AND the player's club is one
+  // of those contenders. If the player is mid-table watching from afar
+  // we skip the dramatics and play the round as a normal month — the
+  // cinematic is about the user's own season, not a neutral broadcast.
   if (second.points >= leader.points - 5) {
     const titleContenders = sorted
       .filter((r) => r.points >= leader.points - 5)
       .map((r) => r.clubId);
-    if (titleContenders.length >= 2) {
+    if (titleContenders.length >= 2 && titleContenders.includes(playerClubId)) {
       return { kind: 'title', contenders: titleContenders };
     }
   }

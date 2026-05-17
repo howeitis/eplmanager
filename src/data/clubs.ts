@@ -212,8 +212,8 @@ export const CLUBS: ClubData[] = [
     logo: 'westham.png',
     name: 'West Ham United',
     shortName: 'WHU',
-    tier: 3,
-    budget: 55,
+    tier: 4,
+    budget: 48,
     colors: { primary: '#7A263A', secondary: '#1BB1E7' },
     rivalries: [],
     namePool: [
@@ -324,8 +324,8 @@ export const CLUBS: ClubData[] = [
     logo: 'wolves.png',
     name: 'Wolverhampton Wanderers',
     shortName: 'WOL',
-    tier: 4,
-    budget: 42,
+    tier: 5,
+    budget: 32,
     colors: { primary: '#FDB913', secondary: '#231F20' },
     rivalries: ['aston-villa'],
     namePool: [
@@ -371,8 +371,8 @@ export const CLUBS: ClubData[] = [
     logo: 'everton.png',
     name: 'Everton',
     shortName: 'EVE',
-    tier: 5,
-    budget: 35,
+    tier: 3,
+    budget: 58,
     colors: { primary: '#003399', secondary: '#FFFFFF' },
     rivalries: ['liverpool', 'newcastle'],
     namePool: [

@@ -1,4 +1,4 @@
-export type TutorialTab = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'overview';
+export type TutorialTab = 'hub' | 'squad' | 'transfers' | 'history' | 'binder' | 'manager' | 'overview';
 
 interface TutorialCopy {
   title: string;
@@ -73,8 +73,33 @@ const TUTORIALS: Record<TutorialTab, TutorialCopy> = {
         body: 'League titles you\'ve won appear in the cabinet. All-time records track the biggest goal hauls and points totals across your career.',
       },
       {
+        title: 'Your card collection',
+        body: 'Below the trophy cabinet, the Career Card Collection tile opens your binder — signings, milestones, retirements, and big-moment cards collected across your career. Tap any card to enlarge it.',
+      },
+      {
         title: 'Need a refresher?',
-        body: 'The "New here?" button at the top of this tab opens every tutorial — you can revisit any tab\'s guide any time.',
+        body: 'The "How it works" button at the top of this tab opens every tutorial — you can revisit any tab\'s guide any time.',
+      },
+    ],
+  },
+  binder: {
+    title: 'Card Collection',
+    sections: [
+      {
+        title: 'What gets collected',
+        body: 'Every player you sign joins your binder as a Signing card. End-of-season packs add Retirees, Youth Academy graduates, and any of your players who made the Team of the Season.',
+      },
+      {
+        title: 'Career Moments',
+        body: 'Big career events mint Moment cards: your first title, every league title and FA Cup, surviving relegation, hitting 50/100/250 games, winning a title on the final day, and rare player transitions — Starboy (a U21 hits 82+), Icon (90+ overall), or Legend (eight career trophies).',
+      },
+      {
+        title: 'Browse and filter',
+        body: 'Cards are grouped by season, most-recent first. Filter by category at the top: All, Moments, Signings, TOTS, Retirees, Youth. Click any card to enlarge it.',
+      },
+      {
+        title: 'Pruning the collection',
+        body: 'On the enlarged card, "Remove from collection" deletes it from this save. There\'s no undo — but the rest of the binder stays exactly as it was.',
       },
     ],
   },
@@ -175,7 +200,7 @@ export function TutorialModal({ onClose, tab = 'overview' }: TutorialModalProps)
           ))}
           {tab !== 'history' && tab !== 'overview' && (
             <p className="plm-text-xs plm-text-warm-500 plm-italic plm-pt-1 plm-border-t plm-border-warm-100">
-              You can review every tutorial again from the History tab — tap "New here?" at the top.
+              You can review every tutorial again from the History tab — tap "How it works" at the top.
             </p>
           )}
         </div>

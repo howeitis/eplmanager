@@ -3,6 +3,7 @@ import type {
   PlayerBinderCard,
   PlayerBinderCardType,
   ManagerMomentCard,
+  ManagerMomentTier,
   ManagerMomentType,
   BinderCard,
 } from '@/types/entities';
@@ -61,6 +62,8 @@ export interface ManagerMomentInput {
   /** Force a specific id; defaults to `mm-${type}-${clubId}-s${season}`. */
   id?: string;
   accentColor?: string;
+  /** Override the per-type default rarity tier (used for milestone games). */
+  tier?: ManagerMomentTier;
 }
 
 export function mintManagerMoment(input: ManagerMomentInput): ManagerMomentCard {
@@ -74,6 +77,7 @@ export function mintManagerMoment(input: ManagerMomentInput): ManagerMomentCard 
     clubId: input.clubId,
     mintedAt: Date.now(),
     accentColor: input.accentColor,
+    tier: input.tier,
   };
 }
 

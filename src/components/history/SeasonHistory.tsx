@@ -77,12 +77,20 @@ export function SeasonHistoryScreen() {
     return result;
   }, [seasonHistories, playerClubId, manager?.accomplishments]);
 
+  // Red pill — high-contrast call-out so new players can spot the
+  // tutorial entry without having to hunt for it. Sits in the masthead
+  // and in the empty-state branch.
   const tutorialButton = (
     <button
       onClick={() => setPickerOpen(true)}
-      className="plm-inline-flex plm-items-center plm-gap-1.5 plm-text-[10px] plm-uppercase plm-tracking-[0.18em] plm-font-semibold plm-text-warm-500 hover:plm-text-charcoal plm-min-h-[36px]"
+      className="plm-inline-flex plm-items-center plm-gap-1.5 plm-rounded-full plm-bg-red-600 hover:plm-bg-red-700 plm-text-white plm-px-3 plm-py-1.5 plm-text-[10px] plm-uppercase plm-tracking-[0.18em] plm-font-bold plm-shadow-sm plm-min-h-[36px]"
     >
-      <span aria-hidden="true">?</span>
+      <span
+        className="plm-w-4 plm-h-4 plm-rounded-full plm-bg-white/25 plm-flex plm-items-center plm-justify-center plm-text-[11px] plm-font-bold plm-leading-none"
+        aria-hidden="true"
+      >
+        ?
+      </span>
       <span>How it works</span>
     </button>
   );
@@ -492,7 +500,7 @@ function BinderTile({
         </div>
         <div className="plm-flex-1 plm-min-w-0">
           <div className="plm-font-display plm-font-bold plm-text-base plm-text-charcoal">
-            {total === 0 ? 'Open your scrapbook' : 'Career scrapbook'}
+            {total === 0 ? 'Open your card collection' : 'Career card collection'}
           </div>
           <div className="plm-text-xs plm-text-warm-600 plm-mt-0.5">
             {total === 0
@@ -514,6 +522,7 @@ const TUTORIAL_OPTIONS: { tab: TutorialTab; label: string; icon: string }[] = [
   { tab: 'squad', label: 'Squad', icon: '👥' },
   { tab: 'transfers', label: 'Transfers', icon: '💷' },
   { tab: 'history', label: 'History', icon: '📜' },
+  { tab: 'binder', label: 'Card Collection', icon: '▦' },
   { tab: 'manager', label: 'Manager', icon: '🎩' },
   { tab: 'overview', label: 'Full overview', icon: '📖' },
 ];
