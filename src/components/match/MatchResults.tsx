@@ -400,11 +400,36 @@ function MatchScoreCard({
         </div>
       )}
 
-      {result.isDerby && (
-        <div className="plm-text-[9px] plm-font-bold plm-text-amber-600 plm-uppercase plm-tracking-wider plm-text-center plm-py-0.5 plm-bg-amber-50 plm-rounded-t plm-border-b plm-border-amber-100">
-          Derby
-        </div>
-      )}
+      {result.isDerby && (() => {
+        // Two-tone strip in the two clubs' primary colors — makes a Derby
+        // feel like *these specific clubs* rather than a generic rivalry
+        // tag. Falls back to the existing amber treatment if either club's
+        // colour is missing for any reason. Text colour pivots on which
+        // half of the gradient the label sits over (centred), so we keep
+        // it white and add a subtle text shadow for legibility against
+        // either side.
+        const homePrimary = homeClub?.colors.primary;
+        const awayPrimary = awayClub?.colors.primary;
+        if (!homePrimary || !awayPrimary) {
+          return (
+            <div className="plm-text-[9px] plm-font-bold plm-text-amber-600 plm-uppercase plm-tracking-wider plm-text-center plm-py-0.5 plm-bg-amber-50 plm-rounded-t plm-border-b plm-border-amber-100">
+              Derby
+            </div>
+          );
+        }
+        return (
+          <div
+            className="plm-text-[9px] plm-font-bold plm-text-white plm-uppercase plm-tracking-wider plm-text-center plm-py-0.5 plm-rounded-t"
+            style={{
+              background: `linear-gradient(90deg, ${homePrimary} 0%, ${homePrimary} 48%, ${awayPrimary} 52%, ${awayPrimary} 100%)`,
+              textShadow: '0 0 4px rgba(0,0,0,0.55)',
+            }}
+            aria-label={`${homeClub?.shortName} vs ${awayClub?.shortName} derby`}
+          >
+            Derby
+          </div>
+        );
+      })()}
 
       {upset.isUpset && (
         <div className="plm-text-[9px] plm-font-bold plm-text-purple-700 plm-uppercase plm-tracking-wider plm-text-center plm-py-0.5 plm-bg-purple-50 plm-rounded-t plm-border-b plm-border-purple-100 plm-animate-fade-in">

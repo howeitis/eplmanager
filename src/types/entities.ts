@@ -435,4 +435,11 @@ export interface SaveMetadata {
   lastSaved: string;
   managerName?: string;
   managerAvatar?: string;
+  /**
+   * Total cards in the career binder at save time. Surfaced as a pill on
+   * the save-slot selector so returning players can see their collection
+   * growing without having to load. Optional for back-compat with saves
+   * written before v4 / before this field landed.
+   */
+  binderCount?: number;
 }

@@ -336,12 +336,15 @@ export async function saveGame(slot: number, state: SaveableState): Promise<void
   // Before any matches are played, sort is essentially arbitrary — keep the previous
   // value (0 on a brand-new save) rather than reporting a misleading position.
   const leaguePosition = anyMatchesPlayed && computedPos > 0 ? computedPos : (prevMetadata?.leaguePosition ?? 0);
+  const manager = state.manager as { binder?: unknown[] } | null | undefined;
+  const binderCount = Array.isArray(manager?.binder) ? manager.binder.length : 0;
   const freshMetadata: SaveMetadata = {
     ...(prevMetadata as SaveMetadata),
     leaguePosition,
     currentPhase: state.currentPhase as SaveMetadata['currentPhase'],
     seasonNumber: state.seasonNumber as number,
     lastSaved: new Date().toISOString(),
+    binderCount,
   };
   data.saveMetadata = freshMetadata;
 

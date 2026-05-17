@@ -106,128 +106,120 @@ function makeModifier(
 
 // ─── Form Events (3-5 per month) ───
 
-const FORM_EVENTS: EventTemplate[] = [
-  {
-    id: 'form_st_hot_streak',
+// ─── Form events (parameterised) ─────────────────────────────────────
+//
+// Every form event in this file picks a random user-club player matching
+// a position filter, then attaches a one-phase stat modifier with a
+// player-name flavour line. Inline-cloning that for every {position} ×
+// {hot/cold} combination produced the same scaffolding eight times over,
+// so the variants now live as data and a single builder turns each
+// variant into a full EventTemplate.
+//
+// Add a new form event by appending one entry to FORM_EVENT_VARIANTS.
+// No new builder logic required.
+
+interface FormEventVariant {
+  /** Stable id suffix — becomes `form_${key}` and `form-${key}-${phase}`. */
+  key: string;
+  /** Positions this variant targets — accepts any matching player. */
+  positions: Position[];
+  /** Stat deltas applied to the chosen player for the next phase. */
+  effect: Record<string, number>;
+  /** Sentence rendered as the event description. */
+  describe: (name: string) => string;
+  /** Short label used in the modifier list view. */
+  label: (name: string) => string;
+}
+
+function makeFormEvent(variant: FormEventVariant): EventTemplate {
+  return {
+    id: `form_${variant.key}`,
     category: 'form',
     condition: (ctx) => isMonthlyPhase(ctx.phase),
     generate: (ctx, rng) => {
       const club = getPlayerClub(ctx.clubs, ctx.playerClubId);
       if (!club) return null;
-      const player = getRandomPlayer(rng, club.roster, (p) => p.position === 'ST' && !p.injured && !p.isTemporary);
+      const player = getRandomPlayer(rng, club.roster, (p) =>
+        variant.positions.includes(p.position) && !p.injured && !p.isTemporary,
+      );
       if (!player) return null;
       return {
-        description: `${player.name} is in the form of his life. Goals are flowing.`,
-        modifiers: [makeModifier(`form-st-hot-${ctx.phase}`, `${player.name} hot streak`, { ATK: 4 }, nextPhase(ctx.phase), player.id, ctx.playerClubId)],
+        description: variant.describe(player.name),
+        modifiers: [
+          makeModifier(
+            `form-${variant.key}-${ctx.phase}`,
+            variant.label(player.name),
+            variant.effect,
+            nextPhase(ctx.phase),
+            player.id,
+            ctx.playerClubId,
+          ),
+        ],
       };
     },
+  };
+}
+
+const FORM_EVENT_VARIANTS: FormEventVariant[] = [
+  {
+    key: 'st_hot_streak',
+    positions: ['ST'],
+    effect: { ATK: 4 },
+    describe: (n) => `${n} is in the form of his life. Goals are flowing.`,
+    label: (n) => `${n} hot streak`,
   },
   {
-    id: 'form_cb_shaky',
-    category: 'form',
-    condition: (ctx) => isMonthlyPhase(ctx.phase),
-    generate: (ctx, rng) => {
-      const club = getPlayerClub(ctx.clubs, ctx.playerClubId);
-      if (!club) return null;
-      const player = getRandomPlayer(rng, club.roster, (p) => p.position === 'CB' && !p.injured && !p.isTemporary);
-      if (!player) return null;
-      return {
-        description: `${player.name} looks shaky at the back. Costly errors creeping in.`,
-        modifiers: [makeModifier(`form-cb-shaky-${ctx.phase}`, `${player.name} shaky`, { DEF: -3 }, nextPhase(ctx.phase), player.id, ctx.playerClubId)],
-      };
-    },
+    key: 'cb_shaky',
+    positions: ['CB'],
+    effect: { DEF: -3 },
+    describe: (n) => `${n} looks shaky at the back. Costly errors creeping in.`,
+    label: (n) => `${n} shaky`,
   },
   {
-    id: 'form_mf_brilliant',
-    category: 'form',
-    condition: (ctx) => isMonthlyPhase(ctx.phase),
-    generate: (ctx, rng) => {
-      const club = getPlayerClub(ctx.clubs, ctx.playerClubId);
-      if (!club) return null;
-      const player = getRandomPlayer(rng, club.roster, (p) => p.position === 'MF' && !p.injured && !p.isTemporary);
-      if (!player) return null;
-      return {
-        description: `${player.name} has been quietly brilliant. Running the midfield.`,
-        modifiers: [makeModifier(`form-mf-brill-${ctx.phase}`, `${player.name} brilliant`, { MEN: 3, SKL: 2 }, nextPhase(ctx.phase), player.id, ctx.playerClubId)],
-      };
-    },
+    key: 'mf_brilliant',
+    positions: ['MF'],
+    effect: { MEN: 3, SKL: 2 },
+    describe: (n) => `${n} has been quietly brilliant. Running the midfield.`,
+    label: (n) => `${n} brilliant`,
   },
   {
-    id: 'form_wg_knock',
-    category: 'form',
-    condition: (ctx) => isMonthlyPhase(ctx.phase),
-    generate: (ctx, rng) => {
-      const club = getPlayerClub(ctx.clubs, ctx.playerClubId);
-      if (!club) return null;
-      const player = getRandomPlayer(rng, club.roster, (p) => (p.position === 'WG' || p.position === 'MF') && !p.injured && !p.isTemporary);
-      if (!player) return null;
-      return {
-        description: `${player.name} picked up a knock in training. He'll play through it, but he's not 100%.`,
-        modifiers: [makeModifier(`form-knock-${ctx.phase}`, `${player.name} knock`, { ATK: -2, DEF: -2, MOV: -2, PWR: -2, MEN: -2, SKL: -2 }, nextPhase(ctx.phase), player.id, ctx.playerClubId)],
-      };
-    },
+    key: 'wg_knock',
+    positions: ['WG', 'MF'],
+    effect: { ATK: -2, DEF: -2, MOV: -2, PWR: -2, MEN: -2, SKL: -2 },
+    describe: (n) => `${n} picked up a knock in training. He'll play through it, but he's not 100%.`,
+    label: (n) => `${n} knock`,
   },
   {
-    id: 'form_fb_marauding',
-    category: 'form',
-    condition: (ctx) => isMonthlyPhase(ctx.phase),
-    generate: (ctx, rng) => {
-      const club = getPlayerClub(ctx.clubs, ctx.playerClubId);
-      if (!club) return null;
-      const player = getRandomPlayer(rng, club.roster, (p) => p.position === 'FB' && !p.injured && !p.isTemporary);
-      if (!player) return null;
-      return {
-        description: `${player.name} has been marauding down the flank. Looks unplayable.`,
-        modifiers: [makeModifier(`form-fb-maraud-${ctx.phase}`, `${player.name} marauding`, { MOV: 4, ATK: 2 }, nextPhase(ctx.phase), player.id, ctx.playerClubId)],
-      };
-    },
+    key: 'fb_marauding',
+    positions: ['FB'],
+    effect: { MOV: 4, ATK: 2 },
+    describe: (n) => `${n} has been marauding down the flank. Looks unplayable.`,
+    label: (n) => `${n} marauding`,
   },
   {
-    id: 'form_gk_wall',
-    category: 'form',
-    condition: (ctx) => isMonthlyPhase(ctx.phase),
-    generate: (ctx, rng) => {
-      const club = getPlayerClub(ctx.clubs, ctx.playerClubId);
-      if (!club) return null;
-      const player = getRandomPlayer(rng, club.roster, (p) => p.position === 'GK' && !p.injured && !p.isTemporary);
-      if (!player) return null;
-      return {
-        description: `${player.name} hasn't been beaten in weeks. Wall-like form.`,
-        modifiers: [makeModifier(`form-gk-wall-${ctx.phase}`, `${player.name} wall`, { DEF: 5 }, nextPhase(ctx.phase), player.id, ctx.playerClubId)],
-      };
-    },
+    key: 'gk_wall',
+    positions: ['GK'],
+    effect: { DEF: 5 },
+    describe: (n) => `${n} hasn't been beaten in weeks. Wall-like form.`,
+    label: (n) => `${n} wall`,
   },
   {
-    id: 'form_mf_slow_motion',
-    category: 'form',
-    condition: (ctx) => isMonthlyPhase(ctx.phase),
-    generate: (ctx, rng) => {
-      const club = getPlayerClub(ctx.clubs, ctx.playerClubId);
-      if (!club) return null;
-      const player = getRandomPlayer(rng, club.roster, (p) => p.position === 'MF' && !p.injured && !p.isTemporary);
-      if (!player) return null;
-      return {
-        description: `${player.name} looks like he's playing in slow motion. Lost his rhythm entirely.`,
-        modifiers: [makeModifier(`form-mf-slow-${ctx.phase}`, `${player.name} slow`, { MOV: -3, MEN: -2 }, nextPhase(ctx.phase), player.id, ctx.playerClubId)],
-      };
-    },
+    key: 'mf_slow_motion',
+    positions: ['MF'],
+    effect: { MOV: -3, MEN: -2 },
+    describe: (n) => `${n} looks like he's playing in slow motion. Lost his rhythm entirely.`,
+    label: (n) => `${n} slow`,
   },
   {
-    id: 'form_st_cant_score',
-    category: 'form',
-    condition: (ctx) => isMonthlyPhase(ctx.phase),
-    generate: (ctx, rng) => {
-      const club = getPlayerClub(ctx.clubs, ctx.playerClubId);
-      if (!club) return null;
-      const player = getRandomPlayer(rng, club.roster, (p) => p.position === 'ST' && !p.injured && !p.isTemporary);
-      if (!player) return null;
-      return {
-        description: `${player.name} can't buy a goal. Hitting the post, skying chances.`,
-        modifiers: [makeModifier(`form-st-cold-${ctx.phase}`, `${player.name} cold streak`, { ATK: -4 }, nextPhase(ctx.phase), player.id, ctx.playerClubId)],
-      };
-    },
+    key: 'st_cant_score',
+    positions: ['ST'],
+    effect: { ATK: -4 },
+    describe: (n) => `${n} can't buy a goal. Hitting the post, skying chances.`,
+    label: (n) => `${n} cold streak`,
   },
 ];
+
+const FORM_EVENTS: EventTemplate[] = FORM_EVENT_VARIANTS.map(makeFormEvent);
 
 // ─── Squad Events (1-2 per month) ───
 
