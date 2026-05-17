@@ -20,8 +20,12 @@ const METADATA_KEY = 'epl-manager-save-metadata';
  *       weighted into overall. Migration reshapes every existing GK's
  *       six stat slots so the new average equals the stored overall,
  *       preserving rating continuity across the schema change.
+ *  v4 — manager.binder added (career sticker album). Migration backfills
+ *       an empty array, then synthesises manager-moment cards from
+ *       existing accomplishments so returning players get a non-empty
+ *       binder on first load.
  */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export interface SaveData {
   schemaVersion: number;
@@ -94,7 +98,92 @@ export function migrateSaveData(raw: RawSaveData): SaveData {
     version = 3;
   }
 
+  if (version < 4) {
+    // v3 → v4: manager gets a `binder` array. Empty by default, then we
+    // synthesise manager-moment cards from existing accomplishments so the
+    // binder isn't blank on day one of a multi-season save.
+    data = { ...data, manager: backfillManagerBinder(data.manager) };
+    version = 4;
+  }
+
   return { ...data, schemaVersion: version } as SaveData;
+}
+
+/**
+ * v3 → v4 helper. Adds an empty `binder` if the manager has none, then
+ * back-mints manager-moment cards for league titles, FA Cups, and game
+ * milestones already on the accomplishments log. Player binder cards
+ * cannot be retroactively synthesised — too much history is lost — so
+ * those start empty and accumulate from the upgrade season forward.
+ */
+function backfillManagerBinder(manager: unknown): unknown {
+  if (!manager || typeof manager !== 'object') return manager;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const m = manager as Record<string, any>;
+  if (Array.isArray(m.binder)) return manager;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const accomplishments: any[] = Array.isArray(m.accomplishments) ? m.accomplishments : [];
+  const synthesised: unknown[] = [];
+  let titleCount = 0;
+  let cupCount = 0;
+
+  for (const a of accomplishments) {
+    if (!a || typeof a !== 'object') continue;
+    const season = typeof a.season === 'number' ? a.season : 0;
+    const clubId = typeof a.clubId === 'string' ? a.clubId : (typeof m.clubId === 'string' ? m.clubId : '');
+    const mintedAt = Date.now();
+
+    if (a.type === 'league-title') {
+      titleCount++;
+      synthesised.push({
+        kind: 'manager-moment',
+        id: `mm-${a.type}-${clubId}-s${season}`,
+        type: titleCount === 1 ? 'first-title' : 'league-title',
+        title: titleCount === 1 ? 'Champions of England' : `Premier League · Season ${season}`,
+        subtitle: titleCount === 1 ? 'Your first league title.' : `Title number ${titleCount}.`,
+        season,
+        clubId,
+        mintedAt,
+      });
+    } else if (a.type === 'fa-cup') {
+      cupCount++;
+      synthesised.push({
+        kind: 'manager-moment',
+        id: `mm-${a.type}-${clubId}-s${season}`,
+        type: cupCount === 1 ? 'first-cup' : 'fa-cup',
+        title: cupCount === 1 ? 'FA Cup Winners' : `FA Cup · Season ${season}`,
+        subtitle: cupCount === 1 ? 'Your first cup.' : `Cup number ${cupCount}.`,
+        season,
+        clubId,
+        mintedAt,
+      });
+    } else if (a.type === 'milestone-games') {
+      synthesised.push({
+        kind: 'manager-moment',
+        id: `mm-milestone-${clubId}-s${season}-${a.id ?? season}`,
+        type: 'milestone-games',
+        title: typeof a.headline === 'string' ? a.headline : 'Career milestone',
+        subtitle: 'A line drawn in the touchline chalk.',
+        season,
+        clubId,
+        mintedAt,
+      });
+    } else if (a.type === 'club-hired') {
+      synthesised.push({
+        kind: 'manager-moment',
+        id: `mm-first-hire-${clubId}-s${season}`,
+        type: 'first-hire',
+        title: typeof a.headline === 'string' ? a.headline : 'New appointment',
+        subtitle: 'The badge gets pinned on.',
+        season,
+        clubId,
+        mintedAt,
+      });
+    }
+  }
+
+  return { ...m, binder: synthesised };
 }
 
 const GK_STAT_SLOTS = ['ATK', 'DEF', 'MOV', 'PWR', 'MEN', 'SKL'] as const;

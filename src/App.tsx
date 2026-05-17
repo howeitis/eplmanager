@@ -46,6 +46,12 @@ const PlayerDetailModal = lazy(() =>
 const PackOpening = lazy(() =>
   import('./components/shared/PackOpening').then((m) => ({ default: m.PackOpening })),
 );
+const BinderScreen = lazy(() =>
+  import('./components/binder/BinderScreen').then((m) => ({ default: m.BinderScreen })),
+);
+const FinalDayCinematic = lazy(() =>
+  import('./components/match/FinalDayCinematic').then((m) => ({ default: m.FinalDayCinematic })),
+);
 import { useGameStore } from './store/gameStore';
 import { CLUBS } from './data/clubs';
 import { inferNationalityFromName } from './data/namePool';
@@ -89,6 +95,9 @@ import {
   calculateBoardExpectation,
 } from './engine/reputation';
 import { getBackgroundEffects } from './engine/managerBackground';
+import { mintPlayerCard, mintManagerMoment } from './utils/binder';
+import { detectFinalDayStakes, type FinalDayStakes } from './components/match/finalDayStakes';
+import type { BinderCard } from './types/entities';
 import type {
   Club,
   ClubData,
@@ -100,7 +109,7 @@ import type {
 } from './types/entities';
 
 type Screen = 'title' | 'save_select' | 'club_select' | 'manager_creation' | 'game';
-type GameView = 'hub' | 'squad' | 'transfers' | 'history' | 'manager' | 'match_results' | 'season_end' | 'club_squad' | 'board_meeting' | 'resign_club_select';
+type GameView = 'hub' | 'squad' | 'transfers' | 'binder' | 'history' | 'manager' | 'match_results' | 'season_end' | 'final_day' | 'club_squad' | 'board_meeting' | 'resign_club_select';
 
 const PHASE_ORDER: GamePhase[] = [
   'summer_window', 'july_advance', 'august', 'august_deadline',
@@ -129,6 +138,17 @@ const MONTH_LABELS: Record<GamePhase, string> = {
 };
 
 const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
+
+function ordinalSuffixCompact(n: number): string {
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 13) return 'th';
+  switch (n % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
 
 function App() {
   const [screen, setScreen] = useState<Screen>('title');
@@ -166,6 +186,10 @@ function App() {
   const [totsPlayers, setTotsPlayers] = useState<import('./types/entities').Player[]>([]);
   const [totsClubIds, setTotsClubIds] = useState<string[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
+  // Final Day cinematic state. Non-null while the user is on the final-day
+  // view; cleared once they advance through to match results. The stakes
+  // payload drives the cinematic's banner copy and contender selection.
+  const [finalDayStakes, setFinalDayStakes] = useState<FinalDayStakes | null>(null);
   const store = useGameStore;
   const managerClubId = useGameStore((s) => s.manager?.clubId);
   // Gate the PlayerDetailModal chunk on actual modal state so it doesn't
@@ -347,6 +371,15 @@ function App() {
       type: 'club-hired',
       headline: `Took charge at ${club.name}`,
     });
+    state.addBinderCards([
+      mintManagerMoment({
+        type: 'first-hire',
+        title: `Welcome to ${club.name}`,
+        subtitle: `${manager.name}, ${club.name} · Day One.`,
+        season: seasonNumber,
+        clubId: club.id,
+      }),
+    ]);
 
     // Reset board expectation for the new club
     const hireLeniency = getBackgroundEffects(manager.playingBackground).boardLeniency;
@@ -443,6 +476,15 @@ function App() {
         type: 'club-hired',
         headline: `Took charge at ${club.name}`,
       }],
+      binder: [
+        mintManagerMoment({
+          type: 'first-hire',
+          title: `Welcome to ${club.name}`,
+          subtitle: `${data.name}, ${club.name} · Day One.`,
+          season: 1,
+          clubId: club.id,
+        }),
+      ],
       totalGamesManaged: 0,
       totalLeagueTitles: 0,
       totalFaCups: 0,
@@ -672,6 +714,27 @@ function App() {
       }
 
       state.lockStartingXI(activePhase, formation);
+    }
+
+    // ─── Final Day cinematic gate ────────────────────────────────────
+    // If we're about to simulate May and the table is genuinely live
+    // (title race within reach, player in the relegation mix, or top-4
+    // tight), divert to the cinematic instead. Once the user works
+    // through it, onFinish will invoke the same simulateMonth path
+    // below and the canonical results commit.
+    if (activePhase === 'may') {
+      const mayFixtures = getMonthFixtures(store.getState().fixtures, 'may');
+      const unplayed = mayFixtures.filter((f) => !f.played).length;
+      const stakes = detectFinalDayStakes({
+        leagueTable: store.getState().leagueTable,
+        playerClubId,
+        fixturesRemaining: unplayed,
+      });
+      if (stakes) {
+        setFinalDayStakes(stakes);
+        setGameView('final_day');
+        return;
+      }
     }
 
     // Monthly phase: simulate matches
@@ -1092,6 +1155,13 @@ function App() {
     }
 
     // Log accomplishments for the user's manager profile only.
+    // Manager-moment binder cards are minted alongside — the binder is
+    // the visual artefact, the accomplishment is the data row.
+    const newMoments: BinderCard[] = [];
+    const priorBinder = manager!.binder ?? [];
+    const hasPriorTitle = priorBinder.some((c) => c.kind === 'manager-moment' && c.type === 'first-title');
+    const hasPriorCup = priorBinder.some((c) => c.kind === 'manager-moment' && c.type === 'first-cup');
+
     if (playerPosition === 1) {
       state.addAccomplishment({
         id: `acc-title-s${seasonNumber}`,
@@ -1101,6 +1171,17 @@ function App() {
         headline: `Won the Premier League with ${clubDataMap.get(playerClubId)?.name}`,
       });
       state.updateCurrentTenure({ leagueTitles: (manager!.tenures?.at(-1)?.leagueTitles || 0) + 1 });
+      newMoments.push(
+        mintManagerMoment({
+          type: hasPriorTitle ? 'league-title' : 'first-title',
+          title: hasPriorTitle ? 'Champions of England' : 'A First Title',
+          subtitle: hasPriorTitle
+            ? `Premier League winners again — Season ${seasonNumber}.`
+            : `${clubDataMap.get(playerClubId)?.name} crowned for the first time under you.`,
+          season: seasonNumber,
+          clubId: playerClubId,
+        }),
+      );
     }
     if (cupResult.winner === playerClubId) {
       state.addAccomplishment({
@@ -1111,6 +1192,32 @@ function App() {
         headline: `Won the FA Cup with ${clubDataMap.get(playerClubId)?.name}`,
       });
       state.updateCurrentTenure({ faCups: (manager!.tenures?.at(-1)?.faCups || 0) + 1 });
+      newMoments.push(
+        mintManagerMoment({
+          type: hasPriorCup ? 'fa-cup' : 'first-cup',
+          title: hasPriorCup ? 'FA Cup Winners' : 'A First Cup',
+          subtitle: hasPriorCup
+            ? `Cup lifted at Wembley — Season ${seasonNumber}.`
+            : 'Your first piece of silverware.',
+          season: seasonNumber,
+          clubId: playerClubId,
+        }),
+      );
+    }
+    // Survival moment — only applies when the board was asking for survival
+    // (a tier-4/5 brief) and the player delivered without falling into the
+    // relegation places. Caps the "I just stayed up" feeling that bigger
+    // clubs would otherwise trivialise.
+    if (boardExpectation && boardExpectation.minPosition >= 16 && playerPosition <= 17) {
+      newMoments.push(
+        mintManagerMoment({
+          type: 'survival',
+          title: 'We Stayed Up',
+          subtitle: `Finished ${playerPosition}${ordinalSuffixCompact(playerPosition)} — survival secured.`,
+          season: seasonNumber,
+          clubId: playerClubId,
+        }),
+      );
     }
     // Update tenure stats
     const gamesThisSeason = sorted.find((r) => r.clubId === playerClubId)?.played || 0;
@@ -1139,6 +1246,16 @@ function App() {
           type: 'milestone-games',
           headline: `${milestone} career games managed`,
         });
+        newMoments.push(
+          mintManagerMoment({
+            type: 'milestone-games',
+            id: `mm-milestone-${milestone}-${playerClubId}-s${seasonNumber}`,
+            title: `${milestone} Games`,
+            subtitle: 'A line drawn in the touchline chalk.',
+            season: seasonNumber,
+            clubId: playerClubId,
+          }),
+        );
       }
     }
 
@@ -1392,6 +1509,29 @@ function App() {
 
     setTotsPlayers(totsSlots.map((s) => s.player));
     setTotsClubIds(totsSlots.map((s) => s.clubId));
+
+    // ─── Mint binder cards for the season's pack contents ─────────────
+    // Every card in the season-end packs (improved / TOTS / retirement /
+    // youth) gets a permanent home in the binder. Done here at queue-
+    // build time rather than inside the pack flow so it persists even if
+    // the user skips through the celebrations without revealing each card.
+    const seasonEndCards: BinderCard[] = [...newMoments];
+    for (const p of improvedList) {
+      seasonEndCards.push(mintPlayerCard(p, playerClubId, seasonNumber, 'tier-up'));
+    }
+    for (const p of retirees) {
+      seasonEndCards.push(mintPlayerCard(p, playerClubId, seasonNumber, 'retirement'));
+    }
+    for (let i = 0; i < totsSlots.length; i++) {
+      const slot = totsSlots[i];
+      seasonEndCards.push(mintPlayerCard(slot.player, slot.clubId, seasonNumber, 'tots'));
+    }
+    for (const p of playerYouthIntake) {
+      seasonEndCards.push(mintPlayerCard(p, playerClubId, seasonNumber, 'youth-intake'));
+    }
+    if (seasonEndCards.length > 0) {
+      state.addBinderCards(seasonEndCards);
+    }
 
     // Auto-set captain: keep current if still in squad, otherwise pick best player
     const postAgingPlayerClub = store.getState().clubs.find((c) => c.id === playerClubId);
@@ -1761,7 +1901,7 @@ function App() {
   }
 
   // Game screen with navigation
-  const activeNavTab: NavTab = (['hub', 'squad', 'transfers', 'history', 'manager'] as NavTab[]).includes(gameView as NavTab)
+  const activeNavTab: NavTab = (['hub', 'squad', 'transfers', 'binder', 'history', 'manager'] as NavTab[]).includes(gameView as NavTab)
     ? (gameView as NavTab)
     : 'hub';
 
@@ -1813,6 +1953,9 @@ function App() {
             {gameView === 'transfers' && (
               <TransferCenter onClose={() => setGameView('hub')} />
             )}
+            {gameView === 'binder' && (
+              <BinderScreen />
+            )}
             {gameView === 'history' && (
               <SeasonHistoryScreen />
             )}
@@ -1834,6 +1977,36 @@ function App() {
                 fixtures={monthFixtures}
                 events={monthEvents}
                 onContinue={handleMatchResultsContinue}
+              />
+            )}
+            {gameView === 'final_day' && finalDayStakes && managerClubId && (
+              <FinalDayCinematic
+                seasonSeed={deriveSeasonSeed(store.getState().gameSeed, store.getState().seasonNumber)}
+                formation={formation}
+                mentality={mentality}
+                fortunes={fortunes}
+                stakes={finalDayStakes}
+                onFinish={({ playerWasClincher }) => {
+                  // If the player decided their own title on the final
+                  // matchday, mint a dedicated moment card. Other moments
+                  // (regular title, survival, cup) get minted by
+                  // handleSeasonEnd later in the flow.
+                  if (playerWasClincher) {
+                    const s = store.getState();
+                    s.addBinderCards([
+                      mintManagerMoment({
+                        type: 'final-day-clincher',
+                        title: 'Won on the Final Day',
+                        subtitle: 'Title decided in the last 90 minutes — your result was the one that mattered.',
+                        season: s.seasonNumber,
+                        clubId: managerClubId,
+                      }),
+                    ]);
+                  }
+                  const seed = deriveSeasonSeed(store.getState().gameSeed, store.getState().seasonNumber);
+                  setFinalDayStakes(null);
+                  simulateMonth('may', seed, managerClubId);
+                }}
               />
             )}
             {gameView === 'board_meeting' && (

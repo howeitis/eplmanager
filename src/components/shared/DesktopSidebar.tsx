@@ -23,6 +23,7 @@ export function DesktopSidebar({ activeTab, onNavigate, onBack }: DesktopSidebar
     { id: 'hub', label: 'Game Hub' },
     { id: 'squad', label: 'Squad' },
     { id: 'transfers', label: 'Transfers', disabled: !isTransferWindow },
+    { id: 'binder', label: 'Binder' },
     { id: 'history', label: 'History' },
     { id: 'manager', label: 'Manager' },
   ];
