@@ -155,8 +155,29 @@ export function SaveSlotSelect({ onSelectSlot }: SaveSlotSelectProps) {
                             </>
                           )}
                         </div>
-                        <div className="plm-text-xs plm-text-warm-600 plm-mt-1">
-                          Last saved: {new Date(save.lastSaved).toLocaleDateString()}
+                        <div className="plm-flex plm-items-center plm-gap-2 plm-mt-1.5">
+                          <div className="plm-text-xs plm-text-warm-600">
+                            Last saved: {new Date(save.lastSaved).toLocaleDateString()}
+                          </div>
+                          {/* Binder size pill — surfaces the card collection
+                              from the entry screen so returning players see
+                              it growing without having to load. Hidden for
+                              saves with no cards yet, and for pre-binderCount
+                              saves (undefined) to avoid a misleading 0. */}
+                          {typeof save.binderCount === 'number' && save.binderCount > 0 && (
+                            <span
+                              className="plm-inline-flex plm-items-center plm-gap-1 plm-rounded-full plm-px-2 plm-py-0.5 plm-text-[10px] plm-font-semibold plm-tabular-nums"
+                              style={{
+                                backgroundColor: 'rgba(255,215,0,0.12)',
+                                color: '#FCD34D',
+                                border: '1px solid rgba(255,215,0,0.3)',
+                              }}
+                              aria-label={`${save.binderCount} cards in collection`}
+                            >
+                              <span aria-hidden>▦</span>
+                              {save.binderCount}
+                            </span>
+                          )}
                         </div>
                       </>
                     ) : (
