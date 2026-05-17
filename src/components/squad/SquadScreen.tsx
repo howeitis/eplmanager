@@ -4,8 +4,7 @@ import { CLUBS } from '@/data/clubs';
 import { getClubLogoUrl } from '@/data/assets';
 import type { Player, Position } from '@/types/entities';
 import type { Formation, Mentality } from '@/engine/matchSim';
-import { FormationPicker } from './FormationPicker';
-import { MentalitySelector } from './MentalitySelector';
+import { TacticDeckPicker } from './TacticDeckPicker';
 import { StartingXIPicker } from './StartingXIPicker';
 import { SquadProgression } from './SquadProgression';
 import { useModalParams } from '@/hooks/useModalParams';
@@ -237,14 +236,11 @@ export function SquadScreen({
           </span>
         </button>
         {tacticsOpen && (
-          <div className="plm-mt-3 plm-grid plm-grid-cols-1 md:plm-grid-cols-2 plm-gap-4">
-            <FormationPicker
+          <div className="plm-mt-3">
+            <TacticDeckPicker
               formation={formation}
-              onFormationChange={onFormationChange}
-              roster={allPlayers}
-            />
-            <MentalitySelector
               mentality={mentality}
+              onFormationChange={onFormationChange}
               onMentalityChange={onMentalityChange}
             />
           </div>
