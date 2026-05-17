@@ -23,3 +23,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Design doc PDFs are derived from the matching .md via /tmp/build_pdf.py
+docs/design/*.pdf
