@@ -82,6 +82,55 @@ describe('migrateSaveData', () => {
     const migrated = migrateSaveData(v1Shape);
     expect(migrated.clubReputation).toEqual({ c0: 75 });
   });
+
+  describe('v4 → v5 (tactic deck)', () => {
+    it('grants STARTER_INSTRUCTION_CARD_IDS to a v4 save with no tactic state', () => {
+      const v4: Record<string, unknown> = makeValidSaveShape({ schemaVersion: 4 });
+      delete v4.ownedTacticCards;
+      delete v4.activeInstructionCardId;
+
+      const migrated = migrateSaveData(v4);
+      expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+      expect(Array.isArray(migrated.ownedTacticCards)).toBe(true);
+      // At least the starters land — engine asserts later that they're real ids.
+      expect(migrated.ownedTacticCards.length).toBeGreaterThan(0);
+      expect(migrated.activeInstructionCardId).toBeNull();
+    });
+
+    it('does not stomp on existing ownership when present', () => {
+      const v4: Record<string, unknown> = makeValidSaveShape({
+        schemaVersion: 4,
+        ownedTacticCards: ['instr-tempo-quickens'],
+        activeInstructionCardId: 'instr-tempo-quickens',
+      });
+
+      const migrated = migrateSaveData(v4);
+      expect(migrated.ownedTacticCards).toContain('instr-tempo-quickens');
+      expect(migrated.activeInstructionCardId).toBe('instr-tempo-quickens');
+    });
+
+    it('dedupes when starter ids overlap existing ownership', () => {
+      // Pre-grant a starter, then run migration. Should appear exactly once.
+      const v4: Record<string, unknown> = makeValidSaveShape({
+        schemaVersion: 4,
+        ownedTacticCards: ['instr-press-from-front'],
+      });
+
+      const migrated = migrateSaveData(v4);
+      const occurrences = migrated.ownedTacticCards.filter((id) => id === 'instr-press-from-front').length;
+      expect(occurrences).toBe(1);
+    });
+
+    it('passes a v5-shaped save through unchanged', () => {
+      const v5: Record<string, unknown> = makeValidSaveShape({
+        ownedTacticCards: ['instr-press-from-front'],
+        activeInstructionCardId: null,
+      });
+      const migrated = migrateSaveData(v5);
+      expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+      expect(migrated.ownedTacticCards).toEqual(['instr-press-from-front']);
+    });
+  });
 });
 
 describe('validateSaveData', () => {

@@ -9,6 +9,7 @@ import { TitleScreen } from './components/shared/TitleScreen';
 import { BottomNav, type NavTab } from './components/shared/BottomNav';
 import { DesktopSidebar } from './components/shared/DesktopSidebar';
 import { TutorialModal } from './components/shared/TutorialModal';
+import { TacticCardUnlockModal } from './components/shared/TacticCardUnlockModal';
 import { useModalParams } from './hooks/useModalParams';
 import { NavigationContext } from './hooks/useNavigation';
 
@@ -57,6 +58,7 @@ import { CLUBS } from './data/clubs';
 import { inferNationalityFromName } from './data/namePool';
 import { generateAllSquads, generatePhilosophyBonusPlayer } from './engine/playerGen';
 import { saveGame, loadGame } from './utils/save';
+import { STARTER_INSTRUCTION_CARD_IDS, pickNextInstructionToMint, getInstructionCard } from './data/instructionCards';
 import { SeededRNG, seasonSeed as deriveSeasonSeed } from './utils/rng';
 import {
   generateFixtures,
@@ -185,6 +187,8 @@ function App() {
   const [improvedPlayers, setImprovedPlayers] = useState<import('./types/entities').Player[]>([]);
   const [retiringPlayers, setRetiringPlayers] = useState<import('./types/entities').Player[]>([]);
   const [totsPlayers, setTotsPlayers] = useState<import('./types/entities').Player[]>([]);
+  // Phase B: queue for the instruction-card unlock reveal at season end.
+  const [unlockedInstructionCardId, setUnlockedInstructionCardId] = useState<string | null>(null);
   const [totsClubIds, setTotsClubIds] = useState<string[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
   // Final Day cinematic state. Non-null while the user is on the final-day
@@ -328,6 +332,8 @@ function App() {
             }
             return seed;
           })(),
+          ownedTacticCards: (data as unknown as Record<string, unknown>).ownedTacticCards as string[] ?? [],
+          activeInstructionCardId: (data as unknown as Record<string, unknown>).activeInstructionCardId as string | null ?? null,
         });
         // Restore formation from manager's preferred formation
         if (migratedManager?.preferredFormation) {
@@ -500,6 +506,10 @@ function App() {
       5: { minPosition: 18, description: 'Survive relegation' },
     };
     state.setBoardExpectation(expectations[club.tier]);
+
+    // Phase B: grant new managers their starter Instruction cards so the
+    // Tactic Deck's third slot is usable from day one.
+    state.resetTacticCollection(STARTER_INSTRUCTION_CARD_IDS, null);
 
     const metadata: SaveMetadata = {
       slot,
@@ -825,6 +835,10 @@ function App() {
         // safe — only effects targeting one of the two clubs in this match
         // will actually fire.
         activeModifiers: state.activeModifiers,
+        // Phase B: equipped Instruction card. Only applied to whichever side
+        // is the user's club; resolveInstructionEffect handles unknown ids.
+        userInstructionCardId: state.activeInstructionCardId,
+        isCup: false,
       });
 
       results.push(result);
@@ -1104,6 +1118,7 @@ function App() {
     const cupResult = simulateFACup(cupRng, clubs, sorted, fortuneMap, sSeed, {
       userClubId: playerClubId,
       userBackground: store.getState().manager?.playingBackground,
+      userInstructionCardId: store.getState().activeInstructionCardId,
     });
     setFaCupWinner(cupResult.winner);
 
@@ -1602,6 +1617,20 @@ function App() {
       }
     }
 
+    // Phase B: mint one new instruction card if any remain unowned.
+    // Uses a sub-seed of sSeed so the same season produces the same drop
+    // on replay (per CLAUDE.md's seeded-randomness contract).
+    const ownedInstructionIds = store.getState().ownedTacticCards;
+    const instructionRng = new SeededRNG(`${sSeed}-instruction-mint`);
+    const nextInstruction = pickNextInstructionToMint(
+      ownedInstructionIds,
+      (max) => instructionRng.randomInt(0, max - 1),
+    );
+    if (nextInstruction) {
+      store.getState().addOwnedTacticCards([nextInstruction.id]);
+      setUnlockedInstructionCardId(nextInstruction.id);
+    }
+
     // Show season end screen
     setGameView('season_end');
     window.scrollTo(0, 0);
@@ -2089,6 +2118,14 @@ function App() {
         </main>
 
         <BottomNav activeTab={activeNavTab} onNavigate={handleNavigate} />
+        {/* Phase B: instruction-card unlock reveal. Renders only when a card
+            was minted at season end; auto-equips on the Equip Now action so
+            the player can use it in their first match of the new campaign. */}
+        <TacticCardUnlockModal
+          card={unlockedInstructionCardId ? (getInstructionCard(unlockedInstructionCardId) ?? null) : null}
+          onDismiss={() => setUnlockedInstructionCardId(null)}
+          onEquip={(id) => store.getState().setActiveInstructionCardId(id)}
+        />
         <Suspense fallback={null}>
           {playerModalOpen && <PlayerDetailModal />}
 

@@ -27,6 +27,8 @@ import {
   EMPTY_TEAM_MODS,
   type TeamModifiers,
 } from './modifierEffects';
+import type { InstructionContext, InstructionEffect } from '@/types/tactics';
+import { INSTRUCTION_TSS_CAP, getInstructionCard } from '@/data/instructionCards';
 
 // ─── Formation & Mentality Types ───
 
@@ -306,6 +308,29 @@ export interface TSSConfig {
   teamModifiers?: TeamModifiers;
   /** TSS of the opposing team (post-baseline) — used to gate TSS_UNDERDOG. */
   opponentBaseRating?: number;
+  /**
+   * Phase B: the player's active Instruction card effect, if equipped.
+   * AI sides leave this undefined. Evaluated against `instructionContext`
+   * (or the implicit one derived from this TSSConfig) and capped at
+   * INSTRUCTION_TSS_CAP before being added.
+   */
+  instructionEffect?: InstructionEffect;
+  /**
+   * Whether the match is an FA Cup tie. Surfaces to the instruction
+   * condition function so cup-only cards (e.g. "Cup Tied") can fire.
+   * League fixtures pass false / omit.
+   */
+  isCup?: boolean;
+  /**
+   * Opposing club tier (1=top, 5=bottom) — exposed to instruction conditions
+   * so cards like "Big Game" or "Bully Pulpit" can gate on opponent strength.
+   */
+  opponentTier?: number;
+  /**
+   * Whether this is a derby fixture — also surfaced to instruction conditions
+   * ("Derby Day" only fires when this is true).
+   */
+  isDerby?: boolean;
 }
 
 /**
@@ -422,9 +447,58 @@ export function calculateTSS(
       ? teamMods.tssUnderdogBonus
       : 0;
 
+  // Phase B: instruction-card contribution. Effect is gated by its condition
+  // (if any), evaluated against an InstructionContext derived from this
+  // TSSConfig, and the net (atk+def)/2 contribution is capped at
+  // INSTRUCTION_TSS_CAP so a single card can't blow past the design envelope.
+  const instructionContribution = evaluateInstructionEffect(
+    config.instructionEffect,
+    {
+      isHome: config.isHome,
+      isDerby: config.isDerby ?? isDerby,
+      isCup: config.isCup ?? false,
+      opponentBaseRating: config.opponentBaseRating ?? baseRating,
+      selfBaseRating: baseRating,
+      opponentTier: config.opponentTier ?? 3,
+    },
+  );
+
   return baseRating + formationBonus + mentalityBonus + homeBonus +
     formBonus + derbyBonus + fortuneBonus + repBonus + narrativeBonus + leaderBonus +
-    preferredFormationBonus + captainBonus + userBackgroundBonus + tssEventBonus + underdogBonus;
+    preferredFormationBonus + captainBonus + userBackgroundBonus + tssEventBonus + underdogBonus +
+    instructionContribution.tss + instructionContribution.form;
+}
+
+/**
+ * Resolve an InstructionEffect against a context and return its capped TSS
+ * contribution + form modifier. Exported so tests can hit it directly without
+ * spinning up a full match.
+ *
+ * The cap is one-sided: net (atk+def)/2 is clamped to ±INSTRUCTION_TSS_CAP.
+ * Form is not capped here; instruction form swings are small by convention
+ * and the squad form bonus has its own implicit floor/ceiling via the
+ * underlying [-5, 5] form clamp.
+ */
+export function evaluateInstructionEffect(
+  effect: InstructionEffect | undefined,
+  ctx: InstructionContext,
+): { tss: number; form: number } {
+  if (!effect) return { tss: 0, form: 0 };
+  if (effect.condition && !effect.condition(ctx)) return { tss: 0, form: 0 };
+  const rawTss = (effect.atkMod + effect.defMod) / 2;
+  const cappedTss = Math.max(-INSTRUCTION_TSS_CAP, Math.min(INSTRUCTION_TSS_CAP, rawTss));
+  return { tss: cappedTss, form: effect.formMod };
+}
+
+/**
+ * Resolve an instruction card id to its effect. Returns undefined if the id
+ * is missing, unknown, or the card has no effect (e.g. a shape/tempo card
+ * was wired in by mistake — defensive).
+ */
+export function resolveInstructionEffect(cardId: string | null | undefined): InstructionEffect | undefined {
+  if (!cardId) return undefined;
+  const card = getInstructionCard(cardId);
+  return card?.effect;
 }
 
 /**
@@ -763,6 +837,18 @@ export interface MatchContext {
    * player-targeted effects both flow through here.
    */
   activeModifiers?: ActiveModifier[];
+  /**
+   * Phase B: id of the user's currently equipped Instruction card, if any.
+   * Only applied to whichever side (home or away) is the user's club —
+   * AI sides never get an instruction effect. Resolved inside simulateMatch
+   * via resolveInstructionEffect so callers don't need to import the data.
+   */
+  userInstructionCardId?: string | null;
+  /**
+   * Phase B: true when this match is an FA Cup fixture (vs league).
+   * Surfaced to instruction conditions so "Cup Tied" etc. fire correctly.
+   */
+  isCup?: boolean;
 }
 
 export function simulateMatch(
@@ -823,6 +909,13 @@ export function simulateMatch(
     ? bgEffects.matchTSSPct({ isRival: isDerby, sameTier, rng })
     : 0;
 
+  // Phase B: instruction-card effect, resolved once and routed to whichever
+  // side is the user's club. AI sides leave instructionEffect undefined.
+  const userInstructionEffect = resolveInstructionEffect(context.userInstructionCardId);
+  const homeInstructionEffect = context.userClubId === context.homeClub.id ? userInstructionEffect : undefined;
+  const awayInstructionEffect = context.userClubId === context.awayClub.id ? userInstructionEffect : undefined;
+  const isCupMatch = context.isCup ?? false;
+
   // Calculate TSS with Starting XI + depth
   const homeTSS = calculateTSS(
     homeXIPlayers,
@@ -839,6 +932,10 @@ export function simulateMatch(
       userTSSBoostPct: homeUserBoost,
       teamModifiers: homeTeamMods,
       opponentBaseRating: awayBaseRating,
+      instructionEffect: homeInstructionEffect,
+      isCup: isCupMatch,
+      opponentTier: context.awayClub.tier,
+      isDerby,
     },
     isDerby,
     rng,
@@ -859,6 +956,10 @@ export function simulateMatch(
       userTSSBoostPct: awayUserBoost,
       teamModifiers: awayTeamMods,
       opponentBaseRating: homeBaseRating,
+      instructionEffect: awayInstructionEffect,
+      isCup: isCupMatch,
+      opponentTier: context.homeClub.tier,
+      isDerby,
     },
     isDerby,
     rng,

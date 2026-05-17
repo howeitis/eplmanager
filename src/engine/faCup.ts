@@ -9,6 +9,9 @@ import {
 interface UserContext {
   userClubId?: string;
   userBackground?: PlayingBackground;
+  /** Phase B: equipped Instruction card id, applied to whichever cup match
+   *  the user's club is playing in. AI cup ties leave it undefined. */
+  userInstructionCardId?: string | null;
 }
 
 // ─── FA Cup Types ───
@@ -266,6 +269,8 @@ function simulateCupMatch(
     seasonSeed,
     userClubId: userContext.userClubId,
     userBackground: userContext.userBackground,
+    userInstructionCardId: userContext.userInstructionCardId,
+    isCup: true,
   });
 }
 
