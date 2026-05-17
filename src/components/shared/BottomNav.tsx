@@ -1,6 +1,6 @@
 import { useGameStore } from '@/store/gameStore';
 
-export type NavTab = 'hub' | 'squad' | 'transfers' | 'binder' | 'history' | 'manager';
+export type NavTab = 'hub' | 'squad' | 'transfers' | 'history' | 'manager';
 
 interface BottomNavProps {
   activeTab: NavTab;
@@ -14,14 +14,10 @@ export function BottomNav({ activeTab, onNavigate }: BottomNavProps) {
     || currentPhase === 'august_deadline' || currentPhase === 'january_window'
     || currentPhase === 'january_deadline';
 
-  // 6 tabs — at 375px wide each gets ~62px, comfortably above the 44px
-  // touch target after icon + label padding. Compact icons keep the row
-  // legible on the narrowest supported phones.
   const tabs: { id: NavTab; label: string; icon: string; disabled?: boolean }[] = [
     { id: 'hub', label: 'Hub', icon: '⌂' },
     { id: 'squad', label: 'Squad', icon: '⫶' },
     { id: 'transfers', label: 'Transfers', icon: '⇄', disabled: !isTransferWindow },
-    { id: 'binder', label: 'Binder', icon: '▦' },
     { id: 'history', label: 'History', icon: '☆' },
     { id: 'manager', label: 'Manager', icon: '👤' },
   ];

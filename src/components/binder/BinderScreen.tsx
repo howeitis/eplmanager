@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useModalDismiss } from '@/hooks/useModalDismiss';
+import { useNavigation } from '@/hooks/useNavigation';
 import { CLUBS } from '@/data/clubs';
 import { RetroPlayerCard } from '@/components/shared/RetroPlayerCard';
 import { ManagerMomentCard } from './ManagerMomentCard';
@@ -11,15 +12,17 @@ const clubDataMap = new Map(CLUBS.map((c) => [c.id, c]));
 
 type Filter = 'all' | 'moments' | PlayerBinderCardType;
 
+// Risers and generic "Season End" cards aren't minted anymore — only special
+// tier transitions (Starboy / Icon / Legend) become cards, and they live
+// under Moments rather than as their own filter. Old saves with legacy
+// tier-up / season-end cards still surface them under the All view.
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'moments', label: 'Moments' },
   { id: 'signing', label: 'Signings' },
-  { id: 'tier-up', label: 'Risers' },
   { id: 'tots', label: 'TOTS' },
   { id: 'retirement', label: 'Retirees' },
   { id: 'youth-intake', label: 'Youth' },
-  { id: 'season-end', label: 'Season End' },
 ];
 
 /**
@@ -30,6 +33,7 @@ const FILTERS: { id: Filter; label: string }[] = [
  */
 export function BinderScreen() {
   const manager = useGameStore((s) => s.manager);
+  const { navigateBack } = useNavigation();
   const [filter, setFilter] = useState<Filter>('all');
   const [enlarged, setEnlarged] = useState<BinderCard | null>(null);
 
@@ -60,6 +64,17 @@ export function BinderScreen() {
 
   return (
     <div className="plm-space-y-4 plm-w-full plm-py-4">
+      {/* Back to History */}
+      <button
+        type="button"
+        onClick={navigateBack}
+        className="plm-inline-flex plm-items-center plm-gap-1.5 plm-text-xs plm-font-semibold plm-text-warm-500 hover:plm-text-charcoal plm-transition-colors plm-min-h-[44px]"
+        aria-label="Back to Season History"
+      >
+        <span aria-hidden>‹</span>
+        <span>Season History</span>
+      </button>
+
       {/* Header */}
       <div className="plm-bg-white plm-rounded-lg plm-shadow-sm plm-border plm-border-warm-200 plm-p-4">
         <div className="plm-flex plm-items-center plm-gap-2 plm-mb-1">
