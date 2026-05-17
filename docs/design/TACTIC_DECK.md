@@ -1,8 +1,10 @@
 # Tactic Deck — Product Plan
 
 > A roadmap for evolving the pre-match formation/mentality picker into a
-> collectible tactical card system. Phase A has shipped. Phases B–D are
-> spec'd here for the next builders to pick up.
+> collectible tactical card system. **Phases A and B have shipped.**
+> Phase B.5 (pack-opening integration), C (manager schools), and D
+> (tier variants + sets + legendaries) are spec'd here for the next
+> builders to pick up.
 
 ---
 
@@ -50,157 +52,138 @@ A three-slot loadout UI: **SHAPE / TEMPO / INSTRUCTION**.
 
 ### What was NOT changed in Phase A (and why)
 
-- **Engine math** — `matchSim.ts` still takes `formation: Formation` and
-  `mentality: Mentality` in `TSSConfig`. The picker just maps card.id back
-  to those enums before calling the existing callbacks. This kept the blast
-  radius small and let us ship without rerunning balance tests.
-- **Save schema** — `SaveData` is untouched. No `tacticCards` field yet.
-  Every player implicitly "owns" all 9 baseline cards.
-- **`BALANCE`** — not modified. The 100-season `fullBalanceCheck` was
-  unchanged after Phase A.
+- **Engine math** — `matchSim.ts` was left alone in Phase A. The picker
+  mapped card.id back to formation/mentality enums before calling the
+  existing callbacks. This kept Phase A's blast radius small. *Phase B
+  did extend the engine — see that section.*
+- **Save schema** — `SaveData` was untouched in Phase A. *Phase B added
+  v5 with `ownedTacticCards` + `activeInstructionCardId`.*
+- **`BALANCE`** — not modified by either phase. The 100-season
+  `fullBalanceCheck` is unchanged because instruction effects are
+  opt-in and AI never receives one.
 
-### Known limitations of Phase A
+### Known limitations carried forward
 
-- The deck is a **re-skin**. Mechanically identical to today. The "card"
-  feeling is in the visual treatment only.
-- All cards are **bronze** tier. The tier system exists in the type but
-  isn't used.
-- **No card collection.** Every player has the same 9 cards available
-  from day one.
-- **No pack-opening moment** for tactic cards (PackOpening currently
-  only handles `Player` cards).
-- The locked Instruction slot is the player's first prompt that "there's
-  more coming." It's currently the only hint.
+- Shape and Tempo cards are still mechanical re-skins — no collection,
+  no tier variants. Phase D addresses this.
+- All instruction cards are currently **bronze** tier.
+- The pack-opening moment for instruction unlocks is a dedicated modal,
+  not a `PackOpening` invocation. Phase B.5 fixes this.
+- AI doesn't use Instruction cards — they keep using the legacy
+  formation/mentality enums. Closing this gap is a future enhancement
+  (probably alongside Phase C's schools, since AI's "tactical identity"
+  would be the natural place for it).
 
 ---
 
 ## Phase B — Instruction cards (the depth payload)
 
-**Estimate:** ~3 days of work, plus content authoring.
-**Status:** spec only.
+**Status: SHIPPED.** See `feat(tactics): Phase B` commit.
 
-### Why this is the most important phase
+### Why this was the most important phase
 
-Phase A is a coat of paint. Phase B is where the deck becomes a *new
+Phase A was a coat of paint. Phase B is where the deck became a *new
 game*. Conditional and situational instruction cards introduce real
 tactical decisions that change match-to-match.
 
+### What shipped
+
+1. Instruction slot unlocked in `TacticDeckPicker`. Owned cards listed,
+   plus a "None" option (slot is optional).
+2. **16** starter instruction cards (8 flat + 8 conditional). Pool will
+   grow incrementally; the engine cap absorbs unbounded content.
+3. Engine accepts `InstructionEffect` with a cap of `INSTRUCTION_TSS_CAP = 2`
+   on net (atk+def)/2 contribution — single-card swing can't blow the
+   ±6 envelope.
+4. Save schema bumped to v5. `ownedTacticCards: string[]` and
+   `activeInstructionCardId: string | null` on the meta slice; migration
+   grants `STARTER_INSTRUCTION_CARD_IDS` so existing saves are immediately
+   usable.
+5. **Reveal flow** is a dedicated `TacticCardUnlockModal` rather than
+   the full `PackOpening` integration. See "Phase B.5 — Pack-opening
+   integration" below.
+
+### Files of interest (shipped)
+
+| File | What it owns |
+|---|---|
+| [src/data/instructionCards.ts](src/data/instructionCards.ts) | The 16 cards + `INSTRUCTION_TSS_CAP` + `STARTER_INSTRUCTION_CARD_IDS` + the seeded mint helper. Content authors live here. |
+| [src/engine/matchSim.ts](src/engine/matchSim.ts) | `evaluateInstructionEffect`, `resolveInstructionEffect`, and the `instructionEffect?` field on `TSSConfig`. |
+| [src/components/shared/TacticCardUnlockModal.tsx](src/components/shared/TacticCardUnlockModal.tsx) | The season-end reveal moment. Flip-to-see-effect, equip-now affordance. |
+| [src/store/metaSlice.ts](src/store/metaSlice.ts) | `ownedTacticCards`, `activeInstructionCardId`, and the equip / grant / reset actions. |
+| [src/utils/save.ts](src/utils/save.ts) | v4 → v5 migration. |
+
+### Future Phase B authoring
+
+When adding more instruction cards:
+
+1. Append to `INSTRUCTION_CARDS` in `instructionCards.ts`.
+2. If conditional, include a `conditionLabel` (the picker shows it).
+3. Re-run `npm test -- src/data/__tests__/instructionCards.test.ts` —
+   the cap test will catch any card whose raw (atk+def)/2 exceeds the cap.
+4. Re-run `npm test -- src/engine/__tests__/fullBalanceCheck.test.ts`
+   if you've added 5+ new cards at once or a particularly strong
+   conditional — even within the cap, big batches can shift the
+   100-season distribution.
+
+### Resolved design questions (from spec → ship)
+
+- **Can Instruction be empty?** Yes. "None" is a first-class option in
+  the picker; engine treats undefined effect as zero contribution.
+- **One instruction per match or per month?** Per-equip-slot —
+  whatever the player has selected when a match runs, applies. Today
+  selection persists across the month; weekly cadence would let the
+  player swap mid-month and is the right shape for Phase C+ once
+  weekly events / mid-match Moments land.
+- **Should Shape/Tempo also gain collectibility?** Still deferred to
+  Phase D; everyone owns them today.
+
+---
+
+## Phase B.5 — Pack-opening integration (deferred from Phase B)
+
+**Estimate:** ~2 days.
+**Status:** spec only.
+
+### Why this is the natural next slice
+
+Phase B ships with a lightweight `TacticCardUnlockModal` for the
+season-end reveal. It works and has accessibility wiring — but it
+doesn't have the pack-opening intro → shake → burst rhythm the rest
+of the trading-card meta uses. That mismatch is small today but will
+feel cheap as the card pool grows.
+
 ### What ships
 
-1. Unlock the Instruction slot in `TacticDeckPicker`.
-2. Add the first **30 Instruction cards** to the pool.
-3. Extend the engine to accept and apply Instruction effects.
-4. Persist owned cards in the save (schema v5 migration).
-5. Mint tactic cards at season-end via the existing `PackOpening` flow.
+1. Extend `PackOpening.tsx` to accept a `cards` payload of either
+   `Player[]` or `TacticCard[]` (discriminated union).
+2. Render a `TacticCardFace` component for tactic cards (front + back),
+   matching the visual idiom of `RetroPlayerCard` but tactic-shaped.
+3. Replace `TacticCardUnlockModal` with a `PackOpening` invocation from
+   `handleSeasonEnd`. Keep the modal as a fallback for single-card
+   mid-season grants (Phase C events could surface one of these).
+4. Bonus drops:
+   - **+1 instruction card** at season end (today's baseline).
+   - **+1 extra** if you won a trophy that season.
+   - **+1 extra** at reputation milestones (50, 75, "Iconic").
 
-### Card design
+### Why it's deferred from Phase B
 
-Instruction cards have two kinds of effects:
-
-**Flat effects** — apply every match (small deltas):
-- "Press From The Front" — +1 ATK, -1 DEF
-- "Compact Lines" — +1 DEF
-- "Tempo Quickens" — +1 to form bonus this month
-
-**Conditional effects** — only fire in specific states (bigger deltas):
-- "Underdog's Bite" — +2 ATK when opponent's TSS exceeds yours by 5+
-- "See It Out" — +3 DEF when leading after minute 70 (pairs with Mid-match Moments if/when that ships)
-- "Derby Day" — +2 ATK / +2 DEF in rivalry fixtures only
-- "Cup Tied" — only playable in FA Cup matches
-- "Wounded Animal" — +2 ATK in the match after a 3+ goal defeat
-- "Away Days" — +1 form when playing away
-
-Conditional cards multiply effective pool size: you collect them, but
-only *play* them situationally. This is what stops players from settling
-on a single optimal loadout.
-
-### Engine integration
-
-`TSSConfig` gains a new optional field:
-
-```typescript
-interface TSSConfig {
-  // existing fields...
-  instructionEffects?: InstructionEffect[];
-}
-
-interface InstructionEffect {
-  atkMod?: number;
-  defMod?: number;
-  formMod?: number;
-  condition?: (ctx: MatchContext) => boolean;
-}
-```
-
-In `calculateTSS()`, after the existing modifier stack, apply each
-instruction effect whose condition is met (or unconditional). This sits
-alongside the existing event modifiers (`FORMATION_DOUBLE`, `TSS_HOME`,
-`DERBY_CHAOS`) — no conflict, both are additive.
-
-**Balance constraint:** the sum of all Instruction effects in a loadout
-must cap at **±2 TSS** swing. With one Instruction slot and the existing
-shape+tempo range (~±4 TSS combined), total tactical swing stays in
-today's envelope. The `fullBalanceCheck.test.ts` should be re-run after
-each batch of Instruction cards is added.
-
-### Save schema bump
-
-`CURRENT_SCHEMA_VERSION` goes from 4 → 5. Migration backfills:
-
-```typescript
-data = {
-  ...data,
-  ownedTacticCards: ALL_TACTIC_CARDS.map(c => c.id), // grandfather everything
-  activeLoadout: defaultLoadoutFromFormationMentality(data),
-};
-```
-
-Store ownership lives in `metaSlice` (career-persistent, alongside
-manager binder):
-
-```typescript
-interface MetaSlice {
-  // existing fields...
-  ownedTacticCards: TacticCardId[];
-  activeLoadout: TacticLoadout;
-}
-```
-
-### Pack integration
-
-Reuse the existing `PackOpening` component — its `players` array
-becomes generic `cards` and can carry tactic cards. Mint timing:
-
-- **+1 instruction card** at season end (always)
-- **+1 extra** if you won a trophy
-- **+1 extra** if you reached the "Iconic" reputation tier this season
-- Higher-tier drops as your reputation climbs (see Phase D)
-
-### Open design questions
-
-- **Can Instruction be empty?** Yes — playing without an Instruction
-  card should be valid. The slot accepts `undefined`.
-- **One instruction per match or one per month?** Recommend **per
-  match** so weekly drama emerges, but per-month is simpler and aligns
-  with current cadence. Decide before authoring conditional cards.
-- **Should Shape/Tempo also gain collectibility?** Eventually yes
-  (Phase D). For now they're "stock" cards everyone owns.
+- `PackOpening` is heavily player-shaped (clubId, cardVariant,
+  hero-stat thresholds). Generalising it is ~1 day of work and a
+  small refactor risk to a hot file.
+- Player-facing impact of the dedicated modal is already real — the
+  unlock feels like a moment, just a smaller one.
+- Doing Phase B without this dependency unblocked the engine + content
+  cleanly.
 
 ### Files to create / modify
 
 ```
-NEW: src/data/instructionCards.ts        — the 30+ Instruction cards
-NEW: src/engine/instructionEffects.ts    — effect evaluator + types
-MOD: src/engine/matchSim.ts              — apply instruction effects in calculateTSS
-MOD: src/types/store.ts                  — extend MetaSlice
-MOD: src/store/metaSlice.ts              — ownership + active loadout
-MOD: src/utils/save.ts                   — v5 migration
-MOD: src/components/squad/TacticDeckPicker.tsx — unlock Instruction slot
-NEW: src/components/squad/TacticCardSheet.tsx  — bottom-sheet card picker
-MOD: src/App.tsx                         — mint tactic cards at season end
-MOD: src/components/shared/PackOpening.tsx     — accept tactic cards
-NEW: src/data/__tests__/instructionCards.test.ts — balance cap test
-MOD: src/engine/__tests__/fullBalanceCheck.test.ts — re-run with cards
+MOD: src/components/shared/PackOpening.tsx     — accept tactic-card cards
+NEW: src/components/shared/TacticCardFace.tsx  — tactic-card visual
+MOD: src/App.tsx                               — queue tactic packs in runSeasonEndPackChain
+MOD: src/components/shared/TacticCardUnlockModal.tsx — keep as fallback or delete
 ```
 
 ---
@@ -348,15 +331,16 @@ See the existing v1→v4 migrations as reference. The doc comments in
 
 ## Recommended sequencing
 
-| # | Phase | Effort | Ship together with |
+| # | Phase | Effort | Status |
 |---|---|---|---|
-| 1 | A — re-skin | DONE | — |
-| 2 | B — instruction cards | ~3 days | Save schema v5 migration + balance test re-run |
-| 3 | C — schools | ~2 days | Career-start flow tweak |
-| 4 | D — tiers + sets + legendaries | ~4 days | Ongoing content drops; doesn't need to land in one PR |
+| 1 | A — re-skin | — | **SHIPPED** |
+| 2 | B — instruction cards | ~3 days | **SHIPPED** |
+| 3 | B.5 — pack-opening integration | ~2 days | spec only |
+| 4 | C — schools | ~2 days | spec only |
+| 5 | D — tiers + sets + legendaries | ~4 days | spec only |
 
-**Don't ship Phase C before Phase B.** Schools are pointless without
-Instructions for them to bias toward.
+**Don't ship Phase C before B.5.** The card-reveal moment is what makes
+school-biased drops feel earned. Land the pack-opening unification first.
 
 **Phase D can be drip-fed.** Each batch of legendaries / tier variants
 is a content patch, not a system change.
@@ -365,21 +349,25 @@ is a content patch, not a system change.
 
 ## Documentation that needs updating when these phases ship
 
-When **Phase B** lands:
+**When Phase B landed (done):**
+- ✅ `CLAUDE.md` → "Project Phase" moved to "Phase 7 — Tactic Deck"
+- ✅ `CLAUDE.md` → "Seeded Randomness" documents `${seasonSeed}-instruction-mint`
+- ✅ `CLAUDE.md` → "Key Game Entities" has `TacticCard`, `InstructionEffect`, `InstructionContext`
+- ✅ `CLAUDE.md` → "Hot Files" lists `instructionCards.ts` + bumped `matchSim.ts` to 12 TSS modifiers
+- ✅ `CLAUDE.md` → "Save Schema" documents v5
+- ✅ `CLAUDE.md` → "Testing Expectations" calls out instruction-card balance re-runs
 
-- `CLAUDE.md` → "Project Phase": move from "5–6 polish" to "Phase 7 — Tactic Deck"
-- `CLAUDE.md` → "Hard Requirements → Seeded Randomness": add tactic-card pack RNG seed derivation
-- `CLAUDE.md` → "Key Game Entities": new entries for `TacticCard`, `TacticLoadout`, `InstructionEffect`
-- `CLAUDE.md` → "Hot Files": flag `matchSim.ts` (will grow), add `instructionCards.ts` as a content-author touchpoint
-- `CLAUDE.md` → "Save Schema": document v5 explicitly
-- `CLAUDE.md` → "Testing Expectations": add note that new Instruction cards trigger a balance re-run
+**When Phase B.5 lands:**
 
-When **Phase C** lands:
+- `CLAUDE.md` → "Visual Design Direction → Cards & Pack Meta" should note that `PackOpening` accepts both player and tactic-card payloads
+- `CLAUDE.md` → "Hot Files" should bump `PackOpening.tsx` LoC count
+
+**When Phase C lands:**
 
 - `CLAUDE.md` → "Key Game Entities → Manager": add `school` field
-- New section in `CLAUDE.md` or this doc about school-biased pack drops
+- New section about school-biased pack drops (in this doc or CLAUDE.md)
 
-When **Phase D** lands:
+**When Phase D lands:**
 
 - `CLAUDE.md` → "Visual Design Direction → Cards & Pack Meta → Tier color contract":
   extend to cover non-player tactic cards

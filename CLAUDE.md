@@ -31,7 +31,7 @@ A trading-card meta-layer (`PackOpening`, `RetroPlayerCard`, foil stamps, tier u
 
 ## Project Phase
 
-The game is roughly at **Phase 5–6**: playable end-to-end. Engine, store, full UI, save/load, and the cards meta-layer are all shipped. Recent work has been polish and game-feel rather than new systems.
+The game is in **Phase 7 — Tactic Deck**. Engine, store, full UI, save/load, and the cards meta-layer are all shipped from earlier phases. The current effort reframes formation + mentality as a collectible 3-slot card loadout: Shape / Tempo / Instruction. Phase A (re-skin) and Phase B (Instruction slot, 16 starter cards, season-end mint) have shipped; Phases C (manager schools) and D (tier variants + sets + legendaries) are spec'd in [docs/design/TACTIC_DECK.md](docs/design/TACTIC_DECK.md).
 
 **Shipped:**
 - ✅ Match engine (TSS → Poisson goals), 38-game league
@@ -44,6 +44,8 @@ The game is roughly at **Phase 5–6**: playable end-to-end. Engine, store, full
 - ✅ Trading-card meta: pack opening, 3D tilt + flip, foil stamps, tier upgrades, golden boot stamps
 - ✅ 100-season headless balance test
 - ✅ 3-slot IndexedDB save/load with explicit `schemaVersion` + migration
+- ✅ Tactic Deck Phase A: 3-slot card loadout (Shape / Tempo / Instruction) replaces dual pickers
+- ✅ Tactic Deck Phase B: Instruction slot unlocked, 16 starter cards, conditional effects, season-end mint
 
 **Known incomplete:**
 - ❌ UI component tests (Vitest only covers engine today)
@@ -92,8 +94,11 @@ Seed derivation hierarchy:
 - **Season seed:** `gameSeed + seasonNumber`
 - **Match seed:** `seasonSeed + fixtureId`
 - **Transfer seed:** `seasonSeed + "transfer" + windowId`
+- **Instruction-card mint seed (Phase B):** `${seasonSeed}-instruction-mint` — derived in [App.tsx](src/App.tsx) `handleSeasonEnd`. Picks the next unowned card to grant; replaying the same season produces the same drop.
 
 If you introduce new gameplay randomness (events, aging, transfers), derive a sub-seed from the appropriate parent seed.
+
+**Instruction condition functions** (Phase B) must be pure functions of `InstructionContext` — no RNG, no state, no DOM. They're evaluated once per match in `calculateTSS` and must be deterministic so seeded replays match.
 
 **UI-cosmetic carve-out.** `Math.random()` is permitted *only* for purely decorative animation values (confetti positions, particle bursts, sparkle offsets, glare jitter) where:
 1. The output is never written to the store, save, or any game-affecting state.
@@ -251,12 +256,15 @@ The trading-card meta-layer is a first-class feature. Treat its details with car
 
 ## Save Schema
 
-The save format lives in [src/utils/save.ts](src/utils/save.ts) and is **explicitly versioned** via `SaveData.schemaVersion`.
+The save format lives in [src/utils/save.ts](src/utils/save.ts) and is **explicitly versioned** via `SaveData.schemaVersion`. **Current version: 5.**
 
 - The current version is the `CURRENT_SCHEMA_VERSION` constant.
 - `loadGame()` runs every save through `migrateSaveData()` before returning it, which upgrades older shapes step-by-step. Pre-versioning saves (no `schemaVersion` field) are treated as v1.
 - On load, the migrated data is validated: 20 clubs, 380 fixtures, present manager. Validation failure throws a clean error rather than silently corrupting state.
 - `tempFillIns` and `transferOffers` are intentionally **not** persisted — they're window-scoped and rebuilt on demand.
+
+**Version history:**
+- v1: pre-versioning. v2: schemaVersion introduced, optional fields backfilled. v3: GK stats relabelled + equal-weighted. v4: `manager.binder` added with retroactive accomplishment mint. **v5: `ownedTacticCards` + `activeInstructionCardId` for Phase B tactic deck; migration grants `STARTER_INSTRUCTION_CARD_IDS`.**
 
 **When you change the shape of saved state:**
 1. Bump `CURRENT_SCHEMA_VERSION`.
@@ -277,9 +285,13 @@ Never silently change `SaveData` field semantics without bumping the version —
 
 **Season:** 10 monthly phases (Aug–May) + Season End + Summer Window. Formation/mentality set before each month.
 
-**Manager:** Reputation (0–100), board expectations (rubber-band system), budget consequences.
+**Manager:** Reputation (0–100), board expectations (rubber-band system), budget consequences. Phase B persists `ownedTacticCards: string[]` and `activeInstructionCardId: string | null` on the meta slice.
 
 **Temporary Fill-In:** Rating 40–50, `isTemporary: true`, stored in `tempFillIns` array (not main roster), auto-deleted on recovery, grayed-out in UI, excluded from saves.
+
+**TacticCard (Phase A+B):** 3 slots — Shape, Tempo, Instruction. Shape and Tempo are mechanical re-skins of formation/mentality and mirror `BALANCE.formationModifiers` / `mentalityModifiers`. Instruction cards have an `effect: InstructionEffect` with optional `condition(InstructionContext) → boolean`. Engine caps each card's net (atk+def)/2 contribution at `INSTRUCTION_TSS_CAP = 2`. Types live in [src/types/tactics.ts](src/types/tactics.ts).
+
+**InstructionEffect / InstructionContext (Phase B):** Defined in [src/types/tactics.ts](src/types/tactics.ts). Conditions are pure functions of `InstructionContext` (isHome, isDerby, isCup, opponent ratings, opponent tier) and **must not** read state, RNG, or DOM — they're evaluated once per match and seeded replays depend on them being deterministic.
 
 ---
 
@@ -293,14 +305,16 @@ These five files are >800 LoC and any of them will swallow a context window on a
 | [transfers.ts](src/engine/transfers.ts) | ~990 | Willingness curve, AI window, market generation, and continent imports all share state. Split into `offerLogic` / `aiTransfers` / `market` when next touched. |
 | [PlayerDetailModal.tsx](src/components/shared/PlayerDetailModal.tsx) | ~970 | Browse + detail + transfer actions + celebration in one. Extract sub-components before adding features. |
 | [RetroPlayerCard.tsx](src/components/shared/RetroPlayerCard.tsx) | ~960 | Foil stamps, hero stat, corner ornaments, back-face scout. Hardcoded hex colors should move to Tailwind theme. |
-| [matchSim.ts](src/engine/matchSim.ts) | ~845 | TSS has 11 additive modifiers. Adding a 12th changes balance significantly — re-run `fullBalanceCheck` after any TSS change. |
+| [matchSim.ts](src/engine/matchSim.ts) | ~900 | TSS has 12 additive modifiers (Phase B added the instruction effect, capped at ±2). Adding a 13th changes balance significantly — re-run `fullBalanceCheck` after any TSS change. |
+| [instructionCards.ts](src/data/instructionCards.ts) | ~200 | Content file for Phase B+. Adding a card here is the safe extension point; balance is enforced by `INSTRUCTION_TSS_CAP` in the engine + a parity test. Re-run `fullBalanceCheck` after every batch of additions. |
+| [App.tsx](src/App.tsx) | ~2150 | Top-level orchestrator. Threads formation/mentality/instruction state into every match-sim call site. When extending Phase C/D systems, route them through here rather than duplicating store reads. |
 
 ---
 
 ## Testing Expectations
 
-- **Engine changes require Vitest coverage.** The engine is heavily tested today (~4,100 LoC of tests across 16 files). New formulas, new event templates, new transfer logic — each gets a test. Match the existing style in [src/engine/__tests__](src/engine/__tests__).
-- **Balance-sensitive changes** (TSS modifiers, transfer willingness, injury rates, aging curves) must be sanity-checked against `balanceCheck.test.ts` or `fullBalanceCheck.test.ts` before being shipped.
+- **Engine changes require Vitest coverage.** The engine is heavily tested today (290+ tests across the project). New formulas, new event templates, new transfer logic, new tactic-card effects — each gets a test. Match the existing style in [src/engine/__tests__](src/engine/__tests__) and [src/data/__tests__](src/data/__tests__).
+- **Balance-sensitive changes** (TSS modifiers, transfer willingness, injury rates, aging curves, **instruction cards**) must be sanity-checked against `balanceCheck.test.ts` or `fullBalanceCheck.test.ts` before being shipped. New instruction cards in particular: even with the ±2 TSS cap, large form swings or stacked conditionals can shift the 100-season distribution.
 - **UI tests are not currently required.** If you add them, use Vitest + React Testing Library and put them in `__tests__` folders next to the component.
 - **Save schema changes require a migration test.** See "Save Schema" above.
 
