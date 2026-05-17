@@ -1,5 +1,6 @@
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import type { SaveMetadata } from '@/types/entities';
+import { STARTER_INSTRUCTION_CARD_IDS } from '@/data/instructionCards';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SaveableState = Record<string, any>;
@@ -24,8 +25,12 @@ const METADATA_KEY = 'epl-manager-save-metadata';
  *       an empty array, then synthesises manager-moment cards from
  *       existing accomplishments so returning players get a non-empty
  *       binder on first load.
+ *  v5 — Phase B tactic deck: ownedTacticCards (string[]) and
+ *       activeInstructionCardId (string | null) added at the top level.
+ *       Migration grants STARTER_INSTRUCTION_CARD_IDS to every existing
+ *       save so the Instruction slot is immediately usable post-update.
  */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 export interface SaveData {
   schemaVersion: number;
@@ -49,6 +54,10 @@ export interface SaveData {
   startingXIHistory: unknown[];
   shortlist: string[];
   clubReputation: Record<string, number>;
+  /** Phase B (v5) — tactic-card collection. Instruction cards only today. */
+  ownedTacticCards: string[];
+  /** Phase B (v5) — equipped instruction card id, or null when slot empty. */
+  activeInstructionCardId: string | null;
 }
 
 /** Raw shape coming off disk — fields are optional because old saves may omit them. */
@@ -104,6 +113,27 @@ export function migrateSaveData(raw: RawSaveData): SaveData {
     // binder isn't blank on day one of a multi-season save.
     data = { ...data, manager: backfillManagerBinder(data.manager) };
     version = 4;
+  }
+
+  if (version < 5) {
+    // v4 → v5: Phase B tactic deck. Grant every save the starter Instruction
+    // cards so the unlocked slot is immediately usable. Keep any preexisting
+    // ownership the save somehow already has (forward-compat with manual
+    // edits / testing fixtures).
+    const existingOwned: string[] = Array.isArray(data.ownedTacticCards)
+      ? data.ownedTacticCards.filter((id: unknown): id is string => typeof id === 'string')
+      : [];
+    const merged = new Set<string>(existingOwned);
+    for (const id of STARTER_INSTRUCTION_CARD_IDS) merged.add(id);
+    const existingActive: string | null = typeof data.activeInstructionCardId === 'string'
+      ? data.activeInstructionCardId
+      : null;
+    data = {
+      ...data,
+      ownedTacticCards: Array.from(merged),
+      activeInstructionCardId: existingActive,
+    };
+    version = 5;
   }
 
   return { ...data, schemaVersion: version } as SaveData;
@@ -315,6 +345,8 @@ export function extractSaveData(state: SaveableState): SaveData {
     shortlist: (state.shortlist || []) as string[],
     previousLeagueTable: (state.previousLeagueTable || []) as unknown[],
     clubReputation: (state.clubReputation || {}) as Record<string, number>,
+    ownedTacticCards: (state.ownedTacticCards || []) as string[],
+    activeInstructionCardId: (state.activeInstructionCardId ?? null) as string | null,
   };
 }
 

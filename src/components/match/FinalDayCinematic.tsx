@@ -66,6 +66,7 @@ export function FinalDayCinematic({
   const startingXI = useGameStore((s) => s.startingXI);
   const captainId = useGameStore((s) => s.captainId);
   const activeModifiers = useGameStore((s) => s.activeModifiers);
+  const activeInstructionCardId = useGameStore((s) => s.activeInstructionCardId);
 
   const playerClubId = manager?.clubId ?? '';
   const playerClubData = clubDataMap.get(playerClubId);
@@ -86,6 +87,7 @@ export function FinalDayCinematic({
       fixtures,
       liveTable,
       playerClubId,
+      activeInstructionCardId,
       managerReputation: manager?.reputation,
       managerPreferredFormation: manager?.preferredFormation,
       managerBackground: manager?.playingBackground,
@@ -479,6 +481,7 @@ interface PreviewArgs {
   startingXI: Record<string, string>;
   captainId: string | null;
   activeModifiers: import('@/types/entities').ActiveModifier[];
+  activeInstructionCardId: string | null;
 }
 
 function previewMayResults({
@@ -496,6 +499,7 @@ function previewMayResults({
   startingXI,
   captainId,
   activeModifiers,
+  activeInstructionCardId,
 }: PreviewArgs): { results: MatchResult[] } {
   const monthRng = new SeededRNG(`${seasonSeed}-month-may`);
   const fortuneMap = new Map<string, number>();
@@ -545,6 +549,8 @@ function previewMayResults({
       userClubId: playerClubId,
       userBackground: managerBackground,
       activeModifiers,
+      userInstructionCardId: activeInstructionCardId,
+      isCup: false,
     });
     results.push(result);
   }

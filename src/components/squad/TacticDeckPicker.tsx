@@ -1,6 +1,7 @@
 import type { Formation, Mentality } from '@/engine/matchSim';
 import type { TacticCard } from '@/types/tactics';
 import { SHAPE_CARDS, TEMPO_CARDS } from '@/data/tacticCards';
+import { INSTRUCTION_CARDS, getInstructionCard } from '@/data/instructionCards';
 import { useGameStore } from '@/store/gameStore';
 
 interface TacticDeckPickerProps {
@@ -11,12 +12,15 @@ interface TacticDeckPickerProps {
 }
 
 /**
- * Phase A picker — three slots laid out vertically. Shape and Tempo
- * are populated with the baseline 6 + 3 cards (a re-skin of formation
- * + mentality). Instruction is locked with a Phase B placeholder.
+ * Three-slot picker. Shape and Tempo are populated from the baseline
+ * 6 + 3 cards (re-skin of formation + mentality). The Instruction slot
+ * (Phase B) shows the manager's owned instruction cards plus a "None"
+ * option — equipped card persists to the store and is read by the engine
+ * on every match.
  *
- * The combined ATK/DEF totals are shown at the top so the player can
- * see the impact of their loadout at a glance.
+ * The combined ATK/DEF totals at the top reflect Shape + Tempo only;
+ * Instruction effects can be conditional, so we surface them per-card
+ * with a "fires when" label rather than baking them into the total.
  */
 export function TacticDeckPicker({
   formation,
@@ -25,12 +29,21 @@ export function TacticDeckPicker({
   onMentalityChange,
 }: TacticDeckPickerProps) {
   const preferredFormation = useGameStore((s) => s.manager?.preferredFormation);
+  const ownedTacticCards = useGameStore((s) => s.ownedTacticCards);
+  const activeInstructionCardId = useGameStore((s) => s.activeInstructionCardId);
+  const setActiveInstructionCardId = useGameStore((s) => s.setActiveInstructionCardId);
 
   const activeShape = SHAPE_CARDS.find((c) => c.formation === formation) ?? SHAPE_CARDS[0];
   const activeTempo = TEMPO_CARDS.find((c) => c.mentality === mentality) ?? TEMPO_CARDS[0];
 
   const totalAtk = activeShape.atkMod + activeTempo.atkMod;
   const totalDef = activeShape.defMod + activeTempo.defMod;
+
+  // Filter to instruction cards the manager actually owns. The order matches
+  // INSTRUCTION_CARDS so flat cards stay grouped before conditionals.
+  const ownedSet = new Set(ownedTacticCards);
+  const ownedInstructions = INSTRUCTION_CARDS.filter((c) => ownedSet.has(c.id));
+  const activeInstruction = activeInstructionCardId ? getInstructionCard(activeInstructionCardId) : null;
 
   return (
     <div className="plm-space-y-5">
@@ -73,11 +86,39 @@ export function TacticDeckPicker({
         </CardRow>
       </SlotSection>
 
-      <SlotSection label="Instruction" hint="A special play card" slotIndex={3} locked>
-        <LockedSlot />
+      <SlotSection
+        label="Instruction"
+        hint={activeInstruction ? cardSummary(activeInstruction) : 'A special play card'}
+        slotIndex={3}
+      >
+        {ownedInstructions.length === 0 ? (
+          <EmptyInstructions />
+        ) : (
+          <CardRow>
+            <NoneCard
+              active={!activeInstructionCardId}
+              onClick={() => setActiveInstructionCardId(null)}
+            />
+            {ownedInstructions.map((card) => (
+              <InstructionMiniCard
+                key={card.id}
+                card={card}
+                active={card.id === activeInstructionCardId}
+                onClick={() => setActiveInstructionCardId(card.id)}
+              />
+            ))}
+          </CardRow>
+        )}
       </SlotSection>
     </div>
   );
+}
+
+function cardSummary(card: TacticCard): string {
+  if (card.effect?.conditionLabel) {
+    return `${card.name} · ${card.effect.conditionLabel}`;
+  }
+  return card.name;
 }
 
 function LoadoutTotals({ atk, def }: { atk: number; def: number }) {
@@ -215,17 +256,120 @@ function ModInline({ label, value, tone }: { label: string; value: number; tone:
   );
 }
 
-function LockedSlot() {
+function EmptyInstructions() {
   return (
     <div className="plm-rounded-lg plm-border plm-border-dashed plm-border-warm-300 plm-bg-warm-50/50 plm-px-3 plm-py-4 plm-text-center">
       <div className="plm-text-[11px] plm-font-semibold plm-text-warm-600 plm-mb-1">
-        Special Play Cards
+        No Instructions Yet
       </div>
       <p className="plm-text-[10px] plm-text-warm-500 plm-leading-relaxed">
-        Coming soon. Earn instruction cards from match wins, cup runs, and post-season packs.
-        Each one bends the rules — conditional bonuses, derby-day kickers, underdog plays.
+        End the season to unlock your first instruction card.
       </p>
     </div>
+  );
+}
+
+function NoneCard({ active, onClick }: { active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label="No instruction equipped"
+      className={`plm-relative plm-flex-shrink-0 plm-w-[8.5rem] md:plm-w-auto plm-min-h-[88px] plm-rounded-lg plm-border plm-border-dashed plm-text-left plm-px-2.5 plm-py-2 plm-transition-all plm-duration-200 ${
+        active
+          ? 'plm-bg-charcoal/90 plm-text-warm-50 plm-border-charcoal plm-shadow-md plm-scale-[1.02]'
+          : 'plm-bg-transparent plm-text-warm-500 plm-border-warm-300 hover:plm-border-warm-500 hover:plm-text-warm-700'
+      }`}
+    >
+      <div className={`plm-text-[10px] plm-font-bold plm-tabular-nums plm-uppercase plm-tracking-wider ${
+        active ? 'plm-text-warm-300' : 'plm-text-warm-400'
+      }`}>
+        Empty
+      </div>
+      <div className={`plm-font-display plm-font-bold plm-text-sm plm-leading-tight plm-mt-1 ${
+        active ? 'plm-text-warm-50' : 'plm-text-warm-600'
+      }`}>
+        No Instruction
+      </div>
+      <div className={`plm-text-[10px] plm-mt-2 plm-italic ${
+        active ? 'plm-text-warm-300' : 'plm-text-warm-500'
+      }`}>
+        Play it straight.
+      </div>
+    </button>
+  );
+}
+
+function InstructionMiniCard({
+  card,
+  active,
+  onClick,
+}: {
+  card: TacticCard;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const isConditional = !!card.effect?.condition;
+  const tagLabel = isConditional ? 'Conditional' : 'Always On';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={`${card.name}: ${card.description}`}
+      className={`plm-relative plm-flex-shrink-0 plm-w-[10rem] md:plm-w-auto plm-min-h-[110px] plm-rounded-lg plm-border plm-text-left plm-px-2.5 plm-py-2 plm-transition-all plm-duration-200 plm-overflow-hidden ${
+        active
+          ? 'plm-bg-charcoal plm-text-warm-50 plm-border-charcoal plm-shadow-md plm-scale-[1.02]'
+          : 'plm-bg-warm-50 plm-text-warm-800 plm-border-warm-200 hover:plm-border-warm-400 hover:plm-bg-white'
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`plm-absolute plm-bottom-0 plm-left-0 plm-right-0 plm-h-0.5 ${
+          active ? 'plm-bg-amber-400' : 'plm-bg-amber-700/40'
+        }`}
+      />
+      <div className="plm-flex plm-items-start plm-justify-between plm-gap-1">
+        <span className={`plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-wider ${
+          active
+            ? (isConditional ? 'plm-text-amber-300' : 'plm-text-warm-300')
+            : (isConditional ? 'plm-text-amber-700' : 'plm-text-warm-500')
+        }`}>
+          {tagLabel}
+        </span>
+      </div>
+      <div className={`plm-font-display plm-font-bold plm-text-sm plm-leading-tight plm-mt-1 ${
+        active ? 'plm-text-warm-50' : 'plm-text-charcoal'
+      }`}>
+        {card.name}
+      </div>
+      <div className={`plm-text-[10px] plm-mt-1 plm-leading-snug plm-line-clamp-2 ${
+        active ? 'plm-text-warm-300' : 'plm-text-warm-500'
+      }`}>
+        {card.description}
+      </div>
+      {card.effect && (
+        <div className="plm-flex plm-flex-wrap plm-gap-x-2 plm-gap-y-0.5 plm-mt-2 plm-text-[10px] plm-font-semibold plm-tabular-nums">
+          {card.effect.atkMod !== 0 && (
+            <ModInline tone={active ? 'inverted' : 'normal'} label="ATK" value={card.effect.atkMod} />
+          )}
+          {card.effect.defMod !== 0 && (
+            <ModInline tone={active ? 'inverted' : 'normal'} label="DEF" value={card.effect.defMod} />
+          )}
+          {card.effect.formMod !== 0 && (
+            <ModInline tone={active ? 'inverted' : 'normal'} label="FORM" value={card.effect.formMod} />
+          )}
+        </div>
+      )}
+      {isConditional && card.effect?.conditionLabel && (
+        <div className={`plm-text-[9px] plm-mt-1 plm-italic plm-leading-tight ${
+          active ? 'plm-text-warm-300' : 'plm-text-warm-500'
+        }`}>
+          ⓘ {card.effect.conditionLabel}
+        </div>
+      )}
+    </button>
   );
 }
 

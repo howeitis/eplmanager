@@ -76,7 +76,9 @@ export const TEMPO_CARDS: TacticCard[] = (Object.entries(BALANCE.mentalityModifi
     mentality,
   }));
 
-export const ALL_TACTIC_CARDS: TacticCard[] = [...SHAPE_CARDS, ...TEMPO_CARDS];
+import { INSTRUCTION_CARDS, getInstructionCard } from './instructionCards';
+
+export const ALL_TACTIC_CARDS: TacticCard[] = [...SHAPE_CARDS, ...TEMPO_CARDS, ...INSTRUCTION_CARDS];
 
 export function getShapeCardForFormation(formation: Formation): TacticCard {
   return SHAPE_CARDS.find((c) => c.formation === formation) ?? SHAPE_CARDS[0];
@@ -84,4 +86,11 @@ export function getShapeCardForFormation(formation: Formation): TacticCard {
 
 export function getTempoCardForMentality(mentality: Mentality): TacticCard {
   return TEMPO_CARDS.find((c) => c.mentality === mentality) ?? TEMPO_CARDS[0];
+}
+
+/** Look up any card across all pools by id. */
+export function findTacticCard(id: string): TacticCard | undefined {
+  return SHAPE_CARDS.find((c) => c.id === id)
+    ?? TEMPO_CARDS.find((c) => c.id === id)
+    ?? getInstructionCard(id);
 }
