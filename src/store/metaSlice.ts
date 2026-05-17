@@ -6,6 +6,7 @@ import type {
   BoardExpectation,
   SeasonHistory,
   SaveMetadata,
+  BinderCard,
 } from '@/types/entities';
 
 export interface MetaSlice {
@@ -26,6 +27,12 @@ export interface MetaSlice {
   incrementManagerAge: () => void;
   endCurrentTenure: (endSeason: number) => void;
   startNewTenure: (clubId: string, startSeason: number) => void;
+  /**
+   * Mint one or more binder cards onto the manager's career scrapbook.
+   * Dedupes by card id — calling twice with the same id is a no-op,
+   * so retry/replay-safe at every call site.
+   */
+  addBinderCards: (cards: BinderCard[]) => void;
 }
 
 export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set) => ({
@@ -129,6 +136,23 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set)
           tenures: [...state.manager.tenures, newTenure],
         },
       };
+    });
+  },
+
+  addBinderCards: (cards) => {
+    if (cards.length === 0) return;
+    set((state) => {
+      if (!state.manager) return {};
+      const existing = state.manager.binder ?? [];
+      const seen = new Set(existing.map((c) => c.id));
+      const fresh: BinderCard[] = [];
+      for (const card of cards) {
+        if (seen.has(card.id)) continue;
+        seen.add(card.id);
+        fresh.push(card);
+      }
+      if (fresh.length === 0) return {};
+      return { manager: { ...state.manager, binder: [...existing, ...fresh] } };
     });
   },
 });

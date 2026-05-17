@@ -314,12 +314,73 @@ export interface ManagerProfile {
   // Career state
   tenures: ClubTenure[];
   accomplishments: ManagerAccomplishment[];
+  /**
+   * Career sticker binder — player cards minted at signing / season-end and
+   * manager moment cards minted at trophies / milestones. Persists across
+   * club changes; it's the manager's personal scrapbook, not per-tenure.
+   * Schema v4+. Older saves backfill to a synthesised list from
+   * accomplishments via migrateSaveData.
+   */
+  binder?: BinderCard[];
 
   // Career totals (denormalized for display)
   totalGamesManaged: number;
   totalLeagueTitles: number;
   totalFaCups: number;
 }
+
+// ─── Binder (sticker album / career scrapbook) ───
+
+export type PlayerBinderCardType =
+  | 'signing'
+  | 'season-end'
+  | 'retirement'
+  | 'tots'
+  | 'tier-up'
+  | 'youth-intake';
+
+export interface PlayerBinderCard {
+  kind: 'player';
+  /** Stable id — `binder-${playerId}-s${season}-${type}`. Dedup key. */
+  id: string;
+  type: PlayerBinderCardType;
+  season: number;
+  mintedAt: number;
+  /** Full player snapshot at mint time. Independent of live roster state. */
+  player: Player;
+  /** Club at mint time — drives crest + colors on the card render. */
+  clubId: string;
+  /** Optional pre-mint context (e.g. fee paid for a signing). */
+  fee?: number;
+}
+
+export type ManagerMomentType =
+  | 'first-hire'
+  | 'first-title'
+  | 'league-title'
+  | 'first-cup'
+  | 'fa-cup'
+  | 'survival'
+  | 'milestone-games'
+  | 'promotion'
+  | 'final-day-clincher';
+
+export interface ManagerMomentCard {
+  kind: 'manager-moment';
+  id: string;
+  type: ManagerMomentType;
+  /** Headline rendered as the main line on the card. */
+  title: string;
+  /** One-line story below the title. */
+  subtitle: string;
+  season: number;
+  clubId: string;
+  mintedAt: number;
+  /** Optional override for the card accent. Falls back to club primary. */
+  accentColor?: string;
+}
+
+export type BinderCard = PlayerBinderCard | ManagerMomentCard;
 
 export interface BoardExpectation {
   minPosition: number;

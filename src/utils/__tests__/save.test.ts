@@ -225,3 +225,84 @@ describe('migrate → validate round trip', () => {
     expect(() => validateSaveData(migrated)).not.toThrow();
   });
 });
+
+describe('v3 → v4 binder migration', () => {
+  it('adds an empty binder when the manager has none and no accomplishments', () => {
+    const v3: Record<string, unknown> = {
+      schemaVersion: 3,
+      clubs: [],
+      fixtures: [],
+      manager: { name: 'Howe', clubId: 'newcastle', accomplishments: [] },
+      gameSeed: 'seed',
+      seasonNumber: 1,
+    };
+    const migrated = migrateSaveData(v3);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mgr = migrated.manager as any;
+    expect(mgr.binder).toEqual([]);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+
+  it('synthesises manager-moment cards from accomplishments', () => {
+    const v3: Record<string, unknown> = {
+      schemaVersion: 3,
+      clubs: [],
+      fixtures: [],
+      manager: {
+        name: 'Howe',
+        clubId: 'newcastle',
+        accomplishments: [
+          { id: 'a1', season: 1, clubId: 'newcastle', type: 'club-hired', headline: 'Took charge at Newcastle' },
+          { id: 'a2', season: 3, clubId: 'newcastle', type: 'league-title', headline: 'Won the Premier League with Newcastle' },
+          { id: 'a3', season: 4, clubId: 'newcastle', type: 'league-title', headline: 'Won the Premier League with Newcastle' },
+          { id: 'a4', season: 3, clubId: 'newcastle', type: 'fa-cup', headline: 'Won the FA Cup with Newcastle' },
+          { id: 'a5', season: 5, clubId: 'newcastle', type: 'milestone-games', headline: '100 career games managed' },
+        ],
+      },
+      gameSeed: 'seed',
+      seasonNumber: 5,
+    };
+    const migrated = migrateSaveData(v3);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const binder = (migrated.manager as any).binder as Array<{ kind: string; type: string; season: number }>;
+    expect(binder).toHaveLength(5);
+    // First-title vs subsequent: count-aware
+    const titleTypes = binder.filter((c) => c.type === 'first-title' || c.type === 'league-title');
+    expect(titleTypes).toHaveLength(2);
+    expect(titleTypes[0].type).toBe('first-title');
+    expect(titleTypes[1].type).toBe('league-title');
+    // FA Cup is first → first-cup
+    expect(binder.find((c) => c.type === 'first-cup')).toBeTruthy();
+    // First hire & milestone are present
+    expect(binder.find((c) => c.type === 'first-hire')).toBeTruthy();
+    expect(binder.find((c) => c.type === 'milestone-games')).toBeTruthy();
+  });
+
+  it('preserves an existing binder', () => {
+    const existing = [{ kind: 'manager-moment', id: 'mm-x', type: 'first-title', title: 't', subtitle: 's', season: 1, clubId: 'arsenal', mintedAt: 1 }];
+    const v3: Record<string, unknown> = {
+      schemaVersion: 3,
+      clubs: [],
+      fixtures: [],
+      manager: { name: 'Arteta', clubId: 'arsenal', accomplishments: [], binder: existing },
+      gameSeed: 'seed',
+      seasonNumber: 1,
+    };
+    const migrated = migrateSaveData(v3);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((migrated.manager as any).binder).toBe(existing);
+  });
+
+  it('is a no-op for managers that are null or absent', () => {
+    const v3: Record<string, unknown> = {
+      schemaVersion: 3,
+      clubs: [],
+      fixtures: [],
+      manager: null,
+      gameSeed: 'seed',
+      seasonNumber: 1,
+    };
+    const migrated = migrateSaveData(v3);
+    expect(migrated.manager).toBeNull();
+  });
+});
