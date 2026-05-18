@@ -6,6 +6,7 @@ import type { Player, Position } from '@/types/entities';
 import type { Formation, Mentality } from '@/engine/matchSim';
 import { TacticDeckPicker } from './TacticDeckPicker';
 import { StartingXIPicker } from './StartingXIPicker';
+import { SubInModal } from './SubInModal';
 import { SquadProgression } from './SquadProgression';
 import { useModalParams } from '@/hooks/useModalParams';
 import type { XISwap } from '@/engine/startingXI';
@@ -58,6 +59,8 @@ export function SquadScreen({
   const [sortKey, setSortKey] = useState<SortKey>('position');
   const [filterPos, setFilterPos] = useState<Position | 'ALL'>('ALL');
   const [squadView, setSquadView] = useState<SquadView>('roster');
+  // Player picked from the squad list for a "Sub In" slot picker.
+  const [subInPlayer, setSubInPlayer] = useState<Player | null>(null);
   const [tacticsOpen, setTacticsOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const stored = window.sessionStorage.getItem('plm-squad-tactics-open');
@@ -346,13 +349,21 @@ export function SquadScreen({
                 <th scope="col" className="plm-text-center plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-8">SKL</th>
                 <th scope="col" className="plm-text-center plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-10">Form</th>
                 <th scope="col" className="plm-text-center plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-10">Trait</th>
+                <th scope="col" className="plm-text-right plm-py-2 plm-text-[10px] plm-font-semibold plm-text-warm-500 plm-uppercase plm-tracking-wider plm-w-16 plm-pr-1">Sub</th>
               </tr>
             </thead>
             <tbody>
               {filteredPlayers.map((player) => {
                 const isInXI = Object.values(startingXI).includes(player.id);
                 return (
-                  <DesktopPlayerRow key={player.id} player={player} isInXI={isInXI} captainId={captainId} onOpenModal={() => openModal(player.id, playerClub!.id)} />
+                  <DesktopPlayerRow
+                    key={player.id}
+                    player={player}
+                    isInXI={isInXI}
+                    captainId={captainId}
+                    onOpenModal={() => openModal(player.id, playerClub!.id)}
+                    onSubIn={() => setSubInPlayer(player)}
+                  />
                 );
               })}
             </tbody>
@@ -370,6 +381,7 @@ export function SquadScreen({
                 captainId={captainId}
                 isInXI={isInXI}
                 onOpenModal={() => openModal(player.id, playerClub!.id)}
+                onSubIn={() => setSubInPlayer(player)}
               />
             );
           })}
@@ -416,11 +428,19 @@ export function SquadScreen({
       </section>
 
       {tutorial.show && <TutorialModal tab="squad" onClose={tutorial.onClose} />}
+      {subInPlayer && (
+        <SubInModal
+          player={subInPlayer}
+          formation={formation}
+          onClose={() => setSubInPlayer(null)}
+        />
+      )}
     </div>
   );
 }
 
-function DesktopPlayerRow({ player, isInXI, captainId, onOpenModal }: { player: Player; isInXI: boolean; captainId?: string | null; onOpenModal: () => void }) {
+function DesktopPlayerRow({ player, isInXI, captainId, onOpenModal, onSubIn }: { player: Player; isInXI: boolean; captainId?: string | null; onOpenModal: () => void; onSubIn: () => void }) {
+  const canSub = !player.injured && !player.isTemporary;
   return (
     <tr
       onClick={onOpenModal}
@@ -465,6 +485,21 @@ function DesktopPlayerRow({ player, isInXI, captainId, onOpenModal }: { player: 
         <FormBadge form={player.form} />
       </td>
       <td className="plm-py-2 plm-text-center plm-text-[10px] plm-text-warm-500">{player.trait}</td>
+      <td className="plm-py-2 plm-text-right plm-pr-1">
+        {canSub && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSubIn();
+            }}
+            className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-px-2 plm-py-1 plm-rounded plm-border plm-border-emerald-300 plm-text-emerald-700 plm-bg-emerald-50 hover:plm-bg-emerald-100 plm-min-h-[28px]"
+            aria-label={`Sub ${player.name} into the Starting XI`}
+          >
+            {isInXI ? 'Move' : 'Sub In'}
+          </button>
+        )}
+      </td>
     </tr>
   );
 }
@@ -474,51 +509,69 @@ function MobilePlayerCard({
   captainId,
   isInXI,
   onOpenModal,
+  onSubIn,
 }: {
   player: Player;
   captainId?: string | null;
   isInXI: boolean;
   onOpenModal: () => void;
+  onSubIn: () => void;
 }) {
-  // Tap-to-open. The mini-stats dropdown has been retired in favor of the
-  // full player card modal — one canonical surface for player detail.
+  const canSub = !player.injured && !player.isTemporary;
+  // Tap-to-open the full player card. The trailing "Sub" affordance stops
+  // propagation so the modal doesn't open at the same time. Nesting a
+  // button inside a button is invalid HTML, so the row is a div with
+  // role="button" and the Sub action is its own button sibling.
   return (
-    <button
-      onClick={onOpenModal}
-      aria-label={`${player.name}, ${player.position}, overall ${player.overall}`}
-      className={`plm-w-full plm-flex plm-items-center plm-gap-2 plm-py-2.5 plm-min-h-[44px] plm-text-left ${
-        player.isTemporary ? 'plm-opacity-40' : ''
-      }`}
-    >
-      {isInXI && (
-        <span className="plm-w-1.5 plm-h-1.5 plm-rounded-full plm-bg-emerald-500 plm-flex-shrink-0" title="Starting XI" />
-      )}
-      <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-text-warm-400 plm-w-5 plm-tracking-wider">
-        {player.position}
-      </span>
-      <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
-        {player.name}
-        <span className="plm-text-warm-400 plm-font-normal plm-ml-1">({player.age})</span>
-      </span>
-      {player.id === captainId && (
-        <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-py-0.5 plm-rounded" title="Captain">C</span>
-      )}
-      {player.injured && (
-        <span
-          className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-py-0.5 plm-rounded plm-font-semibold plm-tabular-nums"
-          title={`Out ${player.injuryWeeks} month${player.injuryWeeks === 1 ? '' : 's'}`}
-        >
-          INJ {player.injuryWeeks}m
+    <div className={`plm-w-full plm-flex plm-items-center plm-gap-2 plm-py-2.5 plm-min-h-[44px] ${
+      player.isTemporary ? 'plm-opacity-40' : ''
+    }`}>
+      <button
+        type="button"
+        onClick={onOpenModal}
+        aria-label={`${player.name}, ${player.position}, overall ${player.overall}`}
+        className="plm-flex plm-items-center plm-gap-2 plm-min-w-0 plm-flex-1 plm-text-left plm-min-h-[44px]"
+      >
+        {isInXI && (
+          <span className="plm-w-1.5 plm-h-1.5 plm-rounded-full plm-bg-emerald-500 plm-flex-shrink-0" title="Starting XI" />
+        )}
+        <span className="plm-text-[10px] plm-font-semibold plm-uppercase plm-text-warm-400 plm-w-5 plm-tracking-wider">
+          {player.position}
         </span>
+        <span className="plm-text-sm plm-font-medium plm-text-charcoal plm-flex-1 plm-truncate">
+          {player.name}
+          <span className="plm-text-warm-400 plm-font-normal plm-ml-1">({player.age})</span>
+        </span>
+        {player.id === captainId && (
+          <span className="plm-text-[9px] plm-font-black plm-bg-amber-100 plm-text-amber-700 plm-px-1 plm-py-0.5 plm-rounded" title="Captain">C</span>
+        )}
+        {player.injured && (
+          <span
+            className="plm-text-[9px] plm-bg-red-100 plm-text-red-600 plm-px-1 plm-py-0.5 plm-rounded plm-font-semibold plm-tabular-nums"
+            title={`Out ${player.injuryWeeks} month${player.injuryWeeks === 1 ? '' : 's'}`}
+          >
+            INJ {player.injuryWeeks}m
+          </span>
+        )}
+        {player.isTemporary && (
+          <span className="plm-text-[9px] plm-bg-warm-200 plm-text-warm-500 plm-px-1 plm-py-0.5 plm-rounded plm-uppercase">Fill-in</span>
+        )}
+        <FormBadge form={player.form} />
+        <span className="plm-text-sm plm-font-bold plm-text-charcoal plm-tabular-nums plm-w-6 plm-text-right">
+          {player.overall}
+        </span>
+      </button>
+      {canSub && (
+        <button
+          type="button"
+          onClick={onSubIn}
+          className="plm-text-[10px] plm-font-semibold plm-uppercase plm-tracking-wider plm-px-2 plm-py-1 plm-rounded plm-border plm-border-emerald-300 plm-text-emerald-700 plm-bg-emerald-50 hover:plm-bg-emerald-100 plm-min-h-[36px] plm-flex-shrink-0"
+          aria-label={`Sub ${player.name} into the Starting XI`}
+        >
+          {isInXI ? 'Move' : 'Sub'}
+        </button>
       )}
-      {player.isTemporary && (
-        <span className="plm-text-[9px] plm-bg-warm-200 plm-text-warm-500 plm-px-1 plm-py-0.5 plm-rounded plm-uppercase">Fill-in</span>
-      )}
-      <FormBadge form={player.form} />
-      <span className="plm-text-sm plm-font-bold plm-text-charcoal plm-tabular-nums plm-w-6 plm-text-right">
-        {player.overall}
-      </span>
-    </button>
+    </div>
   );
 }
 

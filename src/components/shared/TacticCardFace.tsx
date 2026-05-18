@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import type { TacticCard } from '@/types/tactics';
 import { MANAGER_SCHOOLS } from '@/types/tactics';
 import {
@@ -8,6 +8,7 @@ import {
   getTierFoilColor,
 } from '@/utils/tierColors';
 import { getBrandLogoUrl } from '@/data/assets';
+import { getFamousFromCrestUrl } from '@/data/tacticCrests';
 
 interface TacticCardFaceProps {
   card: TacticCard;
@@ -45,7 +46,10 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
   const [flipped, setFlipped] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [glarePos, setGlarePos] = useState<{ x: number; y: number } | null>(null);
+  const [nameScale, setNameScale] = useState(1);
   const cardRef = useRef<HTMLButtonElement>(null);
+  const nameWrapRef = useRef<HTMLDivElement>(null);
+  const nameInnerRef = useRef<HTMLDivElement>(null);
   const lastFlipAt = useRef(0);
 
   useEffect(() => {
@@ -80,11 +84,16 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
   const def = card.effect?.defMod ?? card.defMod ?? 0;
   const form = card.effect?.formMod ?? 0;
 
-  // Dominant modifier — picked as the absolute-largest of ATK / DEF / FORM
-  // and shown in the OVR slot. Mirrors the way RetroPlayerCard surfaces
-  // a single hero stat (the highest of the six). Format keeps the sign so
-  // negative dominant mods (rare — Park The Bus etc.) read correctly.
-  const heroStat = pickHeroStat(atk, def, form);
+  // Hero number: sum of every modifier the card contributes. Mirrors the
+  // OVR slot on a player card — a single headline that summarizes the
+  // whole effect rather than one stat in isolation. Negative totals
+  // (rare — Park The Bus traded form for shape) render with a minus.
+  const totalBonus = atk + def + form;
+
+  // Watermark crest behind the central glyph — pulls from FAMOUS_FROM:
+  // PL club logo when the tactical concept comes from a club in the game,
+  // national-team crest otherwise (with country flag as last fallback).
+  const watermarkUrl = getFamousFromCrestUrl(card);
 
   // Glare sweep on gold tiers (mirrors RetroPlayerCard's interaction).
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
@@ -98,6 +107,23 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
   const handleMouseLeave = useCallback(() => {
     setGlarePos(null);
   }, []);
+
+  // Auto-fit the full card name on the name plate. Some legendaries
+  // ("The Invincibles' Wing Play", "Big Sam's Houdini Act") overflow at
+  // the natural xl size, so we measure available width and scale the
+  // text down until it fits. Floor at 0.55 — anything tighter would be
+  // harder to read than slightly clipping.
+  useLayoutEffect(() => {
+    if (flipped) return;
+    const wrap = nameWrapRef.current;
+    const inner = nameInnerRef.current;
+    if (!wrap || !inner) return;
+    const natural = inner.scrollWidth;
+    const avail = wrap.clientWidth;
+    if (!natural || !avail) return;
+    const next = natural > avail ? Math.max(0.55, avail / natural) : 1;
+    setNameScale((prev) => (Math.abs(prev - next) > 0.005 ? next : prev));
+  }, [card.name, flipped]);
 
   return (
     <button
@@ -170,8 +196,9 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
             />
           )}
 
-          {/* Hero-stat sticker on gold/elite/legendary (mirrors player card) */}
-          {(isGold || isLegendary) && (
+          {/* Legendary 👑 ornament — top-center, mirrors RetroPlayerCard's
+              corner sticker placement for legendary players */}
+          {isLegendary && (
             <div
               className="plm-absolute plm-z-[15] plm-flex plm-items-center plm-justify-center plm-rounded-full plm-shadow-md"
               style={{
@@ -186,37 +213,18 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
               }}
               aria-hidden="true"
             >
-              <span style={{ fontSize: 16 }}>
-                {getHeroStatEmoji(heroStat.key)}
-              </span>
+              <span style={{ fontSize: 18 }}>👑</span>
             </div>
           )}
 
-          {/* Legendary 👑 ornament — bottom-left, larger and more present */}
-          {isLegendary && (
-            <div
-              className="plm-absolute plm-z-[14]"
-              style={{ bottom: 12, left: 12, fontSize: 28, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}
-              aria-hidden="true"
-            >
-              👑
-            </div>
-          )}
-
-          {/* ─── Top row: hero stat + slot + tier badge ─── */}
+          {/* ─── Top row: total bonus + slot + tier badge ─── */}
           <div className="plm-flex plm-justify-between plm-items-start plm-px-2.5 plm-pt-1 plm-relative plm-z-[5]">
             <div className="plm-text-center">
               <div
                 className="plm-text-5xl plm-font-display plm-font-black plm-leading-none plm-tabular-nums"
                 style={{ color: accent, textShadow: '1px 1px 2px rgba(0,0,0,0.3)' }}
               >
-                {formatHeroValue(heroStat.value)}
-              </div>
-              <div
-                className="plm-text-xs plm-font-bold plm-uppercase plm-tracking-wider plm-mt-0.5"
-                style={{ color: borderColor }}
-              >
-                {heroStat.label}
+                {formatTotalBonus(totalBonus)}
               </div>
               <div
                 className="plm-text-[9px] plm-font-bold plm-uppercase plm-tracking-[0.2em] plm-mt-0.5 plm-opacity-70"
@@ -251,23 +259,40 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
             </div>
           </div>
 
-          {/* ─── Center: tactical glyph (replaces player portrait) ─── */}
+          {/* ─── Center: tactical glyph layered over the famous-from
+              watermark crest. Crest sits behind at low opacity (a
+              ghosted nod) and the glyph reads on top. ─── */}
           <div
             className="plm-flex plm-justify-center plm-items-center plm-relative plm-z-[5] plm-flex-shrink-0"
-            style={{ height: 116 }}
+            style={{ height: 132 }}
           >
             <div
-              className="plm-flex plm-items-center plm-justify-center plm-rounded-full"
+              className="plm-relative plm-flex plm-items-center plm-justify-center plm-rounded-full"
               style={{
-                width: 116,
-                height: 116,
+                width: 132,
+                height: 132,
                 background: 'rgba(255,255,255,0.35)',
                 border: `2px solid ${borderColor}55`,
                 boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.18)',
+                overflow: 'hidden',
               }}
             >
+              {watermarkUrl && (
+                <img
+                  src={watermarkUrl}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                  className="plm-absolute plm-inset-0 plm-w-full plm-h-full plm-object-contain plm-pointer-events-none"
+                  style={{
+                    opacity: 0.28,
+                    filter: 'saturate(0.9) drop-shadow(0 1px 2px rgba(0,0,0,0.15))',
+                  }}
+                />
+              )}
               <span
                 aria-hidden="true"
+                className="plm-relative"
                 style={{
                   fontSize: 64,
                   filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.18))',
@@ -280,9 +305,10 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
             </div>
           </div>
 
-          {/* ─── Name plate ─── */}
+          {/* ─── Name plate (auto-fits the full title) ─── */}
           <div
-            className="plm-mx-2.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5] plm-flex-shrink-0"
+            ref={nameWrapRef}
+            className="plm-mx-2.5 plm-py-1 plm-rounded plm-text-center plm-relative plm-z-[5] plm-flex-shrink-0 plm-overflow-hidden"
             style={{
               background: `linear-gradient(to right, ${borderColor} 0%, ${accent} 50%, ${borderColor} 100%)`,
               borderBottom: `2px solid ${accent}`,
@@ -290,10 +316,13 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
             }}
           >
             <div
-              className="plm-font-display plm-font-bold plm-uppercase plm-tracking-wide plm-truncate plm-px-2 plm-text-xl"
+              ref={nameInnerRef}
+              className="plm-font-display plm-font-bold plm-uppercase plm-tracking-wide plm-whitespace-nowrap plm-px-2 plm-text-xl plm-inline-block"
               style={{
                 color: '#1A1A1A',
                 textShadow: '0 1px 0 rgba(255,255,255,0.4)',
+                transform: `scale(${nameScale})`,
+                transformOrigin: 'center',
               }}
             >
               {card.name}
@@ -452,42 +481,14 @@ export function TacticCardFace({ card, animated = false, disableFlip = false }: 
   );
 }
 
-interface HeroStat {
-  key: 'atk' | 'def' | 'form';
-  label: string;
-  value: number;
-}
-
 /**
- * Pick the dominant stat (largest absolute value across ATK/DEF/FORM) for
- * the OVR-slot display. Ties break ATK → DEF → FORM so the same family at
- * different tiers renders consistently. Returns the +0 ATK placeholder
- * when the card has no mods at all (defensive — shouldn't happen).
+ * Format the total-bonus headline shown in the OVR slot. Always includes
+ * the sign so a positive total reads "+4" and a zero total renders as a
+ * tidy "+0" rather than a bare "0".
  */
-function pickHeroStat(atk: number, def: number, form: number): HeroStat {
-  const stats: HeroStat[] = [
-    { key: 'atk', label: 'ATK', value: atk },
-    { key: 'def', label: 'DEF', value: def },
-    { key: 'form', label: 'FORM', value: form },
-  ];
-  stats.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  return stats[0];
-}
-
-function formatHeroValue(v: number): string {
-  if (v > 0) return `+${v}`;
+function formatTotalBonus(v: number): string {
+  if (v >= 0) return `+${v}`;
   return `${v}`;
-}
-
-function getHeroStatEmoji(key: HeroStat['key']): string {
-  switch (key) {
-    case 'atk':
-      return '⚔️';
-    case 'def':
-      return '🛡️';
-    case 'form':
-      return '🔥';
-  }
 }
 
 /**
