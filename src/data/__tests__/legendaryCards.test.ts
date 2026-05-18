@@ -14,8 +14,8 @@ const baseCtx: LegendaryUnlockContext = {
 };
 
 describe('legendary cards', () => {
-  it('has at least 6 hand-authored cards', () => {
-    expect(LEGENDARY_CARDS.length).toBeGreaterThanOrEqual(6);
+  it('has at least 12 hand-authored cards', () => {
+    expect(LEGENDARY_CARDS.length).toBeGreaterThanOrEqual(12);
   });
 
   it('every card has legendary: true', () => {
@@ -97,5 +97,65 @@ describe('findUnlockedLegendaries', () => {
     const ctx = { ...baseCtx, wonLeague: true };
     const unlocked = findUnlockedLegendaries(ctx, ['instr-legend-invincibles-wing-play']);
     expect(unlocked.every((c) => c.id !== 'instr-legend-invincibles-wing-play')).toBe(true);
+  });
+
+  it('returns The Double when both league and cup are won the same season', () => {
+    const unlocked = findUnlockedLegendaries(
+      { ...baseCtx, wonLeague: true, wonCup: true },
+      [],
+    );
+    expect(unlocked.some((c) => c.id === 'instr-legend-the-double')).toBe(true);
+  });
+
+  it('returns Wenger\'s Project only for total-football managers winning the league', () => {
+    const wenger = findUnlockedLegendaries(
+      { ...baseCtx, wonLeague: true, school: 'total-football' },
+      [],
+    );
+    expect(wenger.some((c) => c.id === 'instr-legend-wenger-project')).toBe(true);
+
+    const notWenger = findUnlockedLegendaries(
+      { ...baseCtx, wonLeague: true, school: 'catenaccio' },
+      [],
+    );
+    expect(notWenger.every((c) => c.id !== 'instr-legend-wenger-project')).toBe(true);
+  });
+
+  it('returns Klopp\'s Heavy Metal only for gegenpress managers winning the league', () => {
+    const klopp = findUnlockedLegendaries(
+      { ...baseCtx, wonLeague: true, school: 'gegenpress' },
+      [],
+    );
+    expect(klopp.some((c) => c.id === 'instr-legend-klopp-heavy-metal')).toBe(true);
+  });
+
+  it('returns Pep\'s Possession Loop only for tiki-taka managers crossing rep 75', () => {
+    const pep = findUnlockedLegendaries(
+      { ...baseCtx, crossed75: true, school: 'tiki-taka' },
+      [],
+    );
+    expect(pep.some((c) => c.id === 'instr-legend-pep-possession-loop')).toBe(true);
+
+    const notPep = findUnlockedLegendaries(
+      { ...baseCtx, crossed75: true, school: 'direct' },
+      [],
+    );
+    expect(notPep.every((c) => c.id !== 'instr-legend-pep-possession-loop')).toBe(true);
+  });
+
+  it('returns Mourinho\'s Park only for catenaccio managers winning the cup', () => {
+    const mou = findUnlockedLegendaries(
+      { ...baseCtx, wonCup: true, school: 'catenaccio' },
+      [],
+    );
+    expect(mou.some((c) => c.id === 'instr-legend-mourinho-park')).toBe(true);
+  });
+
+  it('returns Big Sam\'s Houdini Act only for direct managers surviving relegation', () => {
+    const sam = findUnlockedLegendaries(
+      { ...baseCtx, survivedRelegation: true, school: 'direct' },
+      [],
+    );
+    expect(sam.some((c) => c.id === 'instr-legend-big-sams-houdini')).toBe(true);
   });
 });
