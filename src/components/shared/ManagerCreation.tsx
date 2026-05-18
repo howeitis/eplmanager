@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { PlayingBackground, ManagerPhilosophy } from '@/types/entities';
+import type { ManagerSchool } from '@/types/tactics';
+import { MANAGER_SCHOOLS } from '@/types/tactics';
 import { getManagerFaceUri } from '@/utils/avatarFace';
 import { createRNG } from '@/utils/rng';
 
@@ -49,9 +51,19 @@ export interface ManagerCreationData {
   playingBackground: PlayingBackground;
   preferredFormation: string;
   philosophy: ManagerPhilosophy;
+  /** Phase C: declared tactical school — picked at career creation. */
+  school: ManagerSchool;
   avatar: string;
   bio: string;
 }
+
+const SCHOOL_OPTIONS: ManagerSchool[] = [
+  'gegenpress',
+  'tiki-taka',
+  'catenaccio',
+  'direct',
+  'total-football',
+];
 
 interface ManagerCreationProps {
   clubName: string;
@@ -66,6 +78,7 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
   const [playingBackground, setPlayingBackground] = useState<PlayingBackground | ''>('');
   const [preferredFormation, setPreferredFormation] = useState('');
   const [philosophy, setPhilosophy] = useState<ManagerPhilosophy | ''>('');
+  const [school, setSchool] = useState<ManagerSchool | ''>('');
   const [avatar, setAvatar] = useState('');
   const [avatarBatchKey, setAvatarBatchKey] = useState(() => Date.now());
   const [bio, setBio] = useState('');
@@ -82,6 +95,7 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
     if (!playingBackground) newErrors.playingBackground = 'Select a playing background';
     if (!preferredFormation) newErrors.preferredFormation = 'Select a preferred formation';
     if (!philosophy) newErrors.philosophy = 'Select a philosophy';
+    if (!school) newErrors.school = 'Pick a tactical school';
     if (!avatar) newErrors.avatar = 'Select an avatar';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -97,6 +111,7 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
       playingBackground: playingBackground as PlayingBackground,
       preferredFormation,
       philosophy: philosophy as ManagerPhilosophy,
+      school: school as ManagerSchool,
       avatar,
       bio: bio.trim(),
     });
@@ -276,6 +291,51 @@ export function ManagerCreation({ clubName, onSubmit, onBack }: ManagerCreationP
               </p>
             )}
             {errors.philosophy && <p className={errorClass}>{errors.philosophy}</p>}
+          </div>
+
+          {/* Tactical School — Phase C */}
+          <div>
+            <label className={labelClass}>Tactical School ★</label>
+            <p className="plm-text-xs plm-text-gray-400 plm-mb-2">
+              Your declared identity. Biases the instruction cards you draw at season end.
+            </p>
+            <div className="plm-grid plm-grid-cols-1 plm-gap-2">
+              {SCHOOL_OPTIONS.map((value) => {
+                const meta = MANAGER_SCHOOLS[value];
+                const selected = school === value;
+                return (
+                  <button
+                    type="button"
+                    key={value}
+                    onClick={() => setSchool(value)}
+                    className={`plm-text-left plm-rounded-lg plm-border plm-p-3 plm-transition-colors plm-min-h-[44px] ${
+                      selected
+                        ? 'plm-border-gray-900 plm-bg-gray-100 plm-ring-2 plm-ring-gray-400'
+                        : 'plm-border-gray-200 hover:plm-border-gray-300 plm-bg-white'
+                    }`}
+                    aria-pressed={selected}
+                  >
+                    <div className="plm-flex plm-items-baseline plm-justify-between plm-gap-2">
+                      <span className="plm-font-display plm-text-base plm-font-semibold plm-text-gray-900">
+                        {meta.name}
+                      </span>
+                      <span className="plm-text-[10px] plm-uppercase plm-tracking-wider plm-text-gray-500">
+                        School
+                      </span>
+                    </div>
+                    <div className="plm-text-xs plm-text-gray-600 plm-italic plm-mt-1">
+                      {meta.tagline}
+                    </div>
+                    {selected && (
+                      <div className="plm-text-xs plm-text-gray-500 plm-mt-2 plm-leading-snug">
+                        {meta.description}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {errors.school && <p className={errorClass}>{errors.school}</p>}
           </div>
 
           {/* Bio */}

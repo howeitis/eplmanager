@@ -58,7 +58,7 @@ import { CLUBS } from './data/clubs';
 import { inferNationalityFromName } from './data/namePool';
 import { generateAllSquads, generatePhilosophyBonusPlayer } from './engine/playerGen';
 import { saveGame, loadGame } from './utils/save';
-import { STARTER_INSTRUCTION_CARD_IDS, pickNextInstructionToMint, getInstructionCard } from './data/instructionCards';
+import { STARTER_INSTRUCTION_CARD_IDS, getInstructionCard, computeInstructionDrops } from './data/instructionCards';
 import { SeededRNG, seasonSeed as deriveSeasonSeed } from './utils/rng';
 import {
   generateFixtures,
@@ -165,18 +165,20 @@ function App() {
   const [monthEvents, setMonthEvents] = useState<SeasonEvent[]>([]);
   const [fortunes, setFortunes] = useState<ClubFortune[]>([]);
   const [faCupWinner, setFaCupWinner] = useState<string | null>(null);
+  // Phase D: legendary-unlock context snapshotted at season-end so the
+  // pack chain can mint chase cards deterministically.
+  const [cupBeatTier1, setCupBeatTier1] = useState<boolean>(false);
+  const [survivedRelegationFlag, setSurvivedRelegationFlag] = useState<boolean>(false);
   const [agingResults, setAgingResults] = useState<AgingResult[]>([]);
   const [xiNotifications, setXiNotifications] = useState<XISwap[]>([]);
   const [julyNarrative, setJulyNarrative] = useState<string | null>(null);
   const [julyWinnerNationality, setJulyWinnerNationality] = useState<string | null>(null);
-  const [packPlayers, setPackPlayers] = useState<import('./types/entities').Player[]>([]);
+  const [packPayload, setPackPayload] = useState<import('./components/shared/PackOpening').PackPayload | null>(null);
   const [packInstanceKey, setPackInstanceKey] = useState(0);
   const [packConfig, setPackConfig] = useState<{
     title: string;
     subtitle?: string;
     clubOverride?: { name: string; colors: { primary: string; secondary: string }; clubId?: string };
-    perCardClubIds?: string[];
-    cardVariant?: 'normal' | 'retired' | 'tier-up';
     coverLogoUrl?: string;
     onComplete?: () => void;
   } | null>(null);
@@ -460,11 +462,13 @@ function App() {
       name: data.name,
       clubId: club.id,
       reputation: 50,
+      previousReputation: 50,
       nationality: data.nationality,
       age: data.age,
       playingBackground: data.playingBackground,
       preferredFormation: data.preferredFormation,
       philosophy: data.philosophy,
+      school: data.school,
       avatar: data.avatar,
       bio: data.bio,
       createdAt: Date.now(),
@@ -1122,6 +1126,36 @@ function App() {
     });
     setFaCupWinner(cupResult.winner);
 
+    // Phase D legendary context — derive the two cup/board signals from
+    // the freshly-resolved season. `beatTier1InCup` is true when the user
+    // won at least one fixture against a tier-1 club in the bracket;
+    // `survivedRelegation` matches the existing milestone trigger.
+    const userClubTier = clubDataMap.get(playerClubId)?.tier;
+    const beatT1 = cupResult.fixtures.some((fx) => {
+      if (!fx.result) return false;
+      const userWasHome = fx.homeClubId === playerClubId;
+      const userWasAway = fx.awayClubId === playerClubId;
+      if (!userWasHome && !userWasAway) return false;
+      const userWon = userWasHome
+        ? fx.result.homeGoals > fx.result.awayGoals
+        : fx.result.awayGoals > fx.result.homeGoals;
+      if (!userWon) return false;
+      const oppId = userWasHome ? fx.awayClubId : fx.homeClubId;
+      const oppTier = clubDataMap.get(oppId)?.tier;
+      return oppTier === 1 && userClubTier !== 1;
+    });
+    setCupBeatTier1(beatT1);
+    setSurvivedRelegationFlag(
+      !!(boardExpectation && boardExpectation.minPosition >= 16 && playerPosition <= 17),
+    );
+
+    // Phase B.5: snapshot pre-season reputation BEFORE applying the season's
+    // delta. The bonus-drop logic reads this at chain time to detect
+    // "crossed 50 / 75 this season" — without the snapshot we can't tell
+    // a milestone crossing apart from "was already above the threshold".
+    const repPrev = manager!.reputation;
+    state.setManagerPreviousReputation(repPrev);
+
     // Reputation change
     const repResult = calculateSeasonReputationChange(
       playerPosition,
@@ -1617,19 +1651,10 @@ function App() {
       }
     }
 
-    // Phase B: mint one new instruction card if any remain unowned.
-    // Uses a sub-seed of sSeed so the same season produces the same drop
-    // on replay (per CLAUDE.md's seeded-randomness contract).
-    const ownedInstructionIds = store.getState().ownedTacticCards;
-    const instructionRng = new SeededRNG(`${sSeed}-instruction-mint`);
-    const nextInstruction = pickNextInstructionToMint(
-      ownedInstructionIds,
-      (max) => instructionRng.randomInt(0, max - 1),
-    );
-    if (nextInstruction) {
-      store.getState().addOwnedTacticCards([nextInstruction.id]);
-      setUnlockedInstructionCardId(nextInstruction.id);
-    }
+    // Phase B.5: instruction-card mint now lives at the END of the
+    // season-end pack chain (computeInstructionDrops + tactic-payload
+    // PackOpening). The legacy single-drop modal flow is retained only
+    // for mid-season ad-hoc grants (Phase C events etc.).
 
     // Show season end screen
     setGameView('season_end');
@@ -1719,8 +1744,12 @@ function App() {
     // If a queue is empty, the step calls the next one synchronously and
     // the user never sees a pause — the chain skips cleanly to whatever
     // does have content (or to off-season if nothing does).
-    const openPack = (cfg: NonNullable<typeof packConfig>, payload: import('./types/entities').Player[], clearStep: () => void) => {
-      setPackPlayers(payload);
+    const openPack = (
+      cfg: NonNullable<typeof packConfig>,
+      payload: import('./components/shared/PackOpening').PackPayload,
+      clearStep: () => void,
+    ) => {
+      setPackPayload(payload);
       setPackConfig(cfg);
       setPackInstanceKey((k) => k + 1);
       clearStep();
@@ -1732,18 +1761,78 @@ function App() {
     // "Continue to Off-Season" button at the bottom of that page.
     const finishChain = () => {};
 
+    // Phase B.5: instruction pack — the last in the chain. Computes
+    // bonus drops from the season state (trophies, rep milestones, capped
+    // at 3), seeded by the season seed so replays are deterministic.
+    const startInstruction = () => {
+      const freshState = store.getState();
+      const m = freshState.manager;
+      if (!m) {
+        finishChain();
+        return;
+      }
+      const sortedTable = [...freshState.leagueTable].sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+        return b.goalsFor - a.goalsFor;
+      });
+      const wonLeague = sortedTable[0]?.clubId === m.clubId;
+      const wonCup = faCupWinner === m.clubId;
+      const repNow = m.reputation;
+      const repPrev = m.previousReputation ?? repNow;
+      const sSeed = deriveSeasonSeed(freshState.gameSeed, freshState.seasonNumber);
+
+      const drops = computeInstructionDrops({
+        wonLeague,
+        wonCup,
+        repNow,
+        repPrev,
+        ownedIds: freshState.ownedTacticCards,
+        seed: sSeed,
+        school: m.school,
+        beatTier1InCup: cupBeatTier1,
+        survivedRelegation: survivedRelegationFlag,
+      });
+      if (drops.length === 0) {
+        finishChain();
+        return;
+      }
+      // Grant the cards eagerly so the pack reveal is purely cosmetic —
+      // if the user dismisses mid-reveal, they still own the cards.
+      freshState.addOwnedTacticCards(drops.map((d) => d.id));
+
+      const subtitle =
+        drops.length === 1
+          ? 'Instruction card unlocked'
+          : `${drops.length} instruction cards unlocked`;
+      openPack(
+        {
+          title: 'New Tactics',
+          subtitle,
+          clubOverride: {
+            name: playerClub?.name || 'Club',
+            colors: userColors,
+            clubId: playerClub?.id,
+          },
+          onComplete: finishChain,
+        },
+        { kind: 'tactic', cards: drops },
+        () => {},
+      );
+    };
+
     const startYouth = () => {
       if (youthIntakePlayers.length === 0) {
-        finishChain();
+        startInstruction();
         return;
       }
       openPack(
         {
           title: 'Youth Academy',
           subtitle: `${playerClub?.name || 'Club'} Graduates`,
-          onComplete: finishChain,
+          onComplete: startInstruction,
         },
-        youthIntakePlayers,
+        { kind: 'player', players: youthIntakePlayers },
         () => setYouthIntakePlayers([]),
       );
     };
@@ -1757,10 +1846,9 @@ function App() {
         {
           title: 'Hanging Up the Boots',
           subtitle: 'Career farewells',
-          cardVariant: 'retired',
           onComplete: startYouth,
         },
-        retiringPlayers,
+        { kind: 'player', players: retiringPlayers, cardVariant: 'retired' },
         () => setRetiringPlayers([]),
       );
     };
@@ -1778,14 +1866,13 @@ function App() {
             name: 'Premier League',
             colors: { primary: '#FFD700', secondary: '#1A1A1A' },
           },
-          perCardClubIds: totsClubIds,
           // The TOTS pack belongs to the league, not the user's club —
           // paint the Premier League shield on the wrapper instead of
           // the user's crest.
           coverLogoUrl: getLeagueLogoUrl(),
           onComplete: startRetirement,
         },
-        totsPlayers,
+        { kind: 'player', players: totsPlayers, perCardClubIds: totsClubIds },
         () => { setTotsPlayers([]); setTotsClubIds([]); },
       );
     };
@@ -1804,13 +1891,12 @@ function App() {
             colors: userColors,
             clubId: playerClub?.id,
           },
-          // Tier-up variant triggers the celebratory stamp + impact
-          // burst on every card reveal — every player in this pack is
-          // a real promotion moment.
-          cardVariant: 'tier-up',
           onComplete: startTots,
         },
-        improvedPlayers,
+        // Tier-up variant triggers the celebratory stamp + impact burst
+        // on every card reveal — every player in this pack is a real
+        // promotion moment.
+        { kind: 'player', players: improvedPlayers, cardVariant: 'tier-up' },
         () => setImprovedPlayers([]),
       );
     };
@@ -1818,7 +1904,7 @@ function App() {
     startImproved();
   }, [
     store, improvedPlayers, totsPlayers, totsClubIds, retiringPlayers,
-    youthIntakePlayers,
+    youthIntakePlayers, faCupWinner, cupBeatTier1, survivedRelegationFlag,
   ]);
 
   // Auto-fire the pack chain when the user first lands on the SeasonEnd
@@ -1911,8 +1997,9 @@ function App() {
           .filter((p) => !p.isTemporary)
           .sort((a, b) => b.overall - a.overall)
           .slice(0, 11);
-        setPackPlayers(starters);
+        setPackPayload({ kind: 'player', players: starters });
         setPackConfig({ title: 'Starting XI', subtitle: playerClub.name });
+        setPackInstanceKey((k) => k + 1);
         return;
       }
     }
@@ -2136,7 +2223,7 @@ function App() {
               cards animation. Without the key, React would just swap
               players[] in place and the user would see the second pack
               start already in cards-revealed state. */}
-          {packConfig && packPlayers.length > 0 && (() => {
+          {packConfig && packPayload && (() => {
             const state = store.getState();
             const playerClub = state.clubs.find((c) => c.id === state.manager?.clubId);
             const customOnComplete = packConfig.onComplete;
@@ -2144,7 +2231,7 @@ function App() {
             return (
               <PackOpening
                 key={`pack-${packInstanceKey}`}
-                players={packPlayers}
+                payload={packPayload}
                 clubName={override?.name ?? playerClub?.name ?? ''}
                 clubId={override?.clubId ?? playerClub?.id}
                 clubColors={
@@ -2154,11 +2241,17 @@ function App() {
                 }
                 packTitle={packConfig.title}
                 packSubtitle={packConfig.subtitle}
-                perCardClubIds={packConfig.perCardClubIds}
-                cardVariant={packConfig.cardVariant}
                 coverLogoUrl={packConfig.coverLogoUrl}
+                onEquipTactic={
+                  packPayload.kind === 'tactic'
+                    ? (id) => store.getState().setActiveInstructionCardId(id)
+                    : undefined
+                }
+                equippedTacticId={
+                  packPayload.kind === 'tactic' ? state.activeInstructionCardId : null
+                }
                 onComplete={() => {
-                  setPackPlayers([]);
+                  setPackPayload(null);
                   setPackConfig(null);
                   if (customOnComplete) {
                     customOnComplete();

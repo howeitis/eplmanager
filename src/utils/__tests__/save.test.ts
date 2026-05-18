@@ -4,6 +4,7 @@ import {
   validateSaveData,
   extractSaveData,
   reshapeToEqualWeightedAverage,
+  defaultSchoolFromBackground,
   CURRENT_SCHEMA_VERSION,
   SaveCorruptedError,
 } from '@/utils/save';
@@ -121,7 +122,7 @@ describe('migrateSaveData', () => {
       expect(occurrences).toBe(1);
     });
 
-    it('passes a v5-shaped save through unchanged', () => {
+    it('passes a v5-shaped save through unchanged in its tactic state', () => {
       const v5: Record<string, unknown> = makeValidSaveShape({
         ownedTacticCards: ['instr-press-from-front'],
         activeInstructionCardId: null,
@@ -130,6 +131,71 @@ describe('migrateSaveData', () => {
       expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
       expect(migrated.ownedTacticCards).toEqual(['instr-press-from-front']);
     });
+  });
+
+  describe('v5 → v6 (tactic schools)', () => {
+    it('defaults manager.school from playingBackground when missing', () => {
+      const v5: Record<string, unknown> = makeValidSaveShape({
+        schemaVersion: 5,
+        manager: { name: 'Howe', playingBackground: 'former-pro', reputation: 60 },
+      });
+      const migrated = migrateSaveData(v5);
+      expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const m = migrated.manager as any;
+      expect(m.school).toBe('total-football');
+      expect(m.previousReputation).toBe(60);
+    });
+
+    it('preserves an existing manager.school if already set', () => {
+      const v5: Record<string, unknown> = makeValidSaveShape({
+        schemaVersion: 5,
+        manager: { name: 'Howe', playingBackground: 'former-pro', school: 'gegenpress', reputation: 70 },
+      });
+      const migrated = migrateSaveData(v5);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const m = migrated.manager as any;
+      expect(m.school).toBe('gegenpress');
+      expect(m.previousReputation).toBe(70);
+    });
+
+    it('mirrors reputation into previousReputation only when missing', () => {
+      const v5: Record<string, unknown> = makeValidSaveShape({
+        schemaVersion: 5,
+        manager: { name: 'Howe', reputation: 50, previousReputation: 30 },
+      });
+      const migrated = migrateSaveData(v5);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const m = migrated.manager as any;
+      expect(m.previousReputation).toBe(30);
+    });
+
+    it('defaults previousReputation to 50 when reputation is missing entirely', () => {
+      const v5: Record<string, unknown> = makeValidSaveShape({
+        schemaVersion: 5,
+        manager: { name: 'Howe' },
+      });
+      const migrated = migrateSaveData(v5);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const m = migrated.manager as any;
+      expect(m.previousReputation).toBe(50);
+    });
+  });
+});
+
+describe('defaultSchoolFromBackground', () => {
+  it('maps each known background to a school', () => {
+    expect(defaultSchoolFromBackground('former-pro')).toBe('total-football');
+    expect(defaultSchoolFromBackground('lower-league-pro')).toBe('direct');
+    expect(defaultSchoolFromBackground('academy-coach')).toBe('tiki-taka');
+    expect(defaultSchoolFromBackground('journalist')).toBe('gegenpress');
+    expect(defaultSchoolFromBackground('analyst')).toBe('catenaccio');
+    expect(defaultSchoolFromBackground('never-played')).toBe('gegenpress');
+  });
+
+  it('falls back to gegenpress for an unknown value', () => {
+    expect(defaultSchoolFromBackground(undefined)).toBe('gegenpress');
+    expect(defaultSchoolFromBackground('something-else')).toBe('gegenpress');
   });
 });
 

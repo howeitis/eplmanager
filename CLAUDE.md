@@ -31,7 +31,7 @@ A trading-card meta-layer (`PackOpening`, `RetroPlayerCard`, foil stamps, tier u
 
 ## Project Phase
 
-The game is in **Phase 7 — Tactic Deck**. Engine, store, full UI, save/load, and the cards meta-layer are all shipped from earlier phases. The current effort reframes formation + mentality as a collectible 3-slot card loadout: Shape / Tempo / Instruction. Phase A (re-skin) and Phase B (Instruction slot, 16 starter cards, season-end mint) have shipped; Phases C (manager schools) and D (tier variants + sets + legendaries) are spec'd in [docs/design/TACTIC_DECK.md](docs/design/TACTIC_DECK.md).
+The game is in **Phase 7 — Tactic Deck**. Engine, store, full UI, save/load, and the cards meta-layer are all shipped from earlier phases. The current effort reframes formation + mentality as a collectible 3-slot card loadout: Shape / Tempo / Instruction. Phases A (re-skin), B (Instruction slot, 16 starter cards, season-end mint), B.5 (pack-opening integration + bonus drops), C (manager schools + school-biased mint), and D (tier variants + set bonuses + legendary chase cards) have all shipped.
 
 **Shipped:**
 - ✅ Match engine (TSS → Poisson goals), 38-game league
@@ -46,6 +46,9 @@ The game is in **Phase 7 — Tactic Deck**. Engine, store, full UI, save/load, a
 - ✅ 3-slot IndexedDB save/load with explicit `schemaVersion` + migration
 - ✅ Tactic Deck Phase A: 3-slot card loadout (Shape / Tempo / Instruction) replaces dual pickers
 - ✅ Tactic Deck Phase B: Instruction slot unlocked, 16 starter cards, conditional effects, season-end mint
+- ✅ Tactic Deck Phase B.5: `PackOpening` accepts tactic-card payloads, season-end reveal routes through it, bonus drops on trophies + reputation milestones (capped at 3)
+- ✅ Tactic Deck Phase C: Manager Schools (Gegenpress / Tiki-Taka / Catenaccio / Direct / Total Football) picked at career creation, biases instruction-card mint 60/40 in-school vs out
+- ✅ Tactic Deck Phase D: 12 silver/gold tier variants for 6 families, reputation-gated drop skew, school-set bonus (+1 TSS when Shape/Tempo/Instruction share a school), 6 legendary chase cards minted on career achievements
 
 **Known incomplete:**
 - ❌ UI component tests (Vitest only covers engine today)
@@ -94,7 +97,7 @@ Seed derivation hierarchy:
 - **Season seed:** `gameSeed + seasonNumber`
 - **Match seed:** `seasonSeed + fixtureId`
 - **Transfer seed:** `seasonSeed + "transfer" + windowId`
-- **Instruction-card mint seed (Phase B):** `${seasonSeed}-instruction-mint` — derived in [App.tsx](src/App.tsx) `handleSeasonEnd`. Picks the next unowned card to grant; replaying the same season produces the same drop.
+- **Instruction-card mint seed (Phase B / B.5 / C / D):** `${seasonSeed}-instruction-mint` — derived inside [computeInstructionDrops](src/data/instructionCards.ts), called at the end of the season-end pack chain in [App.tsx](src/App.tsx) `runSeasonEndPackChain`. Picks 1–3 unowned cards: legendaries first (when their unlock condition fires) then reputation-gated regular cards weighted 60/40 in-school vs out. Replaying the same season produces the same drops.
 
 If you introduce new gameplay randomness (events, aging, transfers), derive a sub-seed from the appropriate parent seed.
 
@@ -245,7 +248,7 @@ This prevents Out Of Memory errors in Node.js/Vitest. The reference implementati
 
 The trading-card meta-layer is a first-class feature. Treat its details with care.
 
-- **Core files:** [InteractiveCard.tsx](src/components/shared/InteractiveCard.tsx) (tilt + flip physics), [RetroPlayerCard.tsx](src/components/shared/RetroPlayerCard.tsx) (visual content), [PackOpening.tsx](src/components/shared/PackOpening.tsx) (reveal flow), [Confetti.tsx](src/components/shared/Confetti.tsx) (celebration). Animation keyframes live in [tailwind.config.js](tailwind.config.js).
+- **Core files:** [InteractiveCard.tsx](src/components/shared/InteractiveCard.tsx) (tilt + flip physics), [RetroPlayerCard.tsx](src/components/shared/RetroPlayerCard.tsx) (player-card visual), [TacticCardFace.tsx](src/components/shared/TacticCardFace.tsx) (tactic-card visual — Phase B.5), [PackOpening.tsx](src/components/shared/PackOpening.tsx) (reveal flow — accepts both player and tactic payloads via discriminated `PackPayload`), [Confetti.tsx](src/components/shared/Confetti.tsx) (celebration). Animation keyframes live in [tailwind.config.js](tailwind.config.js).
 - **`prefers-reduced-motion` must be respected.** `InteractiveCard` reads it and disables tilt + heavy transitions. Don't bypass.
 - **400ms flip debounce.** `InteractiveCard` debounces flip toggles to dedupe `pointerup` + `click` from firing back-to-back on touch. If you add a new flip trigger, share the same debounce ref.
 - **Tier color contract.** Player/manager tiers (`bronze | silver | gold | elite | future-star`) map to a fixed color palette shared by both card components via [src/utils/tierColors.ts](src/utils/tierColors.ts). That file owns both classifiers (`cardTierFromOverall`, `cardTierFromManagerReputation`) and the color/border/gradient/foil accessors. Don't reintroduce tier color logic inside `RetroPlayerCard` / `ManagerCard` — add it to the util and call it from the cards.
@@ -264,7 +267,7 @@ The save format lives in [src/utils/save.ts](src/utils/save.ts) and is **explici
 - `tempFillIns` and `transferOffers` are intentionally **not** persisted — they're window-scoped and rebuilt on demand.
 
 **Version history:**
-- v1: pre-versioning. v2: schemaVersion introduced, optional fields backfilled. v3: GK stats relabelled + equal-weighted. v4: `manager.binder` added with retroactive accomplishment mint. **v5: `ownedTacticCards` + `activeInstructionCardId` for Phase B tactic deck; migration grants `STARTER_INSTRUCTION_CARD_IDS`.**
+- v1: pre-versioning. v2: schemaVersion introduced, optional fields backfilled. v3: GK stats relabelled + equal-weighted. v4: `manager.binder` added with retroactive accomplishment mint. v5: `ownedTacticCards` + `activeInstructionCardId` for Phase B tactic deck; migration grants `STARTER_INSTRUCTION_CARD_IDS`. **v6: `manager.school` (Phase C) defaulted from `playingBackground` and `manager.previousReputation` (Phase B.5) mirrored from `reputation`.**
 
 **When you change the shape of saved state:**
 1. Bump `CURRENT_SCHEMA_VERSION`.
@@ -285,11 +288,11 @@ Never silently change `SaveData` field semantics without bumping the version —
 
 **Season:** 10 monthly phases (Aug–May) + Season End + Summer Window. Formation/mentality set before each month.
 
-**Manager:** Reputation (0–100), board expectations (rubber-band system), budget consequences. Phase B persists `ownedTacticCards: string[]` and `activeInstructionCardId: string | null` on the meta slice.
+**Manager:** Reputation (0–100), board expectations (rubber-band system), budget consequences. Phase B persists `ownedTacticCards: string[]` and `activeInstructionCardId: string | null` on the meta slice. Phase B.5 adds `previousReputation` (snapshot of last season's rep for milestone-crossing detection). Phase C adds `school: ManagerSchool` (declared tactical identity, biases season-end card drops).
 
 **Temporary Fill-In:** Rating 40–50, `isTemporary: true`, stored in `tempFillIns` array (not main roster), auto-deleted on recovery, grayed-out in UI, excluded from saves.
 
-**TacticCard (Phase A+B):** 3 slots — Shape, Tempo, Instruction. Shape and Tempo are mechanical re-skins of formation/mentality and mirror `BALANCE.formationModifiers` / `mentalityModifiers`. Instruction cards have an `effect: InstructionEffect` with optional `condition(InstructionContext) → boolean`. Engine caps each card's net (atk+def)/2 contribution at `INSTRUCTION_TSS_CAP = 2`. Types live in [src/types/tactics.ts](src/types/tactics.ts).
+**TacticCard (Phase A+B+D):** 3 slots — Shape, Tempo, Instruction. Shape and Tempo are mechanical re-skins of formation/mentality and mirror `BALANCE.formationModifiers` / `mentalityModifiers`. Instruction cards have an `effect: InstructionEffect` with optional `condition(InstructionContext) → boolean`. Engine caps each card's net (atk+def)/2 contribution at `INSTRUCTION_TSS_CAP = 2`. Phase D adds `family?` (groups tier variants of the same card), `schools?` (school-set affinity tags on every slot), `legendary?` + `unlockCondition?` + `unlockLabel?` (chase-card metadata). Types live in [src/types/tactics.ts](src/types/tactics.ts).
 
 **InstructionEffect / InstructionContext (Phase B):** Defined in [src/types/tactics.ts](src/types/tactics.ts). Conditions are pure functions of `InstructionContext` (isHome, isDerby, isCup, opponent ratings, opponent tier) and **must not** read state, RNG, or DOM — they're evaluated once per match and seeded replays depend on them being deterministic.
 
@@ -305,8 +308,10 @@ These five files are >800 LoC and any of them will swallow a context window on a
 | [transfers.ts](src/engine/transfers.ts) | ~990 | Willingness curve, AI window, market generation, and continent imports all share state. Split into `offerLogic` / `aiTransfers` / `market` when next touched. |
 | [PlayerDetailModal.tsx](src/components/shared/PlayerDetailModal.tsx) | ~970 | Browse + detail + transfer actions + celebration in one. Extract sub-components before adding features. |
 | [RetroPlayerCard.tsx](src/components/shared/RetroPlayerCard.tsx) | ~960 | Foil stamps, hero stat, corner ornaments, back-face scout. Hardcoded hex colors should move to Tailwind theme. |
-| [matchSim.ts](src/engine/matchSim.ts) | ~900 | TSS has 12 additive modifiers (Phase B added the instruction effect, capped at ±2). Adding a 13th changes balance significantly — re-run `fullBalanceCheck` after any TSS change. |
-| [instructionCards.ts](src/data/instructionCards.ts) | ~200 | Content file for Phase B+. Adding a card here is the safe extension point; balance is enforced by `INSTRUCTION_TSS_CAP` in the engine + a parity test. Re-run `fullBalanceCheck` after every batch of additions. |
+| [matchSim.ts](src/engine/matchSim.ts) | ~920 | TSS has 13 additive modifiers (Phase B added the instruction effect, Phase D added the school-set bonus — both user-only, capped). Adding a 14th changes balance significantly — re-run `fullBalanceCheck` after any TSS change. |
+| [instructionCards.ts](src/data/instructionCards.ts) | ~470 | Content file for Phase B+. Adding a card here is the safe extension point; balance is enforced by `INSTRUCTION_TSS_CAP` in the engine + a parity test. Phase D added 12 silver/gold tier variants (gated by `allowedTiersForReputation`) and the legendary-mint integration. Re-run `fullBalanceCheck` after every batch of additions. |
+| [legendaryCards.ts](src/data/legendaryCards.ts) | ~170 | Phase D chase-card pool. Six hand-authored cards with `unlockCondition: (LegendaryUnlockContext) => boolean`. Added one-per-season at most, only when the condition fires AND the card is unowned. Conditions are pure functions of season-end context (trophies / rep crossings / cup upsets / survival). |
+| [setBonus.ts](src/engine/setBonus.ts) | ~80 | Phase D set-bonus engine. `detectSchoolSetBonus(formation, mentality, instructionCardId)` returns `{tssDelta, school}`. `SET_BONUS_TSS = 1`. Wired into `calculateTSS` via `config.setBonusTss` — only the user's side ever passes a non-zero value, so AI matches and `fullBalanceCheck` are unaffected. |
 | [App.tsx](src/App.tsx) | ~2150 | Top-level orchestrator. Threads formation/mentality/instruction state into every match-sim call site. When extending Phase C/D systems, route them through here rather than duplicating store reads. |
 
 ---

@@ -1,37 +1,58 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { RetroPlayerCard } from './RetroPlayerCard';
+import { TacticCardFace } from './TacticCardFace';
 import { getClubLogoUrl } from '@/data/assets';
 import { CLUBS } from '@/data/clubs';
 import type { Player } from '@/types/entities';
+import type { TacticCard } from '@/types/tactics';
 
 const CLUB_BY_ID = new Map(CLUBS.map((c) => [c.id, c]));
 
+/**
+ * Phase B.5: pack payload is a discriminated union. The original player-card
+ * pack chain becomes `{ kind: 'player' }`; tactic-card unlocks at season
+ * end become `{ kind: 'tactic' }` and reuse the same intro → shake → burst →
+ * cards rhythm.
+ */
+export type PackPayload =
+  | {
+      kind: 'player';
+      players: Player[];
+      /** Per-card club id override (TOTS-style packs); falls back to top-level clubId. */
+      perCardClubIds?: string[];
+      /** 'normal' (default), 'retired' (desat + sash), 'tier-up' (riser celebration). */
+      cardVariant?: 'normal' | 'retired' | 'tier-up';
+    }
+  | {
+      kind: 'tactic';
+      cards: TacticCard[];
+    };
+
 interface PackOpeningProps {
-  players: Player[];
+  payload: PackPayload;
   clubName: string;
   clubId?: string;
   clubColors: { primary: string; secondary: string };
   packTitle: string;
   packSubtitle?: string;
   /**
-   * Optional per-card club IDs that override the pack-level clubId when
-   * rendering each card. Length should match players[]; missing/undefined
-   * entries fall back to the pack-level clubId. Used by Team-of-the-Season
-   * packs where each card represents a different club's player.
-   */
-  perCardClubIds?: string[];
-  /** Render variant for the cards inside the pack.
-   *  - 'normal' (default) → no extra treatment
-   *  - 'retired' → desaturated card + RETIRED sash
-   *  - 'tier-up' → celebratory RISER stamp + impact burst on every reveal,
-   *    used by the Risers pack at season wrap. */
-  cardVariant?: 'normal' | 'retired' | 'tier-up';
-  /**
    * Optional override for the large logo painted onto the pack wrapper on
    * the intro screen. Defaults to `getClubLogoUrl(clubId)`. The TOTS pack
    * uses this to swap the user's club crest for the Premier League shield.
    */
   coverLogoUrl?: string;
+  /**
+   * Phase B.5: fired when the user taps "Equip Now" on a tactic card. Only
+   * shown for `{ kind: 'tactic' }` payloads. The parent is responsible for
+   * writing to `activeInstructionCardId`. Optional — when omitted, the
+   * affordance is hidden.
+   */
+  onEquipTactic?: (cardId: string) => void;
+  /**
+   * Phase B.5: which tactic card id is currently equipped, used to render
+   * the "Equipped" disabled state on the Equip Now button. Optional.
+   */
+  equippedTacticId?: string | null;
   onComplete: () => void;
 }
 
@@ -67,15 +88,15 @@ function generateParticles(count: number, isGold: boolean): Particle[] {
 }
 
 export function PackOpening({
-  players,
+  payload,
   clubName,
   clubId,
   clubColors,
   packTitle,
   packSubtitle,
-  perCardClubIds,
-  cardVariant = 'normal',
   coverLogoUrl,
+  onEquipTactic,
+  equippedTacticId,
   onComplete,
 }: PackOpeningProps) {
   const [packState, setPackState] = useState<PackState>('intro');
@@ -86,27 +107,36 @@ export function PackOpening({
   const touchStartRef = useRef<number | null>(null);
 
   const isLight = isLightColor(clubColors.primary);
-  const currentPlayer = players[currentCardIndex];
-  const isHighRated = currentPlayer?.overall >= 85;
-  const isTierUp = cardVariant === 'tier-up';
+  const cardCount =
+    payload.kind === 'player' ? payload.players.length : payload.cards.length;
+  const isTierUp = payload.kind === 'player' && payload.cardVariant === 'tier-up';
 
-  // Trigger impact effect when revealing a celebratory card. Fires on every
-  // tier-up card (the Risers pack — each card is *the* moment); high-rated
-  // cards (85+ OVR) still get it in normal/retired packs.
-  useEffect(() => {
-    if (packState !== 'cards') return;
-    if (!revealedCards.has(currentCardIndex)) return;
-
-    if (isHighRated || isTierUp) {
-      setShowImpact(true);
-      setParticles(generateParticles(isTierUp ? 28 : 20, true));
-      const timer = setTimeout(() => {
-        setShowImpact(false);
-        setParticles([]);
-      }, isTierUp ? 1400 : 1200);
-      return () => clearTimeout(timer);
+  // Per-card "celebratory" predicate. For player payloads: 85+ OVR or tier-up
+  // variant. For tactic payloads: gold/elite tier OR a conditional effect
+  // (conditionals are the rare cards that gate behind specific match states).
+  let triggerImpact = false;
+  if (packState === 'cards' && revealedCards.has(currentCardIndex)) {
+    if (payload.kind === 'player') {
+      const currentPlayer = payload.players[currentCardIndex];
+      triggerImpact = (currentPlayer?.overall ?? 0) >= 85 || isTierUp;
+    } else {
+      const currentCard = payload.cards[currentCardIndex];
+      const isHighTier = currentCard?.tier === 'gold' || currentCard?.tier === 'elite';
+      const isConditional = !!currentCard?.effect?.condition;
+      triggerImpact = isHighTier || isConditional;
     }
-  }, [packState, currentCardIndex, isHighRated, isTierUp, revealedCards]);
+  }
+
+  useEffect(() => {
+    if (!triggerImpact) return;
+    setShowImpact(true);
+    setParticles(generateParticles(isTierUp ? 28 : 20, true));
+    const timer = setTimeout(() => {
+      setShowImpact(false);
+      setParticles([]);
+    }, isTierUp ? 1400 : 1200);
+    return () => clearTimeout(timer);
+  }, [triggerImpact, isTierUp]);
 
   // Transition through pack states
   const handlePackTap = useCallback(() => {
@@ -122,14 +152,14 @@ export function PackOpening({
 
   const handleNextCard = useCallback(() => {
     if (packState !== 'cards') return;
-    if (currentCardIndex < players.length - 1) {
+    if (currentCardIndex < cardCount - 1) {
       const next = currentCardIndex + 1;
       setCurrentCardIndex(next);
       setRevealedCards((prev) => new Set([...prev, next]));
     } else {
       onComplete();
     }
-  }, [packState, currentCardIndex, players.length, onComplete]);
+  }, [packState, currentCardIndex, cardCount, onComplete]);
 
   const handlePrevCard = useCallback(() => {
     if (packState !== 'cards') return;
@@ -322,7 +352,7 @@ export function PackOpening({
             <FoilStrip position="bottom">
               <div className="plm-absolute plm-bottom-2.5 plm-right-3 plm-bg-black/45 plm-rounded-full plm-px-3 plm-py-1 plm-backdrop-blur-sm plm-border plm-border-white/10">
                 <span className="plm-text-[10px] plm-font-bold plm-uppercase plm-tracking-widest plm-text-white plm-tabular-nums">
-                  {players.length} cards
+                  {cardCount} {cardCount === 1 ? 'card' : 'cards'}
                 </span>
               </div>
             </FoilStrip>
@@ -338,7 +368,7 @@ export function PackOpening({
       )}
 
       {/* Cards carousel */}
-      {packState === 'cards' && players.length > 0 && (
+      {packState === 'cards' && cardCount > 0 && (
         <div
           className="plm-flex plm-flex-col plm-items-center plm-gap-2 plm-w-full plm-max-w-lg plm-px-4 plm-overflow-y-auto plm-max-h-screen plm-py-4 plm-relative"
           onTouchStart={handleTouchStart}
@@ -368,7 +398,7 @@ export function PackOpening({
 
           {/* Card counter */}
           <div className="plm-text-warm-400 plm-text-xs plm-font-body plm-uppercase plm-tracking-wider">
-            {currentCardIndex + 1} / {players.length}
+            {currentCardIndex + 1} / {cardCount}
           </div>
 
           {/* Active card — no key on currentCardIndex so React reuses the
@@ -382,30 +412,62 @@ export function PackOpening({
               same DOM element with no className flip and no animation
               restart. */}
           <div className="plm-flex plm-justify-center">
-            {(() => {
-              const cardClubId = perCardClubIds?.[currentCardIndex] ?? clubId;
+            {payload.kind === 'player' && (() => {
+              const cardClubId = payload.perCardClubIds?.[currentCardIndex] ?? clubId;
               const cardClub = cardClubId ? CLUB_BY_ID.get(cardClubId) : null;
               const cardClubName = cardClub?.name ?? clubName;
               const cardClubColors = cardClub?.colors ?? clubColors;
               return (
                 <RetroPlayerCard
-                  player={players[currentCardIndex]}
+                  player={payload.players[currentCardIndex]}
                   clubId={cardClubId}
                   clubName={cardClubName}
                   clubColors={cardClubColors}
                   size="xl"
                   animated={revealedCards.size === 1 && currentCardIndex === 0}
                   disableFlip
-                  retired={cardVariant === 'retired'}
-                  tierUp={cardVariant === 'tier-up'}
+                  retired={payload.cardVariant === 'retired'}
+                  tierUp={payload.cardVariant === 'tier-up'}
                 />
               );
             })()}
+            {payload.kind === 'tactic' && (
+              <TacticCardFace
+                card={payload.cards[currentCardIndex]}
+                animated={revealedCards.size === 1 && currentCardIndex === 0}
+                disableFlip
+              />
+            )}
           </div>
+
+          {/* Equip Now affordance for tactic cards. One button per card —
+              writes to the parent's `activeInstructionCardId` and reflects
+              the current equipped state. Hidden when onEquipTactic isn't
+              wired. */}
+          {payload.kind === 'tactic' && onEquipTactic && (() => {
+            const currentCard = payload.cards[currentCardIndex];
+            const isEquipped = equippedTacticId === currentCard.id;
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isEquipped) onEquipTactic(currentCard.id);
+                }}
+                disabled={isEquipped}
+                className={`plm-mt-2 plm-px-5 plm-py-2.5 plm-rounded-lg plm-text-sm plm-font-semibold plm-min-h-[44px] plm-transition-colors ${
+                  isEquipped
+                    ? 'plm-bg-warm-700 plm-text-warm-300 plm-cursor-default'
+                    : 'plm-bg-amber-400 plm-text-charcoal hover:plm-bg-amber-300'
+                }`}
+              >
+                {isEquipped ? 'Equipped' : 'Equip Now'}
+              </button>
+            );
+          })()}
 
           {/* Navigation dots */}
           <div className="plm-flex plm-gap-1.5 plm-mt-1">
-            {players.map((_, idx) => (
+            {Array.from({ length: cardCount }).map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => {
@@ -438,7 +500,7 @@ export function PackOpening({
               className="plm-px-5 plm-py-2.5 plm-rounded-lg plm-text-sm plm-font-semibold plm-transition-colors plm-min-h-[44px] plm-text-white"
               style={{ backgroundColor: clubColors.primary }}
             >
-              {currentCardIndex === players.length - 1 ? 'Done' : 'Next'}
+              {currentCardIndex === cardCount - 1 ? 'Done' : 'Next'}
             </button>
           </div>
 

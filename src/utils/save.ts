@@ -29,8 +29,12 @@ const METADATA_KEY = 'epl-manager-save-metadata';
  *       activeInstructionCardId (string | null) added at the top level.
  *       Migration grants STARTER_INSTRUCTION_CARD_IDS to every existing
  *       save so the Instruction slot is immediately usable post-update.
+ *  v6 — Phase C tactic schools: manager.school added (ManagerSchool, derived
+ *       from existing playingBackground for legacy saves) and Phase B.5's
+ *       manager.previousReputation added (mirrors current reputation on
+ *       first-load — milestone bonuses don't fire retroactively).
  */
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 export interface SaveData {
   schemaVersion: number;
@@ -136,7 +140,55 @@ export function migrateSaveData(raw: RawSaveData): SaveData {
     version = 5;
   }
 
+  if (version < 6) {
+    // v5 → v6: Phase C tactic schools. Existing managers don't have a school;
+    // derive a sensible default from their playingBackground. Also mirror
+    // current reputation into previousReputation so Phase B.5's milestone-
+    // crossing detection doesn't fire retroactively at first season-end.
+    data = { ...data, manager: backfillManagerSchoolAndRep(data.manager) };
+    version = 6;
+  }
+
   return { ...data, schemaVersion: version } as SaveData;
+}
+
+/**
+ * v5 → v6 helper. Assigns a default `school` derived from the manager's
+ * existing `playingBackground` and mirrors `reputation` into
+ * `previousReputation`. Silent default — no re-picker on load.
+ */
+function backfillManagerSchoolAndRep(manager: unknown): unknown {
+  if (!manager || typeof manager !== 'object') return manager;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const m = manager as Record<string, any>;
+  const updated = { ...m };
+
+  if (typeof updated.school !== 'string') {
+    updated.school = defaultSchoolFromBackground(updated.playingBackground);
+  }
+  if (typeof updated.previousReputation !== 'number') {
+    updated.previousReputation = typeof updated.reputation === 'number' ? updated.reputation : 50;
+  }
+  return updated;
+}
+
+/** Maps a legacy playingBackground to a sensible default ManagerSchool. */
+export function defaultSchoolFromBackground(bg: unknown): string {
+  switch (bg) {
+    case 'former-pro':
+      return 'total-football';
+    case 'lower-league-pro':
+      return 'direct';
+    case 'academy-coach':
+      return 'tiki-taka';
+    case 'journalist':
+      return 'gegenpress';
+    case 'analyst':
+      return 'catenaccio';
+    case 'never-played':
+    default:
+      return 'gegenpress';
+  }
 }
 
 /**

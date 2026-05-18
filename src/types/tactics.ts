@@ -17,6 +17,57 @@ export type TacticSlot = 'shape' | 'tempo' | 'instruction';
 export type TacticTier = 'bronze' | 'silver' | 'gold' | 'elite';
 
 /**
+ * Phase C: a manager's declared tactical identity. Picked at career creation,
+ * permanent for the career (a "rebrand" event is a Phase D concern).
+ *
+ * Used to bias instruction-card drops at pack-mint time (60/40 in-school vs
+ * out-of-school) — it has no engine-side effect on TSS.
+ */
+export type ManagerSchool =
+  | 'gegenpress'
+  | 'tiki-taka'
+  | 'catenaccio'
+  | 'direct'
+  | 'total-football';
+
+export interface ManagerSchoolMeta {
+  /** Display name shown in the picker and on tactic-card chips. */
+  name: string;
+  /** Single-line tagline shown under the name. */
+  tagline: string;
+  /** Longer flavour copy shown when the school is selected. */
+  description: string;
+}
+
+export const MANAGER_SCHOOLS: Record<ManagerSchool, ManagerSchoolMeta> = {
+  gegenpress: {
+    name: 'Gegenpress',
+    tagline: 'Win it high, score before they breathe.',
+    description: 'Aggressive front-foot football. Cards bias toward pressing, transitions and underdog edges.',
+  },
+  'tiki-taka': {
+    name: 'Tiki-Taka',
+    tagline: 'Control the ball. Control the game.',
+    description: 'Possession is sovereignty. Cards bias toward patience, midfield control, home-soil dominance.',
+  },
+  catenaccio: {
+    name: 'Catenaccio',
+    tagline: 'Two banks. One scoreline. Three points.',
+    description: 'Defensive identity built on shape and discipline. Cards bias toward low-block, time-wasting, holding lines.',
+  },
+  direct: {
+    name: 'Direct',
+    tagline: 'First contact forward. No nonsense.',
+    description: 'Vertical football — long balls, fast transitions, second-ball dominance.',
+  },
+  'total-football': {
+    name: 'Total Football',
+    tagline: 'Every player, every role.',
+    description: 'Versatility across the XI. Cards bias toward big-stage temperament and shape-fluid identities.',
+  },
+};
+
+/**
  * Context passed to a conditional instruction's `condition` function.
  * Only includes fields the engine can supply at TSS time — keep this
  * narrow so condition functions stay testable in isolation.
@@ -91,6 +142,65 @@ export interface TacticCard {
    */
   formation?: Formation;
   mentality?: Mentality;
+  /**
+   * Phase C: which manager schools count this card as "in-school" for the
+   * 60/40 weighted mint. Multi-tag — a card can belong to multiple schools.
+   * Omit (or empty) for neutral cards that are always eligible regardless
+   * of the manager's school.
+   */
+  schools?: ManagerSchool[];
+  /**
+   * Phase D: groups tier variants of the same card together. e.g. the
+   * bronze/silver/gold/elite "Press From The Front" cards all share
+   * `family: 'press-from-front'`. Used by the collection UI to render
+   * "best tier owned" pips. The engine ignores `family` — each card's
+   * own `effect` is what fires.
+   */
+  family?: string;
+  /**
+   * Phase D legendary cards: a hand-authored card minted only when this
+   * condition is met during season-end. Receives the current season's
+   * achievement context. Must be a pure function (no RNG, no state, no
+   * DOM) — same contract as InstructionEffect.condition. When omitted,
+   * the card is part of the regular reputation-gated pool.
+   */
+  unlockCondition?: (ctx: LegendaryUnlockContext) => boolean;
+  /**
+   * Phase D: free-text description of the unlock condition shown on the
+   * card back when the legendary is revealed. Required when
+   * `unlockCondition` is present.
+   */
+  unlockLabel?: string;
+  /**
+   * Phase D: true for hand-authored legendaries. Cosmetic flag — the
+   * picker can apply a special foil treatment, and the engine excludes
+   * them from the reputation-skewed regular pool (they only mint via
+   * their unlock condition).
+   */
+  legendary?: boolean;
+}
+
+/**
+ * Phase D context for evaluating a legendary card's unlock condition at
+ * season-end. Pure data — same purity contract as InstructionContext.
+ */
+export interface LegendaryUnlockContext {
+  /** Did the player's club finish 1st in the league this season? */
+  wonLeague: boolean;
+  /** Did the player's club win the FA Cup this season? */
+  wonCup: boolean;
+  /** Did the player's club beat a tier-1 club in the FA Cup this season? */
+  beatTier1InCup: boolean;
+  /** Did manager reputation cross 75 this season (50 → ≥75)? */
+  crossed75: boolean;
+  /** Did manager reputation cross 90 this season? */
+  crossed90: boolean;
+  /** True when the player survived relegation against an explicit board expectation to go down. */
+  survivedRelegation: boolean;
+  /** Manager's tactical school. */
+  school?: ManagerSchool;
+  /** Reputation as it stands at this season's end. */
+  reputation: number;
 }
 
 export interface TacticLoadout {

@@ -54,8 +54,9 @@ describe('tactic cards mirror balance config', () => {
     expect(ids.size).toBe(ALL_TACTIC_CARDS.length);
   });
 
-  it('all Phase A cards are bronze tier', () => {
+  it('all Phase A Shape/Tempo cards are bronze tier (Phase D adds tier variants on Instruction only)', () => {
     for (const card of ALL_TACTIC_CARDS) {
+      if (card.slot === 'instruction') continue;
       expect(card.tier).toBe('bronze');
     }
   });

@@ -300,6 +300,14 @@ export interface ManagerProfile {
   name: string;
   clubId: string;
   reputation: number;
+  /**
+   * Reputation as it stood at the **start** of the current season. Used by
+   * Phase B.5's bonus-drop logic to detect "crossed 50 / 75 this season"
+   * (vs. "currently above"). Snapshotted at the start of handleSeasonEnd
+   * before the season's reputation delta is applied. Optional for back-
+   * compat with pre-v6 saves; the v6 migration mirrors `reputation` into it.
+   */
+  previousReputation?: number;
 
   // Identity fields (set at creation)
   nationality: string;
@@ -307,6 +315,14 @@ export interface ManagerProfile {
   playingBackground: PlayingBackground;
   preferredFormation: string;
   philosophy: ManagerPhilosophy;
+  /**
+   * Phase C: the manager's declared tactical identity. Picked at career
+   * creation, permanent for the career. Biases instruction-card drop weights
+   * at mint time (60/40 in-school vs out). Optional for back-compat with
+   * pre-v6 saves; the v6 migration assigns a default derived from
+   * `playingBackground`.
+   */
+  school?: import('./tactics').ManagerSchool;
   avatar: string;
   bio: string;
   createdAt: number;

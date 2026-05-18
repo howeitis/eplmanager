@@ -30,6 +30,12 @@ export interface MetaSlice {
 
   setManager: (profile: ManagerProfile) => void;
   updateReputation: (delta: number) => void;
+  /**
+   * Phase B.5: snapshot reputation as it stood at the start of the season,
+   * used by the season-end bonus-drop logic to detect milestone crossings.
+   * Called from handleSeasonEnd before applying the season's rep delta.
+   */
+  setManagerPreviousReputation: (rep: number) => void;
   setBoardExpectation: (expectation: BoardExpectation) => void;
   addSeasonHistory: (history: SeasonHistory) => void;
   setSaveSlot: (slot: number) => void;
@@ -80,6 +86,13 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set)
       if (!state.manager) return {};
       const newRep = Math.max(0, Math.min(100, state.manager.reputation + delta));
       return { manager: { ...state.manager, reputation: newRep } };
+    });
+  },
+
+  setManagerPreviousReputation: (rep) => {
+    set((state) => {
+      if (!state.manager) return {};
+      return { manager: { ...state.manager, previousReputation: rep } };
     });
   },
 

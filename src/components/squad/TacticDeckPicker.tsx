@@ -1,7 +1,9 @@
 import type { Formation, Mentality } from '@/engine/matchSim';
 import type { TacticCard } from '@/types/tactics';
+import { MANAGER_SCHOOLS } from '@/types/tactics';
 import { SHAPE_CARDS, TEMPO_CARDS } from '@/data/tacticCards';
 import { INSTRUCTION_CARDS, getInstructionCard } from '@/data/instructionCards';
+import { detectSchoolSetBonusFromCards, SET_BONUS_TSS } from '@/engine/setBonus';
 import { useGameStore } from '@/store/gameStore';
 
 interface TacticDeckPickerProps {
@@ -39,6 +41,14 @@ export function TacticDeckPicker({
   const totalAtk = activeShape.atkMod + activeTempo.atkMod;
   const totalDef = activeShape.defMod + activeTempo.defMod;
 
+  // Phase D: school-set bonus pill. Reads the active loadout's school
+  // intersection; renders when all three slots share at least one school.
+  const setResult = detectSchoolSetBonusFromCards(
+    activeShape,
+    activeTempo,
+    activeInstructionCardId ? (getInstructionCard(activeInstructionCardId) ?? null) : null,
+  );
+
   // Filter to instruction cards the manager actually owns. The order matches
   // INSTRUCTION_CARDS so flat cards stay grouped before conditionals.
   const ownedSet = new Set(ownedTacticCards);
@@ -58,6 +68,34 @@ export function TacticDeckPicker({
         </div>
         <LoadoutTotals atk={totalAtk} def={totalDef} />
       </header>
+
+      {setResult.tssDelta > 0 && setResult.school && (
+        <div
+          className="plm-flex plm-items-center plm-justify-between plm-gap-3 plm-rounded-lg plm-border plm-px-3 plm-py-2 plm-text-xs"
+          style={{
+            background: 'rgba(180, 142, 53, 0.12)',
+            borderColor: 'rgba(180, 142, 53, 0.45)',
+          }}
+        >
+          <div className="plm-flex plm-items-center plm-gap-2">
+            <span
+              className="plm-text-[10px] plm-font-bold plm-tracking-[0.3em] plm-uppercase"
+              style={{ color: '#B48E35' }}
+            >
+              Set Active
+            </span>
+            <span className="plm-font-semibold plm-text-warm-100">
+              {MANAGER_SCHOOLS[setResult.school].name}
+            </span>
+          </div>
+          <span
+            className="plm-text-[11px] plm-font-bold plm-tabular-nums"
+            style={{ color: '#B48E35' }}
+          >
+            +{SET_BONUS_TSS} TSS
+          </span>
+        </div>
+      )}
 
       <SlotSection label="Shape" hint="How the team lines up" slotIndex={1}>
         <CardRow>

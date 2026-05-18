@@ -1,6 +1,27 @@
 import type { Formation, Mentality } from '@/engine/matchSim';
-import type { TacticCard } from '@/types/tactics';
+import type { ManagerSchool, TacticCard } from '@/types/tactics';
 import { BALANCE } from './balance';
+
+/**
+ * Phase D: school affinities for each shape/tempo, so a fully in-school
+ * loadout (shape + tempo + instruction all sharing a school) triggers
+ * the +1 TSS set bonus. Multi-tag — many shapes/tempos naturally fit
+ * more than one school.
+ */
+const SHAPE_SCHOOLS: Record<Formation, ManagerSchool[]> = {
+  '4-4-2': ['direct', 'catenaccio'],
+  '4-3-3': ['gegenpress', 'total-football'],
+  '3-5-2': ['tiki-taka', 'total-football'],
+  '4-2-3-1': ['tiki-taka', 'total-football'],
+  '5-3-2': ['catenaccio'],
+  '3-4-3': ['gegenpress', 'direct'],
+};
+
+const TEMPO_SCHOOLS: Record<Mentality, ManagerSchool[]> = {
+  defensive: ['catenaccio'],
+  balanced: ['tiki-taka', 'total-football'],
+  attacking: ['gegenpress', 'direct'],
+};
 
 /**
  * Phase A tactic-card pool.
@@ -62,6 +83,7 @@ export const SHAPE_CARDS: TacticCard[] = (Object.entries(BALANCE.formationModifi
     atkMod: mods.atk,
     defMod: mods.def,
     formation,
+    schools: SHAPE_SCHOOLS[formation],
   }));
 
 export const TEMPO_CARDS: TacticCard[] = (Object.entries(BALANCE.mentalityModifiers) as [Mentality, { atk: number; def: number }][])
@@ -74,6 +96,7 @@ export const TEMPO_CARDS: TacticCard[] = (Object.entries(BALANCE.mentalityModifi
     atkMod: mods.atk,
     defMod: mods.def,
     mentality,
+    schools: TEMPO_SCHOOLS[mentality],
   }));
 
 import { INSTRUCTION_CARDS, getInstructionCard } from './instructionCards';

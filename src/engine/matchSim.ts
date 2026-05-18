@@ -29,6 +29,7 @@ import {
 } from './modifierEffects';
 import type { InstructionContext, InstructionEffect } from '@/types/tactics';
 import { INSTRUCTION_TSS_CAP, getInstructionCard } from '@/data/instructionCards';
+import { detectSchoolSetBonus } from './setBonus';
 
 // ─── Formation & Mentality Types ───
 
@@ -331,6 +332,13 @@ export interface TSSConfig {
    * ("Derby Day" only fires when this is true).
    */
   isDerby?: boolean;
+  /**
+   * Phase D: precomputed school-set TSS bonus. Resolved in simulateMatch
+   * for the user's side (Shape ∩ Tempo ∩ Instruction schools), 0 elsewhere.
+   * Capped via SET_BONUS_TSS in detectSchoolSetBonus; the engine just
+   * adds whatever the caller supplies.
+   */
+  setBonusTss?: number;
 }
 
 /**
@@ -463,10 +471,14 @@ export function calculateTSS(
     },
   );
 
+  // Phase D: school-set bonus — added when the user's three tactic slots
+  // share a school. Always 0 on AI sides (they don't equip Instruction).
+  const setBonus = config.setBonusTss ?? 0;
+
   return baseRating + formationBonus + mentalityBonus + homeBonus +
     formBonus + derbyBonus + fortuneBonus + repBonus + narrativeBonus + leaderBonus +
     preferredFormationBonus + captainBonus + userBackgroundBonus + tssEventBonus + underdogBonus +
-    instructionContribution.tss + instructionContribution.form;
+    instructionContribution.tss + instructionContribution.form + setBonus;
 }
 
 /**
@@ -916,6 +928,17 @@ export function simulateMatch(
   const awayInstructionEffect = context.userClubId === context.awayClub.id ? userInstructionEffect : undefined;
   const isCupMatch = context.isCup ?? false;
 
+  // Phase D: school-set bonus. Only applies on the user's side and only
+  // when an instruction is equipped (the set rule requires all 3 slots).
+  const homeIsUser = context.userClubId === context.homeClub.id;
+  const awayIsUser = context.userClubId === context.awayClub.id;
+  const homeSetBonus = homeIsUser
+    ? detectSchoolSetBonus(context.homeFormation, context.homeMentality, context.userInstructionCardId).tssDelta
+    : 0;
+  const awaySetBonus = awayIsUser
+    ? detectSchoolSetBonus(context.awayFormation, context.awayMentality, context.userInstructionCardId).tssDelta
+    : 0;
+
   // Calculate TSS with Starting XI + depth
   const homeTSS = calculateTSS(
     homeXIPlayers,
@@ -936,6 +959,7 @@ export function simulateMatch(
       isCup: isCupMatch,
       opponentTier: context.awayClub.tier,
       isDerby,
+      setBonusTss: homeSetBonus,
     },
     isDerby,
     rng,
@@ -960,6 +984,7 @@ export function simulateMatch(
       isCup: isCupMatch,
       opponentTier: context.homeClub.tier,
       isDerby,
+      setBonusTss: awaySetBonus,
     },
     isDerby,
     rng,
